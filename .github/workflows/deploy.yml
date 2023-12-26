@@ -1,0 +1,37 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+    paths:
+      - infra/**
+      - app/**
+      - alembic/**
+      - scripts/**
+      - Dockerfile
+      - requirements.txt
+      - .github/workflows/**
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+  issues: write
+
+jobs:
+  deploy:
+    name: Deploy
+    uses: pet-friend/terraform-microservice-module/.github/workflows/deploy.yml@main
+    with:
+      app-name: "basic-setup"
+      terraform-dir: "infra"
+      env: ${{ (github.ref_name == 'main' && 'prd') || 'dev'}}
+      dockerhub-repo: ${{ vars.DOCKERHUB_REPO }}
+      dockerhub-user: ${{ vars.DOCKERHUB_USERNAME }}
+      pre-deploy-command: >-
+        ./scripts/tests.sh && ./scripts/linters.sh
+    secrets:
+      dockerhub-token: ${{ secrets.DOCKERHUB_TOKEN }}
+      tf-token: ${{ secrets.TF_TOKEN }}

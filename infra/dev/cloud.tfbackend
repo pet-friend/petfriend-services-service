@@ -1,0 +1,5 @@
+organization = "PetFriend"
+
+workspaces {
+    name = "DEV-BASIC-SETUP"
+}

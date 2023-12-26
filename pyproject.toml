@@ -1,0 +1,48 @@
+[tool.black]
+line-length = 100
+preview = true
+
+[tool.pylint.'MAIN']
+source-roots = '.'
+output-format = 'colorized'
+extension-pkg-whitelist = 'pydantic'
+# E401 bug https://github.com/pylint-dev/pylint/issues/9262
+disable = ['W0703', 'W1203', 'C0114', 'C0115', 'C0116', 'E0401', 'R0903', 'E0213']
+ignore = ['CVS', 'migrations', 'app/db_volume', 'tests']
+jobs = 0
+
+[tool.pylint.'MISCELLANEOUS']
+notes = ['FIXME', 'XXX', 'TODO']
+
+[tool.mypy]
+exclude = [
+    'alembic',
+    '__pycache__',
+    '\.git',
+    '\.mypy_cache',
+    '\.pytest_cache',
+    '\.venv',
+    'app\/db_volume',
+]
+mypy_path = '.'
+check_untyped_defs = true
+python_version = '3.12'
+disallow_untyped_defs = true
+disallow_any_generics = true
+implicit_reexport = false
+namespace_packages = true
+explicit_package_bases = true
+plugins = ['pydantic.mypy']
+
+[tool.pytest.ini_options]
+minversion = '6.0'
+addopts = '-ra -q'
+testpaths = ['tests']
+pythonpath = ['.']
+
+[tool.coverage.run]
+omit = [
+    "app/db.py", "app/main.py", "app/routes/example.py",
+    "app/router.py", "app/log.py", "app/repositories/example.py",
+    "app/models/example.py", "app/config.py"
+]

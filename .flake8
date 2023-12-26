@@ -1,0 +1,8 @@
+[flake8]
+
+exclude = .git,__pycache__,requirements,scripts,alembic
+show-source = True
+statistics = True
+count = True
+max-line-length = 100
+ignore = E701
