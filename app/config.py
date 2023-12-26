@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    app_name: str = "Awesome API"
+    app_name: str = "Services API"
     DB_URL: str = os.environ["DATABASE_URL"]
     DB_FORCE_ROLLBACK: bool = False
     DB_ARGUMENTS: dict[str, str | bool] = {}
