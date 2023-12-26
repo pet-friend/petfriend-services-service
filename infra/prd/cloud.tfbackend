@@ -1,0 +1,5 @@
+organization = "PetFriend"
+
+workspaces {
+    name = "PRD-BASIC-SETUP"
+}
