@@ -25,7 +25,7 @@ jobs:
     name: Deploy
     uses: pet-friend/terraform-microservice-module/.github/workflows/deploy.yml@main
     with:
-      app-name: "basic-setup"
+      app-name: "services"
       terraform-dir: "infra"
       env: ${{ (github.ref_name == 'main' && 'prd') || 'dev'}}
       dockerhub-repo: ${{ vars.DOCKERHUB_REPO }}

@@ -1,5 +1,5 @@
 organization = "PetFriend"
 
 workspaces {
-    name = "DEV-BASIC-SETUP"
+    name = "DEV-SERVICES-SERVICE"
 }
