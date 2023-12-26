@@ -1,5 +1,5 @@
 organization = "PetFriend"
 
 workspaces {
-    name = "PRD-SERVICES-SETUP"
+    name = "PRD-SERVICES-SERVICE"
 }
