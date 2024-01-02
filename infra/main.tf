@@ -23,10 +23,13 @@ locals {
   cae_resource_group = "SERVICES-RG"
   cae_name           = "SERVICES-CAE"
   db_allow_external  = false
+
+  products_images_container = "products"
+  stores_images_container   = "stores"
 }
 
 module "microservice" {
-  source = "git::https://github.com/pet-friend/terraform-microservice-module.git?ref=v2.0.3"
+  source = "git::https://github.com/pet-friend/terraform-microservice-module.git?ref=v2.0.6"
 
   app_name           = var.app_name
   subdomain          = local.subdomain
@@ -39,6 +42,21 @@ module "microservice" {
   container_image = var.container_image
   container_port  = var.container_port
   env             = var.env
+
+  environment_variables = {
+    PRODUCTS_IMAGES_CONTAINER = local.products_images_container
+    STORES_IMAGES_CONTAINER   = local.stores_images_container
+  }
 }
 
 data "azurerm_client_config" "config" {}
+
+resource "azurerm_storage_container" "products_images_container" {
+  name                 = local.products_images_container
+  storage_account_name = module.microservice.storage_account.name
+}
+
+resource "azurerm_storage_container" "stores_images_container" {
+  name                 = local.stores_images_container
+  storage_account_name = module.microservice.storage_account.name
+}

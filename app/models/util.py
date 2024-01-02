@@ -1,5 +1,6 @@
 import uuid as uuid_pkg
 from datetime import datetime
+from typing import BinaryIO, Protocol
 
 from pydantic import BaseModel
 from sqlalchemy import text
@@ -37,3 +38,7 @@ class TimestampModel(SQLModel):
             "onupdate": text("current_timestamp"),
         },
     )
+
+
+class File(Protocol):
+    file: BinaryIO
