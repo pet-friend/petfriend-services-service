@@ -1,5 +1,6 @@
 from typing import Optional
-from sqlmodel import SQLModel
+from uuid import uuid4
+from sqlmodel import Field, SQLModel
 from pydantic import UUID4, validator
 from .util import Id, UUIDModel, TimestampModel
 
@@ -13,7 +14,7 @@ class StoreBase(SQLModel):
     name: str
     description: Optional[str] = None
     # image: con lo de azure
-    address: Id = UUID4()
+    address: Id = Field(default_factory=uuid4)
     delivery_range_km: float
 
     @validator("delivery_range_km")
