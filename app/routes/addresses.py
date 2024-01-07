@@ -1,0 +1,38 @@
+from fastapi import APIRouter, Depends
+from fastapi import status as http_status
+
+from app.services.addresses import AddressesService
+from app.models.addresses import AddressRead, AddressCreate, AddressReadRenamed
+from app.models.util import Id
+from .responses.addresses import ADDRESS_NOT_FOUND_ERROR, ADDRESS_EXISTS_ERROR
+from .util import get_exception_docs
+
+router = APIRouter(
+    tags=["Addresses"],
+    # TODO: change to /stores/{service_id}/addresses, the same for other services
+    prefix="/addresses/{service_id}",
+)
+
+
+@router.post(
+    "",
+    status_code=http_status.HTTP_201_CREATED,
+    responses=get_exception_docs(ADDRESS_NOT_FOUND_ERROR, ADDRESS_EXISTS_ERROR),
+    response_model=AddressReadRenamed,
+)
+async def create_address(
+    service_id: Id,
+    data: AddressCreate,
+    addresses_service: AddressesService = Depends(AddressesService),
+) -> AddressRead:
+    return await addresses_service.create_address(service_id, data)
+
+
+@router.get(
+    "", responses=get_exception_docs(ADDRESS_NOT_FOUND_ERROR), response_model=AddressReadRenamed
+)
+async def get_user_addresses(
+    service_id: Id,
+    addresses_service: AddressesService = Depends(AddressesService),
+) -> AddressRead:
+    return await addresses_service.get_address(service_id)

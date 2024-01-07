@@ -21,6 +21,7 @@ services:
         condition: service_completed_successfully
     volumes:
       - ./:/app
+      - /var/run/docker.sock:/var/run/docker.sock # Docker in docker for tests
 
   database:
     container_name: ${DB_CONTAINER_NAME}
