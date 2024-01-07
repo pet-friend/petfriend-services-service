@@ -1,7 +1,7 @@
 # json stores
 
 valid_store = {
-    "name": "test",
+    "name": "test store",
     "description": "test",
     "delivery_range_km": 5,
 }
