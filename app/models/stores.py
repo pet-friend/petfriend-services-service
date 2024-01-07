@@ -2,6 +2,12 @@ from typing import Optional
 from uuid import uuid4
 from sqlmodel import Field, SQLModel
 from pydantic import UUID4, validator
+
+from app.models.constants.stores import (
+    MIN_DELIVERY_RANGE,
+    MAX_DELIVERY_RANGE,
+    INVALID_DELIVERY_RANGE_MSG,
+)
 from .util import Id, UUIDModel, TimestampModel
 
 
@@ -19,9 +25,9 @@ class StoreBase(SQLModel):
 
     @validator("delivery_range_km")
     def delivery_range_verification(cls, delivery_range_km: float) -> float:
-        if delivery_range_km > 0 and delivery_range_km <= 20:
+        if delivery_range_km > MIN_DELIVERY_RANGE and delivery_range_km <= MAX_DELIVERY_RANGE:
             return delivery_range_km
-        raise ValueError("invalid delivery range")
+        raise ValueError(INVALID_DELIVERY_RANGE_MSG)
 
 
 # What the user gets from the API (Base + id)
