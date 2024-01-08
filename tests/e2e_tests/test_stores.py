@@ -15,7 +15,7 @@ class TestStoresRoute(BaseAPITestCase):
         assert response_text["id"] is not None
         assert response_text["name"] == "test store"
 
-        store_db: Store = await self.db.get(Store, response_text["id"])
+        store_db: Store = await self.db.get(Store, response_text["id"])  # type: ignore
         assert_store_db_equals_response(store_db, response_text)
         assert store_db.created_at is not None
         assert store_db.updated_at is not None
@@ -24,6 +24,12 @@ class TestStoresRoute(BaseAPITestCase):
         response = await self.client.post("/stores", json=invalid_store)
 
         assert response.status_code == 400
+
+    async def test_create_store_with_existing_name(self) -> None:
+        response = await self.client.post("/stores", json=valid_store)
+        assert response.status_code == 201
+        response2 = await self.client.post("/stores", json=valid_store)
+        assert response2.status_code == 400
 
 
 # Aux

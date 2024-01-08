@@ -1,7 +1,7 @@
 from typing import Optional
 from uuid import uuid4
 from sqlmodel import Field, SQLModel
-from pydantic import UUID4, validator
+from pydantic import UUID4, field_validator
 
 from app.models.constants.stores import (
     MIN_DELIVERY_RANGE,
@@ -17,13 +17,13 @@ class Image(SQLModel):
 
 
 class StoreBase(SQLModel):
-    name: str
+    name: str = Field(unique=True)
     description: Optional[str] = None
     # image: con lo de azure
     address: Id = Field(default_factory=uuid4)
     delivery_range_km: float
 
-    @validator("delivery_range_km")
+    @field_validator("delivery_range_km")
     def delivery_range_verification(cls, delivery_range_km: float) -> float:
         if delivery_range_km > MIN_DELIVERY_RANGE and delivery_range_km <= MAX_DELIVERY_RANGE:
             return delivery_range_km
@@ -32,7 +32,7 @@ class StoreBase(SQLModel):
 
 # What the user gets from the API (Base + id)
 class StoreRead(StoreBase, UUIDModel):
-    # owner_id: Id
+    # TODO: owner_id: Id (retrieved from auth credentials)
     pass
 
 

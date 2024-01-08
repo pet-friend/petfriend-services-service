@@ -18,9 +18,6 @@ async def get_stores(
     offset: int = Query(0, ge=0),
     store_service: StoresService = Depends(StoresService),
 ) -> StoreList:
-    # filters = await process_stores_filters(
-    #     adopted, type, breed, colour, gender, owner, shelter, size, age
-    # )
     filters = {}  # type: ignore
 
     stores = await store_service.get_stores(limit, offset, **filters)
