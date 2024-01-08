@@ -114,3 +114,60 @@ class TestUsersRoute(BaseAPITestCase):
 
         assert response_text.pop("service_id") == service_id
         assert response_text.items() == self.address_create_json_data.items()
+
+    async def test_can_create_with_put(self) -> None:
+        service_id = str(uuid4())
+        self.address_create_json_data["type"] = AddressType.APARTMENT
+        self.address_create_json_data["apartment"] = "1A"
+
+        r_address = await self.client.put(
+            f"/addresses/{service_id}", json=self.address_create_json_data
+        )
+        assert r_address.status_code == 200
+        response_text: dict[str, Any] = json.loads(r_address.text)
+        address: Address | None = await self.db.get(Address, response_text["service_id"])
+
+        assert address is not None
+        assert address.created_at is not None
+        assert address.updated_at is not None
+        assert response_text.pop("service_id") == service_id
+        assert response_text == self.address_create_json_data
+
+    async def test_create_and_modify_address(self) -> None:
+        service_id = str(uuid4())
+        self.address_create_json_data["type"] = AddressType.APARTMENT
+        self.address_create_json_data["apartment"] = "1A"
+
+        r_address = await self.client.post(
+            f"/addresses/{service_id}", json=self.address_create_json_data
+        )
+        assert r_address.status_code == 201
+        response_text: dict[str, Any] = json.loads(r_address.text)
+
+        response_text["apartment"] = "2B"
+        r_address_2 = await self.client.put(f"/addresses/{service_id}", json=response_text)
+        assert r_address_2.status_code == 200
+        response_text_2: dict[str, Any] = json.loads(r_address_2.text)
+        assert response_text_2 == response_text
+
+    async def test_create_delete_get_address_returns_404(self) -> None:
+        service_id = str(uuid4())
+        self.address_create_json_data["type"] = AddressType.APARTMENT
+        self.address_create_json_data["apartment"] = "1A"
+
+        r_post = await self.client.post(
+            f"/addresses/{service_id}", json=self.address_create_json_data
+        )
+        assert r_post.status_code == 201
+
+        r_delete = await self.client.delete(f"/addresses/{service_id}")
+        assert r_delete.status_code == 204
+
+        r_get = await self.client.get(f"/addresses/{service_id}")
+        assert r_get.status_code == 404
+
+    async def test_delete_address_not_exists_returns_404(self) -> None:
+        service_id = str(uuid4())
+
+        r_delete = await self.client.delete(f"/addresses/{service_id}")
+        assert r_delete.status_code == 404

@@ -3,6 +3,7 @@ from fastapi import Depends
 from app.models.util import Id
 from app.models.addresses import AddressCreate, Address
 from app.repositories.addresses import AddressesRepository
+from app.exceptions.repository import RecordNotFound
 from app.exceptions.addresses import AddressNotFound, AddressAlreadyExists
 
 
@@ -25,3 +26,15 @@ class AddressesService:
         if address is None:
             raise AddressNotFound
         return address
+
+    async def update_address(self, service_id: Id, data: AddressCreate) -> Address:
+        try:
+            return await self.addresses_repo.update(service_id, data.model_dump())
+        except RecordNotFound as e:
+            raise AddressNotFound from e
+
+    async def delete_address(self, service_id: Id) -> None:
+        try:
+            await self.addresses_repo.delete(service_id)
+        except RecordNotFound as e:
+            raise AddressNotFound from e

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from fastapi import status as http_status
 
 from app.services.addresses import AddressesService
+from app.exceptions.addresses import AddressNotFound
 from app.models.addresses import AddressRead, AddressCreate, AddressReadRenamed
 from app.models.util import Id
 from .responses.addresses import ADDRESS_NOT_FOUND_ERROR, ADDRESS_EXISTS_ERROR
@@ -36,3 +37,27 @@ async def get_user_addresses(
     addresses_service: AddressesService = Depends(AddressesService),
 ) -> AddressRead:
     return await addresses_service.get_address(service_id)
+
+
+@router.put("", response_model=AddressReadRenamed)
+async def update_user_addresses(
+    service_id: Id,
+    data: AddressCreate,
+    addresses_service: AddressesService = Depends(AddressesService),
+) -> AddressRead:
+    try:
+        return await addresses_service.update_address(service_id, data)
+    except AddressNotFound:
+        return await addresses_service.create_address(service_id, data)
+
+
+@router.delete(
+    "",
+    responses=get_exception_docs(ADDRESS_NOT_FOUND_ERROR),
+    status_code=http_status.HTTP_204_NO_CONTENT,
+)
+async def delete_user_addresses(
+    service_id: Id,
+    addresses_service: AddressesService = Depends(AddressesService),
+) -> None:
+    await addresses_service.delete_address(service_id)
