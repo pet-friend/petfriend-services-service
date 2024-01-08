@@ -18,7 +18,7 @@ router = APIRouter(
 @router.post(
     "",
     status_code=http_status.HTTP_201_CREATED,
-    responses=get_exception_docs(ADDRESS_NOT_FOUND_ERROR, ADDRESS_EXISTS_ERROR),
+    responses=get_exception_docs(ADDRESS_EXISTS_ERROR),
     response_model=AddressReadRenamed,
 )
 async def create_address(
