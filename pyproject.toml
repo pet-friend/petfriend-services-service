@@ -7,12 +7,19 @@ source-roots = '.'
 output-format = 'colorized'
 extension-pkg-whitelist = 'pydantic'
 # E401 bug https://github.com/pylint-dev/pylint/issues/9262
-disable = ['W0703', 'W1203', 'C0114', 'C0115', 'C0116', 'E0401', 'R0903', 'E0213']
-ignore = ['CVS', 'migrations', 'app/db_volume', 'tests']
+disable = [
+    'W0703',
+    'W1203',
+    'C0114',
+    'C0115',
+    'C0116',
+    'E0401',
+    'R0903',
+    'E0213',
+    'W0511',
+]
+ignore = ['CVS', 'migrations', 'app/dev_volumes', 'tests']
 jobs = 0
-
-[tool.pylint.'MISCELLANEOUS']
-notes = ['FIXME', 'XXX', 'TODO']
 
 [tool.mypy]
 exclude = [
@@ -22,7 +29,7 @@ exclude = [
     '\.mypy_cache',
     '\.pytest_cache',
     '\.venv',
-    'app\/db_volume',
+    'app\/dev_volumes',
 ]
 mypy_path = '.'
 check_untyped_defs = true
@@ -39,10 +46,23 @@ minversion = '6.0'
 addopts = '-ra -q'
 testpaths = ['tests']
 pythonpath = ['.']
+# ignore deprecation warnings inside dependencies:
+filterwarnings = [
+    "ignore::DeprecationWarning:polyfactory.*:",
+    "ignore::DeprecationWarning:pydantic.*:",
+    "ignore::DeprecationWarning:sqlmodel.*:",
+    "ignore::DeprecationWarning:pydantic_core.*:",
+    "ignore::DeprecationWarning:azure.*:",
+]
 
 [tool.coverage.run]
 omit = [
-    "app/db.py", "app/main.py", "app/routes/example.py",
-    "app/router.py", "app/log.py", "app/repositories/example.py",
-    "app/models/example.py", "app/config.py"
+    "app/db.py",
+    "app/main.py",
+    "app/routes/example.py",
+    "app/router.py",
+    "app/log.py",
+    "app/repositories/example.py",
+    "app/models/example.py",
+    "app/config.py",
 ]

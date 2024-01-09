@@ -1,6 +1,6 @@
 version: "3.5"
 services:
-  fastapi:
+  api:
     image: ${WEB_CONTAINER_NAME}
     build:
       context: .
@@ -11,8 +11,14 @@ services:
       DATABASE_URL: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@${DB_CONTAINER_NAME}:${DB_PORT}/${DB_NAME}
       ENVIRONMENT: DEVELOPMENT
       PORT: ${WEB_PORT}
+      STORAGE_CONNECTION_STRING: DefaultEndpointsProtocol=http;AccountName=acc;AccountKey=key1;BlobEndpoint=http://azurite:${STORAGE_PORT}/acc;
+      STORES_IMAGES_CONTAINER: ${STORES_IMAGES_CONTAINER}
+      PRODUCTS_IMAGES_CONTAINER: ${PRODUCTS_IMAGES_CONTAINER}
     depends_on:
-      - database
+      database:
+        condition: service_healthy
+      azurite_init:
+        condition: service_completed_successfully
     volumes:
       - ./:/app
 
@@ -28,5 +34,39 @@ services:
       - ${DB_PORT}:${DB_PORT}
     volumes:
       - type: bind
-        source: ./app/db_volume
+        source: ./app/dev_volumes/db
         target: /app/db_volume
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${DB_USER} -d ${DB_NAME}'"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    ports:
+      - ${STORAGE_PORT}:${STORAGE_PORT}
+    command: azurite-blob --blobHost 0.0.0.0 --blobPort ${STORAGE_PORT} -l data/data
+    environment:
+      AZURITE_ACCOUNTS: acc:key1:key2
+    healthcheck:
+      test: nc 127.0.0.1 ${STORAGE_PORT} -z
+      interval: 1s
+      retries: 30
+    volumes:
+      - type: bind
+        source: ./app/dev_volumes/azurite
+        target: /opt/azurite/data
+
+  azurite_init:
+    # This creates the container in the azurite emulator
+    image: mcr.microsoft.com/azure-cli:latest
+    command: >
+      /bin/sh -c 
+        "az storage container create --name ${PRODUCTS_IMAGES_CONTAINER} && 
+        az storage container create --name ${STORES_IMAGES_CONTAINER}"
+    depends_on:
+      azurite:
+        condition: service_healthy
+    environment:
+      AZURE_STORAGE_CONNECTION_STRING: DefaultEndpointsProtocol=http;AccountName=acc;AccountKey=key1;BlobEndpoint=http://azurite:${STORAGE_PORT}/acc;
