@@ -6,6 +6,7 @@ from sqlmodel import select, delete, and_, update
 from sqlmodel.sql.expression import SelectOfScalar
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.exceptions.repository import RecordNotFound
 from ..models.util import UUIDModel, Id
 
 T = TypeVar("T", bound=UUIDModel)
@@ -47,12 +48,15 @@ class BaseRepository(Generic[T], ABC):
     async def update(self, record_id: Id | str, new_data: dict) -> T:
         existing = await self.get_by_id(record_id)
         if not existing:
-            raise ValueError(f"Record with id {record_id} does not exist")
+            raise RecordNotFound
         query = update(self.cls).where(self.cls.id == record_id).values(**new_data)
         await self.db.exec(query)
         await self.db.refresh(existing)
         return existing
 
     async def delete(self, record_id: Id | str) -> None:
+        existing = await self.get_by_id(record_id)
+        if not existing:
+            raise RecordNotFound
         query = delete(self.cls).where(self.cls.id == record_id)
         await self.db.exec(query)

@@ -4,19 +4,15 @@ import os
 import time
 from typing import Any, AsyncIterator
 
-from fastapi import FastAPI, Request, Response, status
-from fastapi.exceptions import RequestValidationError
+from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from sqlalchemy.engine.base import Connection
-from sqlalchemy.exc import IntegrityError
 import uvicorn
-from starlette.responses import JSONResponse
 from alembic.config import Config
 from alembic import command
 
+from app.handlers import add_exception_handlers
 from app.router import api_router
-from app.validators.db_validator_schema import DatabaseValidatorSchema
-from app.validators.validator_schema import ValidatorSchema
 from .log import setup_logs
 from .config import settings
 from .db import engine
@@ -82,6 +78,7 @@ def create_app() -> FastAPI:
     new_app = FastAPI(title=settings.app_name, lifespan=run_migrations, debug=settings.DEBUG)
     new_app.include_router(api_router)
     new_app.openapi = custom_openapi  # type: ignore[method-assign]
+    add_exception_handlers(new_app)
     return new_app
 
 
@@ -91,33 +88,3 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     host = os.environ.get("HOST", "0.0.0.0")
     uvicorn.run("app.main:app", log_config=None, reload=reload, host=host, port=port)
-
-
-@app.exception_handler(Exception)
-def handle_exception(_req: Request, exc: Exception) -> Response:
-    logging.error("Internal Server Error", exc_info=exc)
-    return Response("Internal Server Error", status_code=500)
-
-
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(_req: Request, exc: RequestValidationError) -> JSONResponse:
-    logging.error("Request Validation Error", exc_info=exc)
-    messages_dict = {}
-    for error in exc.errors():
-        logging.info(error["loc"][-1])
-        field_name = error["loc"][-1]
-        if field_name not in messages_dict:
-            messages_dict[field_name] = [error["msg"]]
-        else:
-            errors = messages_dict[field_name]
-            errors.append(error["msg"])
-    json_schema = ValidatorSchema(detail=messages_dict).model_dump(mode="json")
-    return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=json_schema)
-
-
-@app.exception_handler(IntegrityError)
-async def validation_integrity_error_handler(_req: Request, exc: IntegrityError) -> JSONResponse:
-    logging.error("Request integrity Error", exc_info=exc)
-    error_detail = DatabaseValidatorSchema(error=str(exc.orig)).get_error_detail(settings)
-    json_schema = ValidatorSchema(detail=error_detail).model_dump(mode="json")
-    return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=json_schema)
