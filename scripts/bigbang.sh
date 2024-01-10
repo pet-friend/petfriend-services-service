@@ -20,7 +20,8 @@ done
 # Remove database data if the flag is set
 if [ "$drop_db" = true ]; then
   echo "Dropping database data..."
-  rm -r app/db_volume/data/*
+  rm -r app/dev_volumes/db/data/*
+  rm -r app/dev_volumes/azurite/data/*
 fi
 
 # Stop and remove containers, networks, and volumes defined in the docker-compose.yml file
