@@ -1,7 +1,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, Query
 from fastapi import status as http_status
-from app.models.stores import StoreCreate, StoreRead
+from app.models.stores import StoreCreate, StoreRead, StoreReadWithImage
 from app.routes.responses.stores import STORE_NOT_FOUND_ERROR
 from app.serializers.errors import ValidationErrorMessage
 from app.serializers.stores import StoreList
@@ -22,7 +22,7 @@ async def get_stores(
 
     stores = await store_service.get_stores(limit, offset, **filters)
     stores_amount = await store_service.count_stores(**filters)
-    return StoreList(stores=stores, amount=stores_amount)
+    return StoreList(stores=await store_service.get_stores_with_image(stores), amount=stores_amount)
 
 
 @router.post(
@@ -40,8 +40,10 @@ async def create_store(
 @router.get("/{store_id}", response_model_exclude_none=True)
 async def get_store(
     store_id: str, store_service: StoresService = Depends(StoresService)
-) -> StoreRead:
+) -> StoreReadWithImage:
     store = await store_service.get_store_by_id(store_id)
-    if store is None:
-        raise STORE_NOT_FOUND_ERROR
-    return store
+    return (await store_service.get_stores_with_image([store]))[0]
+
+
+# TODO: PUT
+# TODO: DELETE

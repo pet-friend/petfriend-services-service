@@ -30,10 +30,14 @@ class StoreBase(SQLModel):
         raise ValueError(INVALID_DELIVERY_RANGE_MSG)
 
 
-# What the user gets from the API (Base + id)
+# What the Store gets from the API (Base + id)
 class StoreRead(StoreBase, UUIDModel):
     # TODO: owner_id: Id (retrieved from auth credentials)
     pass
+
+
+class StoreReadWithImage(StoreRead):
+    image_url: str | None = None
 
 
 # Actual data in database table (Base + id + timestamps)

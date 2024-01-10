@@ -25,14 +25,6 @@ class FilesService:
         ) as container:
             yield cls(container)
 
-    @classmethod
-    def products_images_service(cls) -> AsyncGenerator["FilesService", None]:
-        return cls.from_container_name(settings.PRODUCTS_IMAGES_CONTAINER)
-
-    @classmethod
-    def stores_images_service(cls) -> AsyncGenerator["FilesService", None]:
-        return cls.from_container_name(settings.STORES_IMAGES_CONTAINER)
-
     async def create_file(self, image_id: Id, file: File) -> None:
         try:
             await self.container.upload_blob(str(image_id), file.file, overwrite=False)
@@ -72,3 +64,17 @@ class FilesService:
             expiry=expiry_time,
             permission="r",
         )
+
+
+async def products_images_service() -> AsyncGenerator[FilesService, None]:
+    async with ContainerClient.from_connection_string(
+        settings.STORAGE_CONNECTION_STRING, settings.PRODUCTS_IMAGES_CONTAINER
+    ) as container:
+        yield FilesService(container)
+
+
+async def stores_images_service() -> AsyncGenerator["FilesService", None]:
+    async with ContainerClient.from_connection_string(
+        settings.STORAGE_CONNECTION_STRING, settings.STORES_IMAGES_CONTAINER
+    ) as container:
+        yield FilesService(container)
