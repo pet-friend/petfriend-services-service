@@ -2,7 +2,7 @@ import json
 from tests.tests_setup import BaseAPITestCase
 
 from app.models.stores import Store
-from tests.fixtures.stores import valid_store, invalid_store
+from tests.fixtures.stores import valid_store, valid_store2, invalid_store
 
 
 class TestStoresRoute(BaseAPITestCase):
@@ -30,6 +30,39 @@ class TestStoresRoute(BaseAPITestCase):
         assert response.status_code == 201
         response2 = await self.client.post("/stores", json=valid_store)
         assert response2.status_code == 400
+
+    async def test_get_stores(self) -> None:
+        response = await self.client.post("/stores", json=valid_store)
+        assert response.status_code == 201
+        response2 = await self.client.get("/stores")
+        assert response2.status_code == 200
+
+        response_text = json.loads(response2.text)
+        await _verify_paginated_response(self.db, response_text, 1, 1)
+
+    async def test_get_stores_with_pagination(self) -> None:
+        response = await self.client.post("/stores", json=valid_store)
+        assert response.status_code == 201
+        response2 = await self.client.post("/stores", json=valid_store2)
+        assert response2.status_code == 201
+        response3 = await self.client.get("/stores?limit=1&offset=1")
+        assert response3.status_code == 200
+
+        response_text = json.loads(response3.text)
+        await _verify_paginated_response(self.db, response_text, 1, 2)
+
+    async def test_get_store_by_id(self) -> None:
+        response = await self.client.post("/stores", json=valid_store)
+        assert response.status_code == 201
+
+        response_text = json.loads(response.text)
+        response2 = await self.client.get(f"/stores/{response_text['id']}")
+        assert response2.status_code == 200
+
+        response_text2 = json.loads(response2.text)
+        assert_store_db_equals_response(
+            await self.db.get(Store, response_text["id"]), response_text2
+        )
 
 
 # Aux

@@ -6,6 +6,12 @@ valid_store = {
     "delivery_range_km": 5,
 }
 
+valid_store2 = {
+    "name": "test store2",
+    "description": "test2",
+    "delivery_range_km": 5,
+}
+
 invalid_store = {
     "name": "test",
     "description": "test",

@@ -19,8 +19,6 @@ class Image(SQLModel):
 class StoreBase(SQLModel):
     name: str = Field(unique=True)
     description: Optional[str] = None
-    # image: con lo de azure
-    address: Id = Field(default_factory=uuid4)
     delivery_range_km: float
 
     @field_validator("delivery_range_km")

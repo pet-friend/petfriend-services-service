@@ -46,15 +46,16 @@ class StoresService:
         return result
 
     async def create_store_image(self, store_id: Id, image: File) -> None:
-        await self.get_store_by_id(store_id)  # assert store exists
+        # assert store exists
+        await self.get_store_by_id(store_id)  # type: ignore
         await self.files_service.create_file(store_id, image)
 
     async def set_store_image(self, store_id: Id, image: File) -> None:
-        await self.get_store_by_id(store_id)
+        await self.get_store_by_id(store_id)  # type: ignore
         await self.files_service.set_file(store_id, image)
 
     async def delete_store_image(self, store_id: Id) -> None:
-        await self.get_store_by_id(store_id)
+        await self.get_store_by_id(store_id)  # type: ignore
         await self.files_service.delete_file(store_id)
 
     # TODO: delete store should delete image if it exists

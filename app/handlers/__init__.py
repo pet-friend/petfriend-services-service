@@ -8,6 +8,7 @@ from .base_handlers import handle_exception, validation_exception_handler, handl
 from .db_handlers import validation_integrity_error_handler
 from .addresses_handlers import address_not_found_handler, address_already_exists_handler
 from .stores_handlers import store_not_found_handler, store_already_exists_handler
+from .image_handlers import file_exists_handler, file_not_found_handler
 
 
 def add_exception_handlers(app: FastAPI) -> None:
@@ -19,3 +20,5 @@ def add_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(AddressAlreadyExists, address_already_exists_handler)
     app.add_exception_handler(StoreNotFound, store_not_found_handler)
     app.add_exception_handler(StoreAlreadyExists, store_already_exists_handler)
+    app.add_exception_handler(FileExistsError, file_exists_handler)
+    app.add_exception_handler(FileNotFoundError, file_not_found_handler)
