@@ -6,6 +6,8 @@ from sqlmodel import select
 
 from .models.util import HealthCheck
 from .validators.validator_schema import ValidatorSchema
+from .routes.stores import router as stores_router
+from .routes.stores_image import router as stores_image_router
 from .routes.example import router as example_router
 from .routes.addresses import router as addresses_router
 from .db import get_db
@@ -13,8 +15,10 @@ from .db import get_db
 api_router = APIRouter(
     responses={"400": {"model": ValidatorSchema, "description": "Bad Request"}},
 )
+api_router.include_router(stores_router)
 api_router.include_router(example_router)
 api_router.include_router(addresses_router)
+api_router.include_router(stores_image_router)
 
 
 @api_router.get("/health", tags=["Healthcheck"])
