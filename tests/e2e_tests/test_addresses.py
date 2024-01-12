@@ -49,7 +49,6 @@ class TestUsersRoute(BaseAPITestCase):
         assert address is not None
         assert address.created_at is not None
         assert address.updated_at is not None
-        print(response_text)
         assert response_text.pop("service_id") == service_id
         assert response_text == self.address_create_json_data
 
