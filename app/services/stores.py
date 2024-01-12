@@ -1,7 +1,7 @@
 from typing import Sequence, Any
 
 from fastapi import Depends
-from app.exceptions.stores import StoreNotFound, StoreNotFound
+from app.exceptions.stores import StoreNotFound
 
 
 from app.models.stores import StoreCreate, Store, StoreReadWithImage

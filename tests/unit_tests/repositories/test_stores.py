@@ -3,7 +3,7 @@ import datetime
 from unittest import IsolatedAsyncioTestCase
 
 from sqlalchemy import ScalarResult
-from app.models.stores import Store, StoreCreate
+from app.models.stores import Store
 from uuid import uuid4
 from unittest.mock import AsyncMock, Mock
 import pytest

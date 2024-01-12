@@ -1,12 +1,12 @@
-from typing import List, Optional
 from fastapi import APIRouter, Depends, Query
 from fastapi import status as http_status
+
 from app.models.stores import StoreCreate, StoreRead, StoreReadWithImage
 from app.routes.responses.stores import STORE_NOT_FOUND_ERROR
-from app.serializers.errors import ValidationErrorMessage
+from app.validators.error_schema import ErrorSchema
 from app.serializers.stores import StoreList
-
 from app.services.stores import StoresService
+from .util import get_exception_docs
 
 
 router = APIRouter(prefix="/stores", tags=["Stores"])
@@ -29,7 +29,7 @@ async def get_stores(
     "",
     response_model_exclude_none=True,
     status_code=http_status.HTTP_201_CREATED,
-    responses={400: {"model": ValidationErrorMessage}},
+    responses={400: {"model": ErrorSchema}},
 )
 async def create_store(
     data: StoreCreate, store_service: StoresService = Depends(StoresService)
@@ -37,7 +37,11 @@ async def create_store(
     return await store_service.create_store(data)
 
 
-@router.get("/{store_id}", response_model_exclude_none=True)
+@router.get(
+    "/{store_id}",
+    responses=get_exception_docs(STORE_NOT_FOUND_ERROR),
+    response_model_exclude_none=True,
+)
 async def get_store(
     store_id: str, store_service: StoresService = Depends(StoresService)
 ) -> StoreReadWithImage:

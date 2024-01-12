@@ -1,6 +1,6 @@
 # mypy: disable-error-code="method-assign"
 import datetime
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock
 from unittest import IsolatedAsyncioTestCase
 from uuid import uuid4
 
