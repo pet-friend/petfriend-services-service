@@ -10,11 +10,6 @@ from app.models.constants.stores import (
 from .util import UUIDModel, TimestampModel
 
 
-class Image(SQLModel):
-    name: str
-    data: bytes
-
-
 class StoreBase(SQLModel):
     name: str = Field(unique=True)
     description: Optional[str] = None
