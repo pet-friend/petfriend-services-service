@@ -41,7 +41,7 @@ class TestStoresRepository(IsolatedAsyncioTestCase):
         # Given
         name = self.store_create.name
         result: ScalarResult[Store] = AsyncMock()
-        result.first = Mock(return_value=self.store)
+        result.all = Mock(return_value=[self.store])
         self.async_session.exec = AsyncMock(return_value=result)
 
         # When
@@ -55,7 +55,7 @@ class TestStoresRepository(IsolatedAsyncioTestCase):
         # Given
         name = self.store_create.name
         result: ScalarResult[Store] = AsyncMock()
-        result.first = Mock(return_value=None)
+        result.all = Mock(return_value=[])
         self.async_session.exec = AsyncMock(return_value=result)
 
         # When

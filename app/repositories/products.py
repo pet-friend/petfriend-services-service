@@ -1,5 +1,4 @@
 from fastapi import Depends
-from sqlmodel import select, col
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.products import Product, ProductCreate
@@ -16,6 +15,5 @@ class ProductsRepository(BaseRepository[Product]):
         return await self.save(Product.model_validate(data))
 
     async def get_by_name(self, name: str) -> Product | None:
-        query = select(self.cls).where(col(self.cls.name) == name)
-        result = await self.db.exec(query)
-        return result.first()
+        products = await self.get_all(name=name)
+        return products[0] if len(products) > 0 else None
