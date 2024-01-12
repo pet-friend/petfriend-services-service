@@ -6,5 +6,5 @@ from app.models.stores import StoreReadWithImage
 
 
 class StoreList(BaseModel):
-    stores: List[StoreReadWithImage]
+    stores: list[StoreReadWithImage]
     amount: int
