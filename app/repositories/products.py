@@ -13,7 +13,7 @@ class ProductsRepository(BaseRepository[Product]):
         super().__init__(Product, session)
 
     async def create(self, data: ProductCreate) -> Product:
-        return await self.save(Product.model_validate(data))  # type: ignore
+        return await self.save(Product.model_validate(data))
 
     async def get_by_name(self, name: str) -> Product | None:
         query = select(self.cls).where(col(self.cls.name) == name)

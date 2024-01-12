@@ -12,7 +12,7 @@ class StoresRepository(BaseRepository[Store]):
         super().__init__(Store, session)
 
     async def create(self, data: StoreCreate) -> Store:
-        return await self.save(Store.model_validate(data))  # type: ignore
+        return await self.save(Store.model_validate(data))
 
     async def get_by_name(self, name: str) -> Store | None:
         query = select(self.cls).where(self.cls.name == name)
