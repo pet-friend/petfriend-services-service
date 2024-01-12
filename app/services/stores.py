@@ -1,6 +1,7 @@
 from typing import Sequence, Any
 
 from fastapi import Depends
+from app.exceptions.repository import RecordNotFound
 from app.exceptions.stores import StoreNotFound
 
 
@@ -45,6 +46,22 @@ class StoresService:
             result.append(StoreReadWithImage(**store.model_dump(), image_url=image))
         return result
 
+    async def update_store(self, service_id: Id, data: StoreCreate) -> Store:
+        try:
+            return await self.stores_repo.update(service_id, data.model_dump())
+        except RecordNotFound as e:
+            raise StoreNotFound from e
+
+    async def delete_store(self, service_id: Id) -> None:
+        try:
+            await self.files_service.delete_file(service_id)  # delete image if exists
+        except FileNotFoundError:
+            pass
+        try:
+            await self.stores_repo.delete(service_id)
+        except RecordNotFound as e:
+            raise StoreNotFound from e
+
     async def create_store_image(self, store_id: Id, image: File) -> None:
         # assert store exists
         await self.get_store_by_id(store_id)  # type: ignore
@@ -57,5 +74,3 @@ class StoresService:
     async def delete_store_image(self, store_id: Id) -> None:
         await self.get_store_by_id(store_id)  # type: ignore
         await self.files_service.delete_file(store_id)
-
-    # TODO: delete store should delete image if it exists
