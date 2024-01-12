@@ -1,8 +1,8 @@
-# mypy: ignore-errors
-from typing import Sequence, Type, TypeVar, Generic
+from typing import Any, Sequence, Type, TypeVar, Generic
 from abc import ABC
 
-from sqlmodel import select, delete, and_, update
+from sqlalchemy import func
+from sqlmodel import select, and_
 from sqlmodel.sql.expression import SelectOfScalar
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -17,7 +17,7 @@ class BaseRepository(Generic[T], ABC):
         self.db = session
         self.cls = repositor_class
 
-    def _list_select(self, **filters) -> SelectOfScalar:
+    def _list_select(self, **filters: Any) -> SelectOfScalar[T]:
         query = select(self.cls)
         where_clauses = []
         for c, v in filters.items():
@@ -31,7 +31,7 @@ class BaseRepository(Generic[T], ABC):
         initial, *rest = where_clauses
         return query.where(and_(initial, *rest))
 
-    async def get_all(self, skip: int = 0, limit: int | None = None, **filters) -> Sequence[T]:
+    async def get_all(self, skip: int = 0, limit: int | None = None, **filters: Any) -> Sequence[T]:
         query = self._list_select(**filters).offset(skip).limit(limit)
         result = await self.db.exec(query)
         return result.all()
@@ -45,18 +45,33 @@ class BaseRepository(Generic[T], ABC):
         await self.db.refresh(record)
         return record
 
-    async def update(self, record_id: Id | str, new_data: dict) -> T:
+    async def update(self, record_id: Id | str, new_data: dict[str, Any]) -> T:
         existing = await self.get_by_id(record_id)
         if not existing:
             raise RecordNotFound
-        query = update(self.cls).where(self.cls.id == record_id).values(**new_data)
-        await self.db.exec(query)
-        await self.db.refresh(existing)
-        return existing
+        for key, value in new_data.items():
+            if hasattr(existing, key):
+                setattr(existing, key, value)
+        return await self.save(existing)
 
     async def delete(self, record_id: Id | str) -> None:
         existing = await self.get_by_id(record_id)
         if not existing:
             raise RecordNotFound
-        query = delete(self.cls).where(self.cls.id == record_id)
-        await self.db.exec(query)
+        await self.db.delete(existing)
+        await self.db.flush()
+
+    async def count_all(self, **filters: Any) -> int:
+        query = self._count_select(**filters)
+        result = await self.db.exec(query)
+        return result.one()
+
+    def _count_select(self, **filters: Any) -> SelectOfScalar[int]:
+        query = select(func.count()).select_from(self.cls)
+
+        # Applying filters, assuming keys in filters are column names of the Product model
+        for key, value in filters.items():
+            if hasattr(self.cls, key):
+                query = query.where(getattr(self.cls, key) == value)
+
+        return query
