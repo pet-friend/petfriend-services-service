@@ -7,12 +7,12 @@ from sqlmodel.sql.expression import SelectOfScalar
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.exceptions.repository import RecordNotFound
-from ..models.util import UUIDModel, Id
 
-T = TypeVar("T", bound=UUIDModel)
+T = TypeVar("T")  # Model
+PK = TypeVar("PK")  # Primary key type
 
 
-class BaseRepository(Generic[T], ABC):
+class BaseRepository(Generic[T, PK], ABC):
     def __init__(self, repositor_class: Type[T], session: AsyncSession):
         self.db = session
         self.cls = repositor_class
@@ -36,7 +36,7 @@ class BaseRepository(Generic[T], ABC):
         result = await self.db.exec(query)
         return result.all()
 
-    async def get_by_id(self, record_id: Id | str) -> T | None:
+    async def get_by_id(self, record_id: PK) -> T | None:
         return await self.db.get(self.cls, record_id)
 
     async def save(self, record: T) -> T:
@@ -45,7 +45,7 @@ class BaseRepository(Generic[T], ABC):
         await self.db.refresh(record)
         return record
 
-    async def update(self, record_id: Id | str, new_data: dict[str, Any]) -> T:
+    async def update(self, record_id: PK, new_data: dict[str, Any]) -> T:
         existing = await self.get_by_id(record_id)
         if not existing:
             raise RecordNotFound
@@ -54,7 +54,7 @@ class BaseRepository(Generic[T], ABC):
                 setattr(existing, key, value)
         return await self.save(existing)
 
-    async def delete(self, record_id: Id | str) -> None:
+    async def delete(self, record_id: PK) -> None:
         existing = await self.get_by_id(record_id)
         if not existing:
             raise RecordNotFound

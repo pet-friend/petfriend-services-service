@@ -1,5 +1,5 @@
 from decimal import Decimal
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import PrimaryKeyConstraint, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 from .util import Id, UUIDModel, TimestampModel
@@ -15,7 +15,7 @@ class ProductBase(SQLModel):
 
 # What the Product gets from the API (Base + id)
 class ProductRead(ProductBase, UUIDModel):
-    store_id: Id = Field(foreign_key="stores.id")
+    store_id: Id = Field(foreign_key="stores.id", primary_key=True)
     pass
 
 
@@ -28,7 +28,10 @@ class Product(ProductRead, TimestampModel, table=True):
     __tablename__ = "products"
 
     # Two products in the same store cannot have the same name:
-    __table_args__ = (UniqueConstraint("name", "store_id", name="product_name_uq"),)
+    __table_args__ = (
+        UniqueConstraint("name", "store_id", name="product_name_uq"),
+        PrimaryKeyConstraint("store_id", "id"),  # Make sure the order of the PK is (store_id, id)
+    )
 
 
 # Required attributes for creating a new record

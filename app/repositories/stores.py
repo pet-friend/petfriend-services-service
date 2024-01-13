@@ -1,12 +1,13 @@
 from fastapi import Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
-from app.models.stores import Store, StoreCreate
 
+from app.models.stores import Store, StoreCreate
+from app.models.util import Id
 from ..db import get_db
 from .base_repository import BaseRepository
 
 
-class StoresRepository(BaseRepository[Store]):
+class StoresRepository(BaseRepository[Store, Id | str]):
     def __init__(self, session: AsyncSession = Depends(get_db)):
         super().__init__(Store, session)
 

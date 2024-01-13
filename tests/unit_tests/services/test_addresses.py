@@ -38,7 +38,7 @@ class TestAddressesService(IsolatedAsyncioTestCase):
     async def test_create_address_twice_should_raise(self) -> None:
         # Given
         service_id = uuid4()
-        address = Address(service_id=service_id, **self.address_create.model_dump())
+        address = Address(id=service_id, **self.address_create.model_dump())
         self.repository.get_by_id.return_value = address
 
         # When, Then
@@ -49,7 +49,7 @@ class TestAddressesService(IsolatedAsyncioTestCase):
     async def test_get_address_should_call_repository_get_by_id(self) -> None:
         # Given
         service_id = uuid4()
-        address = Address(service_id=service_id, **self.address_create.model_dump())
+        address = Address(id=service_id, **self.address_create.model_dump())
         self.repository.get_by_id.return_value = address
 
         # When
@@ -72,7 +72,7 @@ class TestAddressesService(IsolatedAsyncioTestCase):
     async def test_update_address_should_call_repository_update(self) -> None:
         # Given
         service_id = uuid4()
-        address = Address(service_id=service_id, **self.address_create.model_dump())
+        address = Address(id=service_id, **self.address_create.model_dump())
         self.repository.update.side_effect = lambda _id, record: address
 
         # When

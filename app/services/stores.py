@@ -31,7 +31,7 @@ class StoresService:
         stores_count = await self.stores_repo.count_all(**filters)
         return stores_count
 
-    async def get_store_by_id(self, store_id: str) -> Store:
+    async def get_store_by_id(self, store_id: Id | str) -> Store:
         store = await self.stores_repo.get_by_id(store_id)
         if store is None:
             raise StoreNotFound
@@ -47,15 +47,15 @@ class StoresService:
 
     async def create_store_image(self, store_id: Id, image: File) -> None:
         # assert store exists
-        await self.get_store_by_id(store_id)  # type: ignore
+        await self.get_store_by_id(store_id)
         await self.files_service.create_file(store_id, image)
 
     async def set_store_image(self, store_id: Id, image: File) -> None:
-        await self.get_store_by_id(store_id)  # type: ignore
+        await self.get_store_by_id(store_id)
         await self.files_service.set_file(store_id, image)
 
     async def delete_store_image(self, store_id: Id) -> None:
-        await self.get_store_by_id(store_id)  # type: ignore
+        await self.get_store_by_id(store_id)
         await self.files_service.delete_file(store_id)
 
     # TODO: delete store should delete image if it exists

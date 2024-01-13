@@ -15,12 +15,7 @@ Id = uuid_pkg.UUID
 
 
 class UUIDModel(SQLModel):
-    id: Id = Field(
-        default_factory=uuid_pkg.uuid4,
-        primary_key=True,
-        nullable=False,
-        sa_column_kwargs={"unique": True},
-    )
+    id: Id = Field(default_factory=uuid_pkg.uuid4, primary_key=True)
 
 
 class TimestampModel(SQLModel):

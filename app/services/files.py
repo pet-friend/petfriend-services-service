@@ -25,26 +25,26 @@ class FilesService:
         ) as container:
             yield cls(container)
 
-    async def create_file(self, image_id: Id, file: File) -> None:
+    async def create_file(self, file_id: str | Id, file: File) -> None:
         try:
-            await self.container.upload_blob(str(image_id), file.file, overwrite=False)
+            await self.container.upload_blob(str(file_id), file.file, overwrite=False)
         except ResourceExistsError as e:
             raise FileExistsError() from e
 
-    async def set_file(self, file_id: Id, file: File) -> None:
+    async def set_file(self, file_id: str | Id, file: File) -> None:
         await self.container.upload_blob(str(file_id), file.file, overwrite=True)
 
-    async def delete_file(self, file_id: Id) -> None:
+    async def delete_file(self, file_id: str | Id) -> None:
         async with self.container.get_blob_client(str(file_id)) as blob:
             if not await blob.exists():
                 raise FileNotFoundError()
             await blob.delete_blob()
 
-    async def file_exists(self, file_id: Id) -> bool:
+    async def file_exists(self, file_id: str | Id) -> bool:
         async with self.container.get_blob_client(str(file_id)) as blob:
             return await blob.exists()
 
-    async def get_file_url(self, file_id: Id, token: str | None = None) -> str | None:
+    async def get_file_url(self, file_id: str | Id, token: str | None = None) -> str | None:
         async with self.container.get_blob_client(str(file_id)) as blob:
             if not await blob.exists():
                 return None

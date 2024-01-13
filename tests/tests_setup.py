@@ -1,8 +1,7 @@
 from unittest import IsolatedAsyncioTestCase
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
-
-
+from sqlalchemy.sql import text
 from httpx import AsyncClient
 
 from app.db import engine
@@ -17,6 +16,7 @@ class BaseDbTestCase(IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self) -> None:
         async with engine.begin() as conn:
+            await conn.execute(text("PRAGMA foreign_keys=ON"))
             await conn.run_sync(SQLModel.metadata.create_all)
 
     async def asyncTearDown(self) -> None:
