@@ -23,7 +23,6 @@ class StoresService:
     async def create_store(self, data: StoreCreate) -> Store:
         store = await self.stores_repo.get_by_name(data.name)
         if store is not None:
-            print(store)
             raise StoreAlreadyExists
         store = await self.stores_repo.create(data)
         return store
