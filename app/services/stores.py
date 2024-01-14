@@ -1,7 +1,8 @@
 from typing import Sequence, Any
 
 from fastapi import Depends
-from app.exceptions.stores import StoreNotFound
+from app.exceptions.repository import RecordNotFound
+from app.exceptions.stores import StoreAlreadyExists, StoreNotFound
 
 
 from app.models.stores import StoreCreate, Store, StoreReadWithImage
@@ -20,6 +21,9 @@ class StoresService:
         self.files_service = files_service
 
     async def create_store(self, data: StoreCreate) -> Store:
+        store = await self.stores_repo.get_by_name(data.name)
+        if store is not None:
+            raise StoreAlreadyExists
         store = await self.stores_repo.create(data)
         return store
 
@@ -45,6 +49,22 @@ class StoresService:
             result.append(StoreReadWithImage(**store.model_dump(), image_url=image))
         return result
 
+    async def update_store(self, service_id: Id, data: StoreCreate) -> Store:
+        try:
+            return await self.stores_repo.update(service_id, data.model_dump())
+        except RecordNotFound as e:
+            raise StoreNotFound from e
+
+    async def delete_store(self, service_id: Id) -> None:
+        try:
+            await self.delete_store_image(service_id)  # delete image if exists
+        except FileNotFoundError:
+            pass
+        try:
+            await self.stores_repo.delete(service_id)
+        except RecordNotFound as e:
+            raise StoreNotFound from e
+
     async def create_store_image(self, store_id: Id, image: File) -> None:
         # assert store exists
         await self.get_store_by_id(store_id)
@@ -57,5 +77,3 @@ class StoresService:
     async def delete_store_image(self, store_id: Id) -> None:
         await self.get_store_by_id(store_id)
         await self.files_service.delete_file(store_id)
-
-    # TODO: delete store should delete image if it exists
