@@ -73,7 +73,7 @@ async def products_images_service() -> AsyncGenerator[FilesService, None]:
         yield FilesService(container)
 
 
-async def stores_images_service() -> AsyncGenerator["FilesService", None]:
+async def stores_images_service() -> AsyncGenerator[FilesService, None]:
     async with ContainerClient.from_connection_string(
         settings.STORAGE_CONNECTION_STRING, settings.STORES_IMAGES_CONTAINER
     ) as container:

@@ -1,4 +1,5 @@
 import json
+from uuid import uuid4
 from tests.tests_setup import BaseAPITestCase
 
 from app.models.stores import Store
@@ -29,7 +30,7 @@ class TestStoresRoute(BaseAPITestCase):
         response = await self.client.post("/stores", json=valid_store)
         assert response.status_code == 201
         response2 = await self.client.post("/stores", json=valid_store)
-        assert response2.status_code == 400
+        assert response2.status_code == 409
 
     async def test_get_stores(self) -> None:
         response = await self.client.post("/stores", json=valid_store)
@@ -63,6 +64,41 @@ class TestStoresRoute(BaseAPITestCase):
         assert_store_db_equals_response(
             await self.db.get(Store, response_text["id"]), response_text2
         )
+
+    async def test_get_store_by_id_not_found(self) -> None:
+        response = await self.client.get(f"/stores/{uuid4()}")
+        assert response.status_code == 404
+
+    async def test_update_store(self) -> None:
+        response = await self.client.post("/stores", json=valid_store)
+        assert response.status_code == 201
+
+        response_text = json.loads(response.text)
+        response2 = await self.client.put(f"/stores/{response_text['id']}", json=valid_store2)
+        assert response2.status_code == 200
+
+        response_text2 = json.loads(response2.text)
+        assert_store_db_equals_response(
+            await self.db.get(Store, response_text["id"]), response_text2
+        )
+
+    async def test_update_store_not_found(self) -> None:
+        response = await self.client.put(f"/stores/{uuid4()}", json=valid_store)
+        assert response.status_code == 404
+
+    async def test_delete_store(self) -> None:
+        response = await self.client.post("/stores", json=valid_store)
+        assert response.status_code == 201
+
+        response_text = json.loads(response.text)
+        response2 = await self.client.delete(f"/stores/{response_text['id']}")
+        assert response2.status_code == 204
+
+        assert await self.db.get(Store, response_text["id"]) is None
+
+    async def test_delete_store_not_found(self) -> None:
+        response = await self.client.delete(f"/stores/{uuid4()}")
+        assert response.status_code == 404
 
 
 # Aux

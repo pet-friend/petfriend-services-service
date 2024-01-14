@@ -2,7 +2,7 @@ from typing import Sequence, Any
 
 from fastapi import Depends
 from app.exceptions.repository import RecordNotFound
-from app.exceptions.stores import StoreNotFound
+from app.exceptions.stores import StoreAlreadyExists, StoreNotFound
 
 
 from app.models.stores import StoreCreate, Store, StoreReadWithImage
@@ -21,6 +21,10 @@ class StoresService:
         self.files_service = files_service
 
     async def create_store(self, data: StoreCreate) -> Store:
+        store = await self.stores_repo.get_by_name(data.name)
+        if store is not None:
+            print(store)
+            raise StoreAlreadyExists
         store = await self.stores_repo.create(data)
         return store
 
@@ -54,7 +58,7 @@ class StoresService:
 
     async def delete_store(self, service_id: Id) -> None:
         try:
-            await self.files_service.delete_file(service_id)  # delete image if exists
+            await self.delete_store_image(service_id)  # delete image if exists
         except FileNotFoundError:
             pass
         try:

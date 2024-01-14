@@ -50,22 +50,22 @@ async def get_store(
     return (await store_service.get_stores_with_image([store]))[0]
 
 
-@router.put("", response_model=StoreRead)
+@router.put("/{store_id}", response_model=StoreRead)
 async def update_user_stores(
-    service_id: Id,
+    store_id: Id,
     data: StoreCreate,
     stores_service: StoresService = Depends(StoresService),
 ) -> StoreRead:
-    return await stores_service.update_store(service_id, data)
+    return await stores_service.update_store(store_id, data)
 
 
 @router.delete(
-    "",
+    "/{store_id}",
     responses=get_exception_docs(STORE_NOT_FOUND_ERROR),
     status_code=http_status.HTTP_204_NO_CONTENT,
 )
 async def delete_user_stores(
-    service_id: Id,
+    store_id: Id,
     stores_service: StoresService = Depends(StoresService),
 ) -> None:
-    await stores_service.delete_store(service_id)
+    await stores_service.delete_store(store_id)
