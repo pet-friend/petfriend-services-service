@@ -1,6 +1,7 @@
 from typing import Sequence
-from fastapi import Depends
 from asyncio import gather
+
+from fastapi import Depends
 
 from app.models.util import File, Id
 from app.models.products import ProductCreate, Product, ProductReadWithImage

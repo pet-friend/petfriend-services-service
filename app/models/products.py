@@ -16,7 +16,6 @@ class ProductBase(SQLModel):
 # What the Product gets from the API (Base + id)
 class ProductRead(ProductBase, UUIDModel):
     store_id: Id = Field(foreign_key="stores.id", primary_key=True)
-    pass
 
 
 class ProductReadWithImage(ProductRead):

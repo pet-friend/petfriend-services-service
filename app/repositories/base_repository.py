@@ -67,7 +67,8 @@ class BaseRepository(Generic[T, PK], ABC):
         return result.one()
 
     def _count_select(self, **filters: Any) -> SelectOfScalar[int]:
-        query = select(func.count()).select_from(self.cls)
+        # pylint bug: https://github.com/pylint-dev/pylint/issues/8138
+        query = select(func.count()).select_from(self.cls)  # pylint: disable=not-callable
 
         # Applying filters, assuming keys in filters are column names of the Product model
         for key, value in filters.items():
