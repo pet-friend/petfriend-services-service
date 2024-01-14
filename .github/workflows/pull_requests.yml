@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      CONTAINER_NAME: "petfriend-services-service-api-1"
+      CONTAINER_NAME: "petfriend-services-service_api_1"
 
     steps:
       - name: Checkout Repository
@@ -23,9 +23,6 @@ jobs:
 
       - name: Docker starts successfully
         run: docker-compose up --build -d
-
-      - name: Check docker ps
-        run: docker ps
 
       - name: Run linters
         run: docker exec $CONTAINER_NAME sh scripts/linters.sh
