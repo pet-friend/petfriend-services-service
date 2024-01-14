@@ -12,7 +12,7 @@ from app.services.stores import StoresService
 from app.services.files import FilesService
 from app.repositories.products import ProductsRepository
 from app.exceptions.repository import RecordNotFound
-from app.exceptions.products import ProductNotFound
+from app.exceptions.products import ProductNotFound, ProductAlreadyExists
 from tests.factories.product_factories import ProductCreateFactory
 from tests.factories.store_factories import StoreCreateFactory
 
@@ -32,7 +32,7 @@ class TestProductsService(IsolatedAsyncioTestCase):
     @pytest.mark.asyncio
     async def test_create_product_should_call_repository_save(self) -> None:
         # Given
-        self.repository.get_by_id.return_value = None
+        self.repository.get_by_name.return_value = None
         self.repository.save.side_effect = lambda x: x
         self.stores_service.get_store_by_id.return_value = self.store
 
@@ -103,18 +103,21 @@ class TestProductsService(IsolatedAsyncioTestCase):
     async def test_delete_product_should_call_repository_delete(self) -> None:
         # Given
         product_id = uuid4()
+        self.files_service.file_exists.return_value = False
 
         # When
         await self.service.delete_product(self.store.id, product_id)
 
         # Then
         self.repository.delete.assert_called_once_with((self.store.id, product_id))
+        self.files_service.file_exists.assert_called_once_with(f"{self.store.id}-{product_id}")
 
     @pytest.mark.asyncio
     async def test_update_product_not_exists_should_raise(self) -> None:
         # Given
         product_id = uuid4()
         self.repository.update.side_effect = RecordNotFound()
+        self.files_service.file_exists.return_value = False
 
         # When, Then
         with self.assertRaises(ProductNotFound):
@@ -129,3 +132,15 @@ class TestProductsService(IsolatedAsyncioTestCase):
         # When, Then
         with self.assertRaises(ProductNotFound):
             await self.service.delete_product(self.store.id, product_id)
+
+    @pytest.mark.asyncio
+    async def test_create_product_already_exists_should_raise(self) -> None:
+        # Given
+        product = Product(store_id=self.store.id, id=uuid4(), **self.product_create.model_dump())
+        self.repository.get_by_name.return_value = product
+
+        # When, Then
+        with self.assertRaises(ProductAlreadyExists):
+            await self.service.create_product(self.store.id, self.product_create)
+
+        self.repository.get_by_name.assert_called_once_with(self.store.id, self.product_create.name)

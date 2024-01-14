@@ -7,5 +7,5 @@ STORE_NOT_FOUND_ERROR = HTTPException(
 
 STORE_EXISTS_ERROR = HTTPException(
     status_code=status.HTTP_409_CONFLICT,
-    detail="Store already exists",
+    detail="A store with this name already exists",
 )

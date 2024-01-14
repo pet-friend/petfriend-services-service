@@ -1,6 +1,6 @@
 import uuid as uuid_pkg
 from datetime import datetime
-from typing import BinaryIO, Protocol
+from typing import Any, BinaryIO, Protocol
 
 from pydantic import BaseModel
 from sqlalchemy import text
@@ -37,3 +37,10 @@ class TimestampModel(SQLModel):
 
 class File(Protocol):
     file: BinaryIO
+
+
+class WithImage(Protocol):
+    image_url: str | None
+
+    def __init__(self, *, image_url: str | None, **kwargs: Any) -> None:
+        pass

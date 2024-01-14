@@ -1,3 +1,4 @@
+from asyncio import gather
 from typing import Sequence, Any
 
 from fastapi import Depends
@@ -42,12 +43,9 @@ class StoresService:
         return store
 
     async def get_stores_with_image(self, stores: Sequence[Store]) -> Sequence[StoreReadWithImage]:
-        result = []
         token = self.files_service.get_token()
-        for store in stores:  # TODO: make this concurrent
-            image = await self.files_service.get_file_url(store.id, token)
-            result.append(StoreReadWithImage(**store.model_dump(), image_url=image))
-        return result
+        token = self.files_service.get_token()
+        return await gather(*(self.__with_image(store, token) for store in stores))
 
     async def update_store(self, service_id: Id, data: StoreCreate) -> Store:
         try:
@@ -77,3 +75,7 @@ class StoresService:
     async def delete_store_image(self, store_id: Id) -> None:
         await self.get_store_by_id(store_id)
         await self.files_service.delete_file(store_id)
+
+    async def __with_image(self, store: Store, token: str) -> StoreReadWithImage:
+        image = await self.files_service.get_file_url(store.id, token)
+        return StoreReadWithImage(**store.model_dump(), image_url=image)

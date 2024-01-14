@@ -1,5 +1,4 @@
 # mypy: disable-error-code="method-assign"
-import datetime
 from uuid import uuid4
 
 from sqlmodel import select
@@ -21,19 +20,10 @@ class TestProductsRepository(BaseDbTestCase):
     def setUp(self) -> None:
         super().setUp()
         self.store_create = StoreCreateFactory.build()
-        self.store = Store(
-            id=uuid4(),
-            created_at=datetime.datetime(2023, 1, 1),
-            updated_at=datetime.datetime(2023, 1, 1),
-            **self.store_create.__dict__
-        )
+        self.store = Store(id=uuid4(), **self.store_create.__dict__)
         self.product_create = ProductCreateFactory.build()
         self.product = Product(
-            id=uuid4(),
-            store_id=self.store.id,
-            created_at=datetime.datetime(2023, 1, 1),
-            updated_at=datetime.datetime(2023, 1, 1),
-            **self.product_create.model_dump()
+            id=uuid4(), store_id=self.store.id, **self.product_create.model_dump()
         )
         self.product_repository = ProductsRepository(self.db)
 
@@ -41,7 +31,7 @@ class TestProductsRepository(BaseDbTestCase):
     async def test_save_should_save_product_to_db(self) -> None:
         # Given
         self.db.add(self.store)
-        await self.db.commit()
+        await self.db.flush()
 
         # When
         saved_record = await self.product_repository.save(self.product)
@@ -58,7 +48,8 @@ class TestProductsRepository(BaseDbTestCase):
     async def test_update_should_update_db(self) -> None:
         # Given
         self.db.add(self.store)
-        await self.db.commit()
+        await self.db.flush()
+
         product_2 = self.product.model_copy()
         product_2.description = ":D"
         created = await self.product_repository.save(self.product)
@@ -82,7 +73,8 @@ class TestProductsRepository(BaseDbTestCase):
     async def test_delete_should_update_db(self) -> None:
         # Given
         self.db.add(self.store)
-        await self.db.commit()
+        await self.db.flush()
+
         saved_record = await self.product_repository.save(self.product)
 
         # When
@@ -119,3 +111,31 @@ class TestProductsRepository(BaseDbTestCase):
         # When, Then
         with pytest.raises(IntegrityError):
             await self.product_repository.save(self.product)
+
+    @pytest.mark.asyncio
+    async def test_save_get_by_name_should_return_if_exists(self) -> None:
+        # Given
+        self.db.add(self.store)
+        await self.db.flush()
+        self.db.add(self.product)
+        await self.db.flush()
+
+        # When
+        saved_record = await self.product_repository.get_by_name(self.store.id, self.product.name)
+
+        # Then
+        assert saved_record == self.product
+
+    @pytest.mark.asyncio
+    async def test_save_get_by_name_should_return_if_not_exists(self) -> None:
+        # Given
+        self.db.add(self.store)
+        await self.db.flush()
+        self.db.add(self.product)
+        await self.db.flush()
+
+        # When
+        saved_record = await self.product_repository.get_by_name(self.store.id, "random product")
+
+        # Then
+        assert saved_record is None

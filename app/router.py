@@ -10,6 +10,8 @@ from .routes.stores import router as stores_router
 from .routes.stores_image import router as stores_image_router
 from .routes.example import router as example_router
 from .routes.addresses import router as addresses_router
+from .routes.products import router as products_router
+from .routes.products_image import router as products_image_router
 from .db import get_db
 
 api_router = APIRouter(
@@ -19,6 +21,8 @@ api_router.include_router(stores_router)
 api_router.include_router(example_router)
 api_router.include_router(addresses_router)
 api_router.include_router(stores_image_router)
+api_router.include_router(products_router)
+api_router.include_router(products_image_router)
 
 
 @api_router.get("/health", tags=["Healthcheck"])

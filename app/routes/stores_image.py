@@ -1,5 +1,4 @@
 from fastapi import APIRouter, UploadFile, status, Depends
-from app.routes.util import get_exception_docs
 
 from ..models.util import Id
 from ..services.stores import StoresService
@@ -9,17 +8,9 @@ from .responses.image import (
     NOT_FOUND_ERROR,
 )
 from .responses.stores import STORE_NOT_FOUND_ERROR
+from .util import get_exception_docs, get_image
 
 router = APIRouter(prefix="/stores/{store_id}/image", tags=["Store images"])
-
-
-def get_image(image: UploadFile) -> UploadFile:
-    """
-    Validates that the uploaded file is an image, and raises an exception otherwise.
-    """
-    if not (image.content_type and image.content_type.startswith("image/")):
-        raise INVALID_IMAGE_ERROR
-    return image
 
 
 @router.post(

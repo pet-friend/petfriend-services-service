@@ -32,7 +32,7 @@ async def create_address(
 @router.get(
     "", responses=get_exception_docs(ADDRESS_NOT_FOUND_ERROR), response_model=AddressReadRenamed
 )
-async def get_user_addresses(
+async def get_service_addresses(
     service_id: Id,
     addresses_service: AddressesService = Depends(AddressesService),
 ) -> AddressRead:
@@ -40,7 +40,7 @@ async def get_user_addresses(
 
 
 @router.put("", response_model=AddressReadRenamed)
-async def update_user_addresses(
+async def update_service_addresses(
     service_id: Id,
     data: AddressCreate,
     addresses_service: AddressesService = Depends(AddressesService),
@@ -56,7 +56,7 @@ async def update_user_addresses(
     responses=get_exception_docs(ADDRESS_NOT_FOUND_ERROR),
     status_code=http_status.HTTP_204_NO_CONTENT,
 )
-async def delete_user_addresses(
+async def delete_service_addresses(
     service_id: Id,
     addresses_service: AddressesService = Depends(AddressesService),
 ) -> None:
