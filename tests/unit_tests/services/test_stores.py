@@ -125,7 +125,9 @@ class TestStoresService(IsolatedAsyncioTestCase):
     async def test_delete_store_without_image_should_ignore_file_not_found(self) -> None:
         # Given
         self.repository.delete = AsyncMock(return_value=None)
-        self.service.files_service.delete_file = AsyncMock(side_effect=FileNotFoundError)  # type: ignore
+        self.service.files_service.delete_file = AsyncMock(  # type: ignore
+            side_effect=FileNotFoundError
+        )
         # When
         fetched_record = await self.service.delete_store("1")  # type: ignore
         # Then

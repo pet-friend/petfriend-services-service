@@ -1,4 +1,4 @@
-from enum import StrEnum
+from enum import StrEnum  # pylint: disable=E0611
 from decimal import Decimal
 
 from pydantic import field_validator, ValidationInfo, Field as PField
