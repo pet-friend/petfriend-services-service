@@ -1,7 +1,7 @@
 from unittest import IsolatedAsyncioTestCase
-from sqlmodel import SQLModel
+
+from sqlmodel import SQLModel, text
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlalchemy.sql import text
 from httpx import AsyncClient
 
 from app.db import engine
