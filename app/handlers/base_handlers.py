@@ -21,12 +21,12 @@ async def validation_exception_handler(_req: Request, exc: RequestValidationErro
     logging.critical(json.dumps(jsonable_encoder(exc.errors()), indent=4))
     for error in exc.errors():
         if error["type"] == "json_invalid":
-            name, char_no = error["loc"]
-            error_msg = f"{error["msg"]}. {error["ctx"]["error"]} (at {name}.{char_no})."
-            messages_dict.setdefault(name, []).append(error_msg)
+            field_name, char_no = error["loc"]
+            error_msg = f"{error["msg"]}. {error["ctx"]["error"]} (at {field_name}.{char_no})."
         else:
             field_name = error["loc"][-1]
-            messages_dict.setdefault(field_name, []).append(error["msg"])
+            error_msg = error["msg"]
+        messages_dict.setdefault(field_name, []).append(error_msg)
     json_schema = ValidatorSchema(detail=messages_dict).model_dump()
     return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=json_schema)
 
