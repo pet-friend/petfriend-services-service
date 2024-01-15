@@ -1,8 +1,7 @@
 from typing import Any, Sequence, Type, TypeVar, Generic
 from abc import ABC
 
-from sqlalchemy import func
-from sqlmodel import select, and_
+from sqlmodel import select, and_, func
 from sqlmodel.sql.expression import SelectOfScalar
 from sqlmodel.ext.asyncio.session import AsyncSession
 
