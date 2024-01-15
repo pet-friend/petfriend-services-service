@@ -5,7 +5,7 @@ from typing import AsyncGenerator, AsyncIterator, Callable, Awaitable
 
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.engine.base import Connection
 from sqlmodel.ext.asyncio.session import AsyncSession
 from alembic import command
@@ -21,25 +21,15 @@ engine = create_async_engine(
 )
 
 
-SessionLocal = sessionmaker(  # type: ignore
-    autocommit=False,
-    autoflush=False,
-    bind=engine,
-    expire_on_commit=False,
-    class_=AsyncSession,
+SessionLocal = async_sessionmaker(
+    autoflush=False, bind=engine, expire_on_commit=False, class_=AsyncSession
 )
 
 
 async def get_db(req: Request) -> AsyncGenerator[AsyncSession, None]:
-    db: AsyncSession = SessionLocal()
-    try:
+    async with SessionLocal() as db:
         req.state.db = db
         yield db
-    except Exception:
-        await db.rollback()
-        raise
-    finally:
-        await db.close()
 
 
 async def commit_db(req: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
