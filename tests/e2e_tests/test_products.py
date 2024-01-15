@@ -116,6 +116,7 @@ class TestStoresRoute(BaseAPITestCase):
 
         assert response_text.pop("store_id") == store_id
         response_text.pop("id")
+        response_text.pop("image_url")
         assert response_text.items() == self.product_create_json_data.items()
 
     async def test_create_and_modify_product(self) -> None:

@@ -10,7 +10,7 @@ from .responses.image import (
 from .responses.products import PRODUCT_NOT_FOUND_ERROR
 from .util import get_exception_docs, get_image
 
-router = APIRouter(prefix="/stores/{store_id}/products/{product_id}", tags=["Product images"])
+router = APIRouter(prefix="/stores/{store_id}/products/{product_id}/image", tags=["Product images"])
 
 
 @router.post(

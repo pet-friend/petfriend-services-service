@@ -9,7 +9,6 @@ from alembic import context
 from app.config import settings as fastapi_settings
 from app.db import engine
 from app.models.stores import Store  # noqa
-from app.models.example import Example  # noqa
 from app.models.addresses import Address  # noqa
 from app.models.products import Product  # noqa
 

@@ -3,10 +3,10 @@ from fastapi import APIRouter, Depends
 from fastapi import status as http_status
 
 from app.services.products import ProductsService
-from app.models.products import ProductRead, ProductCreate
+from app.models.products import ProductRead, ProductCreate, ProductReadWithImage
 from app.models.util import Id
 from .responses.stores import STORE_NOT_FOUND_ERROR
-from .responses.products import PRODUCT_NOT_FOUND_ERROR, PRODUCT_EXISTS_ERROR, NOT_FOUND_ERROR
+from .responses.products import PRODUCT_EXISTS_ERROR, PRODUCT_NOT_FOUND_ERROR
 from .util import get_exception_docs
 
 router = APIRouter(
@@ -32,20 +32,22 @@ async def create_product(
 async def get_store_products(
     store_id: Id,
     products_service: ProductsService = Depends(ProductsService),
-) -> Sequence[ProductRead]:
-    return await products_service.get_store_products(store_id)
+) -> Sequence[ProductReadWithImage]:
+    products = await products_service.get_store_products(store_id)
+    return await products_service.get_products_with_image(products)
 
 
-@router.get("/{product_id}", responses=get_exception_docs(NOT_FOUND_ERROR))
+@router.get("/{product_id}", responses=get_exception_docs(PRODUCT_NOT_FOUND_ERROR))
 async def get_product(
     store_id: Id,
     product_id: Id,
     products_service: ProductsService = Depends(ProductsService),
-) -> ProductRead:
-    return await products_service.get_product(store_id, product_id)
+) -> ProductReadWithImage:
+    product = await products_service.get_product(store_id, product_id)
+    return (await products_service.get_products_with_image((product,)))[0]
 
 
-@router.put("/{product_id}")
+@router.put("/{product_id}", responses=get_exception_docs(PRODUCT_NOT_FOUND_ERROR))
 async def update_store_product(
     store_id: Id,
     product_id: Id,
