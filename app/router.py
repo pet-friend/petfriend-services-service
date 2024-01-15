@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
+from app.validators.error_schema import ErrorSchema
+
 from .models.util import HealthCheck
 from .validators.validator_schema import ValidatorSchema
 from .routes.stores import router as stores_router
@@ -13,7 +15,10 @@ from .routes.addresses import router as addresses_router
 from .db import get_db
 
 api_router = APIRouter(
-    responses={"400": {"model": ValidatorSchema, "description": "Bad Request"}},
+    responses={
+        "400": {"model": ValidatorSchema, "description": "Bad Request"},
+        "500": {"model": ErrorSchema, "description": "Internal Server Error"},
+    },
 )
 api_router.include_router(stores_router)
 api_router.include_router(example_router)
