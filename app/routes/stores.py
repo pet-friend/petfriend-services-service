@@ -4,7 +4,6 @@ from fastapi import status as http_status
 from app.models.stores import StoreCreate, StoreRead, StoreReadWithImage
 from app.models.util import Id
 from app.routes.responses.stores import STORE_NOT_FOUND_ERROR
-from app.validators.error_schema import ErrorSchema
 from app.serializers.stores import StoreList
 from app.services.stores import StoresService
 from .util import get_exception_docs
