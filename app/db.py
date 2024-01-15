@@ -11,6 +11,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from alembic import command
 from alembic.config import Config
 
+from app.handlers.base_handlers import handle_http_exception
 from .config import settings
 
 # Enable pool pre-ping to avoid failing when database container scales to 0
@@ -49,13 +50,16 @@ async def commit_db(req: Request, call_next: Callable[[Request], Awaitable[Respo
     try:
         logging.debug("Committing database changes")
         await db.commit()
+        return response
     except Exception as e:
         logging.error("Error committing database changes", exc_info=e)
         await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to persist changes"
-        ) from e
-    return response
+        return handle_http_exception(
+            req,
+            HTTPException(
+                status.HTTP_500_INTERNAL_SERVER_ERROR, "Failed to persist database changes"
+            ),
+        )
 
 
 @asynccontextmanager

@@ -9,7 +9,12 @@ from app.validators.error_schema import ErrorSchema
 
 def handle_exception(_req: Request, exc: Exception) -> Response:
     logging.error("Internal Server Error", exc_info=exc)
-    return Response("Internal Server Error", status_code=500)
+    return handle_http_exception(
+        _req,
+        HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error"
+        ),
+    )
 
 
 async def validation_exception_handler(_req: Request, exc: RequestValidationError) -> JSONResponse:
