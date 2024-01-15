@@ -26,12 +26,7 @@ async def get_stores(
     return StoreList(stores=await store_service.get_stores_with_image(stores), amount=stores_amount)
 
 
-@router.post(
-    "",
-    response_model_exclude_none=True,
-    status_code=http_status.HTTP_201_CREATED,
-    responses={400: {"model": ErrorSchema}},
-)
+@router.post("", response_model_exclude_none=True, status_code=http_status.HTTP_201_CREATED)
 async def create_store(
     data: StoreCreate, store_service: StoresService = Depends(StoresService)
 ) -> StoreRead:
