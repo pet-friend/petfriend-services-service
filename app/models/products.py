@@ -9,7 +9,7 @@ class ProductBase(SQLModel):
     name: str
     description: str | None = None
     enabled: bool = True
-    price: Decimal = Field(max_digits=14, decimal_places=2)
+    price: Decimal = Field(max_digits=14, decimal_places=2, ge=0)
     available: int | None = None
 
 

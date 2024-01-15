@@ -14,15 +14,19 @@ def handle_exception(_req: Request, exc: Exception) -> Response:
 
 async def validation_exception_handler(_req: Request, exc: RequestValidationError) -> JSONResponse:
     logging.error("Request Validation Error", exc_info=exc)
-    messages_dict = {}
+    messages_dict: dict[str, list[str]] = {}
+    from fastapi.encoders import jsonable_encoder
+    import json
+
+    logging.critical(json.dumps(jsonable_encoder(exc.errors()), indent=4))
     for error in exc.errors():
-        logging.info(error["loc"][-1])
-        field_name = error["loc"][-1]
-        if field_name not in messages_dict:
-            messages_dict[field_name] = [error["msg"]]
+        if error["type"] == "json_invalid":
+            name, char_no = error["loc"]
+            error_msg = f"{error["msg"]}. {error["ctx"]["error"]} (at {name}.{char_no})."
+            messages_dict.setdefault(name, []).append(error_msg)
         else:
-            errors = messages_dict[field_name]
-            errors.append(error["msg"])
+            field_name = error["loc"][-1]
+            messages_dict.setdefault(field_name, []).append(error["msg"])
     json_schema = ValidatorSchema(detail=messages_dict).model_dump()
     return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=json_schema)
 
