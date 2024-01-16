@@ -27,9 +27,12 @@ SessionLocal = async_sessionmaker(
 
 
 async def get_db(req: Request) -> AsyncGenerator[AsyncSession, None]:
-    async with SessionLocal() as db:
-        req.state.db = db
-        yield db
+    try:
+        async with SessionLocal() as db:
+            req.state.db = db
+            yield db
+    finally:
+        req.state.db = None
 
 
 async def commit_db(req: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
