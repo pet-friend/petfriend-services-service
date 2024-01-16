@@ -26,6 +26,7 @@ class TestStoresRoute(BaseAPITestCase):
         store_id = json.loads(r_store.text)["id"]
         r_image = await self.client.post(f"/stores/{store_id}/image", files={"image": IMAGE})
         assert r_image.status_code == 201
+        assert r_image.json()["image_url"]
 
         r_store_get = await self.client.get(f"/stores/{store_id}")
         assert r_store_get.status_code == 200
@@ -43,6 +44,7 @@ class TestStoresRoute(BaseAPITestCase):
         store_id = json.loads(r_store.text)["id"]
         r_image = await self.client.post(f"/stores/{store_id}/image", files={"image": IMAGE})
         assert r_image.status_code == 201
+        assert r_image.json()["image_url"]
 
         r_image_del = await self.client.delete(f"/stores/{store_id}/image")
         assert r_image_del.status_code == 204
@@ -59,8 +61,11 @@ class TestStoresRoute(BaseAPITestCase):
         store_id = json.loads(r_store.text)["id"]
         r_image = await self.client.post(f"/stores/{store_id}/image", files={"image": IMAGE})
         assert r_image.status_code == 201
+        assert r_image.json()["image_url"]
+
         r_image = await self.client.put(f"/stores/{store_id}/image", files={"image": IMAGE_2})
         assert r_image.status_code == 200
+        assert r_image.json()["image_url"]
 
         r_store_get = await self.client.get(f"/stores/{store_id}")
         assert r_store_get.status_code == 200
@@ -79,6 +84,7 @@ class TestStoresRoute(BaseAPITestCase):
         store_id = json.loads(r_store.text)["id"]
         r_image = await self.client.put(f"/stores/{store_id}/image", files={"image": IMAGE})
         assert r_image.status_code == 200
+        assert r_image.json()["image_url"]
 
         r_store_get = await self.client.get(f"/stores/{store_id}")
         assert r_store_get.status_code == 200
@@ -126,5 +132,6 @@ class TestStoresRoute(BaseAPITestCase):
         store_id = json.loads(r_store.text)["id"]
         r_image = await self.client.post(f"/stores/{store_id}/image", files={"image": IMAGE})
         assert r_image.status_code == 201
+        assert r_image.json()["image_url"]
         r_image = await self.client.post(f"/stores/{store_id}/image", files={"image": IMAGE_2})
         assert r_image.status_code == 409

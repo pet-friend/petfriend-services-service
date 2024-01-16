@@ -63,14 +63,14 @@ class StoresService:
         except RecordNotFound as e:
             raise StoreNotFound from e
 
-    async def create_store_image(self, store_id: Id, image: File) -> None:
+    async def create_store_image(self, store_id: Id, image: File) -> str:
         # assert store exists
         await self.get_store_by_id(store_id)
-        await self.files_service.create_file(store_id, image)
+        return await self.files_service.create_file(store_id, image)
 
-    async def set_store_image(self, store_id: Id, image: File) -> None:
+    async def set_store_image(self, store_id: Id, image: File) -> str:
         await self.get_store_by_id(store_id)
-        await self.files_service.set_file(store_id, image)
+        return await self.files_service.set_file(store_id, image)
 
     async def delete_store_image(self, store_id: Id) -> None:
         await self.get_store_by_id(store_id)

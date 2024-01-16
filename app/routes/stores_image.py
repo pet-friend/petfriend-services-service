@@ -1,6 +1,6 @@
 from fastapi import APIRouter, UploadFile, status, Depends
 
-from ..models.util import Id
+from ..models.util import Id, ImageUrlModel
 from ..services.stores import StoresService
 from .responses.image import (
     IMAGE_EXISTS_ERROR,
@@ -22,8 +22,9 @@ async def create_store_image(
     store_id: Id,
     image: UploadFile = Depends(get_image),
     service: StoresService = Depends(StoresService),
-) -> None:
-    await service.create_store_image(store_id, image)
+) -> ImageUrlModel:
+    url = await service.create_store_image(store_id, image)
+    return ImageUrlModel(image_url=url)
 
 
 @router.put(
@@ -34,8 +35,9 @@ async def set_store_image(
     store_id: Id,
     image: UploadFile = Depends(get_image),
     service: StoresService = Depends(StoresService),
-) -> None:
-    await service.set_store_image(store_id, image)
+) -> ImageUrlModel:
+    url = await service.set_store_image(store_id, image)
+    return ImageUrlModel(image_url=url)
 
 
 @router.delete(

@@ -35,6 +35,14 @@ class TimestampModel(SQLModel):
     )
 
 
+class ImageUrlModel(SQLModel):
+    image_url: str
+
+
+class OptionalImageUrlModel(SQLModel):
+    image_url: str | None = None
+
+
 class File(Protocol):
     file: BinaryIO
 

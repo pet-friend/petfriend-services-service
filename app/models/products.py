@@ -2,7 +2,7 @@ from decimal import Decimal
 from sqlalchemy import PrimaryKeyConstraint, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
-from .util import Id, UUIDModel, TimestampModel
+from .util import Id, UUIDModel, TimestampModel, OptionalImageUrlModel
 
 
 class ProductBase(SQLModel):
@@ -18,8 +18,8 @@ class ProductRead(ProductBase, UUIDModel):
     store_id: Id = Field(foreign_key="stores.id", primary_key=True)
 
 
-class ProductReadWithImage(ProductRead):
-    image_url: str | None = None
+class ProductReadWithImage(ProductRead, OptionalImageUrlModel):
+    pass
 
 
 # Actual data in database table (Base + id + timestamps)

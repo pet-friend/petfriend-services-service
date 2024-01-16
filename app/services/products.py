@@ -59,14 +59,15 @@ class ProductsService:
         token = self.files_service.get_token()
         return await gather(*(self.__with_image(product, token) for product in products))
 
-    async def create_product_image(self, store_id: Id, product_id: Id, image: File) -> None:
-        # assert store exists
+    async def create_product_image(self, store_id: Id, product_id: Id, image: File) -> str:
         await self.get_product(store_id, product_id)
-        await self.files_service.create_file(self.__get_image_id(store_id, product_id), image)
+        return await self.files_service.create_file(
+            self.__get_image_id(store_id, product_id), image
+        )
 
-    async def set_product_image(self, store_id: Id, product_id: Id, image: File) -> None:
+    async def set_product_image(self, store_id: Id, product_id: Id, image: File) -> str:
         await self.get_product(store_id, product_id)
-        await self.files_service.set_file(self.__get_image_id(store_id, product_id), image)
+        return await self.files_service.set_file(self.__get_image_id(store_id, product_id), image)
 
     async def delete_product_image(self, store_id: Id, product_id: Id) -> None:
         await self.get_product(store_id, product_id)

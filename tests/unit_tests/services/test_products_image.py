@@ -74,9 +74,12 @@ class TestProductsService(IsolatedAsyncioTestCase):
         self.repository.get_by_id.return_value = self.product
 
         # When
-        await self.service.create_product_image(self.product.store_id, self.product.id, self.file)
+        url = await self.service.create_product_image(
+            self.product.store_id, self.product.id, self.file
+        )
 
         # Then
+        assert url
         self.repository.get_by_id.assert_called_once_with((self.product.store_id, self.product.id))
         self.files_service.create_file.assert_called_once_with(
             f"{self.product.store_id}-{self.product.id}", self.file
@@ -88,9 +91,12 @@ class TestProductsService(IsolatedAsyncioTestCase):
         self.repository.get_by_id.return_value = self.product
 
         # When
-        await self.service.set_product_image(self.product.store_id, self.product.id, self.file)
+        url = await self.service.set_product_image(
+            self.product.store_id, self.product.id, self.file
+        )
 
         # Then
+        assert url
         self.repository.get_by_id.assert_called_once_with((self.product.store_id, self.product.id))
         self.files_service.set_file.assert_called_once_with(
             f"{self.product.store_id}-{self.product.id}", self.file

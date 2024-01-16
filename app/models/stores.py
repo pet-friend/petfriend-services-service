@@ -7,7 +7,7 @@ from app.models.constants.stores import (
     MAX_DELIVERY_RANGE,
     INVALID_DELIVERY_RANGE_MSG,
 )
-from .util import UUIDModel, TimestampModel
+from .util import UUIDModel, TimestampModel, OptionalImageUrlModel
 
 
 class StoreBase(SQLModel):
@@ -28,8 +28,8 @@ class StoreRead(StoreBase, UUIDModel):
     pass
 
 
-class StoreReadWithImage(StoreRead):
-    image_url: str | None = None
+class StoreReadWithImage(StoreRead, OptionalImageUrlModel):
+    pass
 
 
 # Actual data in database table (Base + id + timestamps)
