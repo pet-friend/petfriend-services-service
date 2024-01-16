@@ -1,50 +1,19 @@
-from contextlib import asynccontextmanager
 import logging
 import os
-import time
-from typing import Any, AsyncIterator
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
-from sqlalchemy.engine.base import Connection
 import uvicorn
-from alembic.config import Config
-from alembic import command
+
 
 from app.handlers import add_exception_handlers
 from app.router import api_router
 from .log import setup_logs
 from .config import settings
-from .db import engine
+from .db import commit_db, run_migrations
 
 setup_logs()
-
-
-@asynccontextmanager
-async def run_migrations(_: FastAPI) -> AsyncIterator[None]:
-    connection_attempt = 0
-    while connection_attempt < 5:
-        connection_attempt += 1
-        logging.info(f"Attempting connection to database {connection_attempt}")
-        try:
-
-            def run(connection: Connection) -> None:
-                alembic_cfg = Config("alembic.ini")
-                alembic_cfg.attributes["connection"] = connection
-                command.upgrade(alembic_cfg, "head")
-
-            logging.info("Running migrations...")
-            async with engine.begin() as conn:
-                await conn.run_sync(run)
-            logging.info("Migrations have been run")
-            break
-        except ConnectionRefusedError as exc:
-            logging.info("Could not connect to database")
-            if connection_attempt >= 5:
-                logging.error("Max attempts reached, throwing error")
-                raise exc
-            time.sleep(10)
-    yield
 
 
 def custom_openapi() -> dict[str, Any]:
@@ -79,6 +48,7 @@ def create_app() -> FastAPI:
     new_app.include_router(api_router)
     new_app.openapi = custom_openapi  # type: ignore[method-assign]
     add_exception_handlers(new_app)
+    new_app.middleware("http")(commit_db)
     return new_app
 
 
