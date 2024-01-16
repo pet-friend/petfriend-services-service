@@ -1,5 +1,5 @@
 # mypy: disable-error-code="method-assign"
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock, patch
 from unittest import IsolatedAsyncioTestCase
 from uuid import uuid4
 
@@ -21,31 +21,43 @@ class TestUsersService(IsolatedAsyncioTestCase):
     def tearDown(self) -> None:
         self.file.file.close()
 
+    @patch("app.services.files.FilesService.get_token")
     @pytest.mark.asyncio
-    async def test_create_file_calls_upload_blob(self) -> None:
+    async def test_create_file_calls_upload_blob(self, mock: Mock) -> None:
         # Given
         file_id = uuid4()
+        mock.return_value = "token"
+        blob = AsyncMock(spec=BlobClient)
+        blob.url = "blob"
+        self.container.upload_blob.return_value.__aenter__.return_value = blob
 
         # When
-        await self.service.create_file(file_id, self.file)
+        url = await self.service.create_file(file_id, self.file)
 
         # Then
         self.container.upload_blob.assert_called_once_with(
             str(file_id), self.file.file, overwrite=False
         )
+        assert url == "blob?token"
 
+    @patch("app.services.files.FilesService.get_token")
     @pytest.mark.asyncio
-    async def test_set_file_calls_upload_blob(self) -> None:
+    async def test_set_file_calls_upload_blob(self, mock: Mock) -> None:
         # Given
         file_id = uuid4()
+        mock.return_value = "token"
+        blob = AsyncMock(spec=BlobClient)
+        blob.url = "blob"
+        self.container.upload_blob.return_value.__aenter__.return_value = blob
 
         # When
-        await self.service.set_file(file_id, self.file)
+        url = await self.service.set_file(file_id, self.file)
 
         # Then
         self.container.upload_blob.assert_called_once_with(
             str(file_id), self.file.file, overwrite=True
         )
+        assert url == "blob?token"
 
     @pytest.mark.asyncio
     async def test_delete_file_calls_delete_blob(self) -> None:

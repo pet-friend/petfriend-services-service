@@ -49,16 +49,18 @@ class TestAddressesRepository(BaseDbTestCase):
         address_2.country_code = CountryAlpha2("BR")
 
         # When
-        saved_record = await self.address_repository.save(self.address)
-        saved_record = await self.address_repository.update(saved_record.id, address_2.model_dump())
+        created = await self.address_repository.save(self.address)
+        updated = await self.address_repository.update(created.id, address_2.model_dump())
         all_records = await self.address_repository.get_all()
 
         # Then
-        assert all_records == [address_2]
-        assert saved_record == address_2
-        addresses = (await self.db.exec(select(Address))).all()
-        assert len(addresses) == 1
-        assert addresses[0] == address_2
+        assert created == updated  # should update the original object
+
+        assert updated.updated_at != address_2.updated_at  # should update the updated_at field
+        address_2.updated_at = updated.updated_at
+
+        assert updated == address_2
+        assert all_records == [updated]
 
     @pytest.mark.asyncio
     async def test_delete_should_update_db(self) -> None:

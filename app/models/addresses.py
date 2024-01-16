@@ -26,8 +26,8 @@ class AddressBase(SQLModel):
     street_number: str
     type: AddressType
     apartment: str | None = Field(default=None)
-    latitude: Decimal = Field(max_digits=9, decimal_places=6)
-    longitude: Decimal = Field(max_digits=9, decimal_places=6)
+    latitude: Decimal = Field(max_digits=9, decimal_places=6, ge=-90, le=90)
+    longitude: Decimal = Field(max_digits=9, decimal_places=6, ge=-180, le=180)
 
     model_config = {"validate_default": True}
 

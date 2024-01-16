@@ -59,10 +59,7 @@ filterwarnings = [
 omit = [
     "app/db.py",
     "app/main.py",
-    "app/routes/example.py",
     "app/router.py",
     "app/log.py",
-    "app/repositories/example.py",
-    "app/models/example.py",
     "app/config.py",
 ]
