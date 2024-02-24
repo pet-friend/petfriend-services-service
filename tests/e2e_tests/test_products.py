@@ -10,7 +10,7 @@ from tests.factories.product_factories import ProductCreateFactory
 from tests.tests_setup import BaseAPITestCase
 
 
-class TestStoresRoute(BaseAPITestCase):
+class TestStoresProductsRoute(BaseAPITestCase):
     def setUp(self) -> None:
         super().setUp()
         self.store_create_json_data = StoreCreateFactory.build().model_dump(mode="json")

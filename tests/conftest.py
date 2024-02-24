@@ -30,3 +30,8 @@ def blob_setup() -> Generator[None, None, None]:
     yield
     stores_client.delete_container()
     products_client.delete_container()
+
+
+@pytest.fixture
+def non_mocked_hosts() -> list[str]:
+    return ["test", "localhost"]

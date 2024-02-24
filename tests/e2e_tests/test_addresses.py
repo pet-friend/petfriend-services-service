@@ -10,7 +10,7 @@ from tests.factories.address_factories import AddressCreateFactory
 from tests.tests_setup import BaseAPITestCase
 
 
-class TestUsersRoute(BaseAPITestCase):
+class TestAddressesRoute(BaseAPITestCase):
     def setUp(self) -> None:
         super().setUp()
         self.address_create_json_data = AddressCreateFactory.build(
