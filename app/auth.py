@@ -2,8 +2,8 @@ from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from .routes.responses.auth import UNAUTHORIZED
-from app.exceptions.users import InvalidToken
-from app.models.util import Id
+from .exceptions.users import InvalidToken
+from .models.util import Id
 from .services.users import UsersService
 
 
