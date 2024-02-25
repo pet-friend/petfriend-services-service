@@ -21,7 +21,7 @@ class TestProductsService(IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.product_create = ProductCreateFactory.build()
 
-        self.store = Store(id=uuid4(), **StoreCreateFactory.build().model_dump())
+        self.store = Store(id=uuid4(), owner_id=uuid4(), **StoreCreateFactory.build().model_dump())
         self.stores_service = AsyncMock(spec=StoresService)
 
         self.repository = AsyncMock(spec=ProductsRepository)

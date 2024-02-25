@@ -7,7 +7,7 @@ from app.models.constants.stores import (
     MAX_DELIVERY_RANGE,
     INVALID_DELIVERY_RANGE_MSG,
 )
-from .util import UUIDModel, TimestampModel, OptionalImageUrlModel
+from .util import Id, UUIDModel, TimestampModel, OptionalImageUrlModel
 
 
 class StoreBase(SQLModel):
@@ -24,8 +24,7 @@ class StoreBase(SQLModel):
 
 # What the Store gets from the API (Base + id)
 class StoreRead(StoreBase, UUIDModel):
-    # TODO: owner_id: Id (retrieved from auth credentials)
-    pass
+    owner_id: Id
 
 
 class StoreReadWithImage(StoreRead, OptionalImageUrlModel):

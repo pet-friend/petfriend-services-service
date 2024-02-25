@@ -20,7 +20,7 @@ class TestProductsRepository(BaseDbTestCase):
     def setUp(self) -> None:
         super().setUp()
         self.store_create = StoreCreateFactory.build()
-        self.store = Store(id=uuid4(), **self.store_create.__dict__)
+        self.store = Store(id=uuid4(), owner_id=uuid4(), **self.store_create.__dict__)
         self.product_create = ProductCreateFactory.build()
         self.product = Product(
             id=uuid4(), store_id=self.store.id, **self.product_create.model_dump()

@@ -6,6 +6,7 @@ from app.models.util import Id
 from app.routes.responses.stores import STORE_NOT_FOUND_ERROR
 from app.serializers.stores import StoreList
 from app.services.stores import StoresService
+from app.auth import get_caller_id
 from .util import get_exception_docs
 
 
@@ -27,9 +28,11 @@ async def get_stores(
 
 @router.post("", response_model_exclude_none=True, status_code=http_status.HTTP_201_CREATED)
 async def create_store(
-    data: StoreCreate, store_service: StoresService = Depends(StoresService)
+    data: StoreCreate,
+    store_service: StoresService = Depends(StoresService),
+    owner_id: Id = Depends(get_caller_id),
 ) -> StoreRead:
-    return await store_service.create_store(data)
+    return await store_service.create_store(data, owner_id)
 
 
 @router.get(

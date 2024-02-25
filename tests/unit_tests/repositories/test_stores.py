@@ -1,12 +1,13 @@
 # mypy: disable-error-code="method-assign"
 import datetime
+from uuid import uuid4
 from unittest import IsolatedAsyncioTestCase
+from unittest.mock import AsyncMock, Mock, patch
 
 from sqlalchemy import ScalarResult
-from app.models.stores import Store
-from uuid import uuid4
-from unittest.mock import AsyncMock, Mock
 import pytest
+
+from app.models.stores import Store
 from app.repositories.stores import StoresRepository
 from tests.factories.store_factories import StoreCreateFactory
 
@@ -16,6 +17,7 @@ class TestStoresRepository(IsolatedAsyncioTestCase):
         self.store_create = StoreCreateFactory.build()
         self.store = Store(
             id=uuid4(),
+            owner_id=uuid4(),
             created_at=datetime.datetime(2023, 1, 1),
             updated_at=datetime.datetime(2023, 1, 1),
             **self.store_create.__dict__
@@ -28,13 +30,21 @@ class TestStoresRepository(IsolatedAsyncioTestCase):
     async def test_save_should_save_store_to_db(self) -> None:
         # Given
         self.stores_repository.save = AsyncMock(return_value=self.store)
-        Store.model_validate = Mock(return_value=self.store)
-        # When
-        saved_record = await self.stores_repository.create(self.store_create)
-        # Then
-        assert saved_record == self.store
-        Store.model_validate.assert_called_once_with(self.store_create)
-        self.stores_repository.save.assert_called_once_with(self.store)
+
+        with patch("app.repositories.stores.Store") as store_cls_mock:
+            store_cls_mock.return_value = self.store
+
+            # When
+            saved_record = await self.stores_repository.create(
+                self.store_create, self.store.owner_id
+            )
+
+            # Then
+            assert saved_record == self.store
+            store_cls_mock.assert_called_once_with(
+                **self.store_create.__dict__, owner_id=self.store.owner_id
+            )
+            self.stores_repository.save.assert_called_once_with(self.store)
 
     @pytest.mark.asyncio
     async def test_get_by_name_should_get_store_by_name(self) -> None:

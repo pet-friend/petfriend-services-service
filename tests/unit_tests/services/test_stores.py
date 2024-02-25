@@ -19,6 +19,7 @@ class TestStoresService(IsolatedAsyncioTestCase):
         )
         self.store = Store(
             id=uuid4(),
+            owner_id=uuid4(),
             created_at=datetime.datetime(2023, 1, 1),
             updated_at=datetime.datetime(2023, 1, 1),
             **self.store_create.__dict__
@@ -32,19 +33,23 @@ class TestStoresService(IsolatedAsyncioTestCase):
         # Given
         self.repository.create = AsyncMock(return_value=self.store)
         self.repository.get_by_name = AsyncMock(return_value=None)
+
         # When
-        saved_record = await self.service.create_store(self.store_create)
+        saved_record = await self.service.create_store(self.store_create, self.store.owner_id)
+
         # Then
         assert saved_record == self.store
-        self.repository.create.assert_called_once_with(self.store_create)
+        self.repository.create.assert_called_once_with(self.store_create, self.store.owner_id)
 
     @pytest.mark.asyncio
     async def test_create_store_with_existing_name_should_raise_store_already_exists(self) -> None:
         # Given
         self.repository.get_by_name = AsyncMock(return_value=self.store)
+
         # When
         with pytest.raises(StoreAlreadyExists):
-            await self.service.create_store(self.store_create)
+            await self.service.create_store(self.store_create, self.store.owner_id)
+
         # Then
         self.repository.get_by_name.assert_called_once_with(self.store_create.name)
 

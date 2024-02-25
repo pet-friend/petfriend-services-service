@@ -21,11 +21,11 @@ class StoresService:
         self.stores_repo = stores_repo
         self.files_service = files_service
 
-    async def create_store(self, data: StoreCreate) -> Store:
+    async def create_store(self, data: StoreCreate, owner_id: Id) -> Store:
         store = await self.stores_repo.get_by_name(data.name)
         if store is not None:
             raise StoreAlreadyExists
-        store = await self.stores_repo.create(data)
+        store = await self.stores_repo.create(data, owner_id)
         return store
 
     async def get_stores(self, limit: int, offset: int, **filters: Any) -> Sequence[Store]:
