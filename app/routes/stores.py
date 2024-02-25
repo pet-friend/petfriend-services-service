@@ -13,19 +13,6 @@ from .util import get_exception_docs
 router = APIRouter(prefix="/stores", tags=["Stores"])
 
 
-@router.get("", response_model_exclude_none=True)
-async def get_stores(
-    limit: int = Query(10, ge=1),
-    offset: int = Query(0, ge=0),
-    store_service: StoresService = Depends(StoresService),
-) -> StoreList:
-    filters = {}  # type: ignore
-
-    stores = await store_service.get_stores(limit, offset, **filters)
-    stores_amount = await store_service.count_stores(**filters)
-    return StoreList(stores=await store_service.get_stores_with_image(stores), amount=stores_amount)
-
-
 @router.post("", response_model_exclude_none=True, status_code=http_status.HTTP_201_CREATED)
 async def create_store(
     data: StoreCreate,
@@ -33,6 +20,29 @@ async def create_store(
     owner_id: Id = Depends(get_caller_id),
 ) -> StoreRead:
     return await store_service.create_store(data, owner_id)
+
+
+@router.get("", response_model_exclude_none=True)
+async def get_stores(
+    limit: int = Query(10, ge=1),
+    offset: int = Query(0, ge=0),
+    store_service: StoresService = Depends(StoresService),
+) -> StoreList:
+    stores = await store_service.get_stores(limit, offset)
+    stores_amount = await store_service.count_stores()
+    return StoreList(stores=await store_service.get_stores_with_image(stores), amount=stores_amount)
+
+
+@router.get("/me", response_model_exclude_none=True)
+async def get_my_stores(
+    limit: int = Query(10, ge=1),
+    offset: int = Query(0, ge=0),
+    store_service: StoresService = Depends(StoresService),
+    owner_id: Id = Depends(get_caller_id),
+) -> StoreList:
+    stores = await store_service.get_stores(limit, offset, owner_id=owner_id)
+    stores_amount = await store_service.count_stores(owner_id=owner_id)
+    return StoreList(stores=await store_service.get_stores_with_image(stores), amount=stores_amount)
 
 
 @router.get(

@@ -1,7 +1,8 @@
 from decimal import Decimal
 from sqlalchemy import PrimaryKeyConstraint, UniqueConstraint
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
 
+from .stores import Store
 from .util import Id, UUIDModel, TimestampModel, OptionalImageUrlModel
 
 
@@ -31,6 +32,8 @@ class Product(ProductRead, TimestampModel, table=True):
         UniqueConstraint("name", "store_id", name="product_name_uq"),
         PrimaryKeyConstraint("store_id", "id"),  # Make sure the order of the PK is (store_id, id)
     )
+
+    store: "Store" = Relationship(sa_relationship_kwargs={"lazy": "selectin"})
 
 
 # Required attributes for creating a new record

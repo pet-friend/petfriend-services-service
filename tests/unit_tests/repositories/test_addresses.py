@@ -7,6 +7,7 @@ import pytest
 from pydantic_extra_types.country import CountryAlpha2
 
 from app.models.addresses import Address
+from app.models.service import Service, ServiceType
 from app.repositories.addresses import AddressesRepository
 from app.exceptions.repository import RecordNotFound
 from tests.factories.address_factories import AddressCreateFactory
@@ -18,9 +19,11 @@ class TestAddressesRepository(BaseDbTestCase):
 
     def setUp(self) -> None:
         super().setUp()
+
+        self.service = Service(id=uuid4(), type=ServiceType.STORE)
         self.address_create = AddressCreateFactory.build(type="other", country_code="AR")
         self.address = Address(
-            id=uuid4(),
+            id=self.service.id,
             created_at=datetime.datetime(2023, 1, 1),
             updated_at=datetime.datetime(2023, 1, 1),
             **self.address_create.model_dump()
@@ -29,7 +32,9 @@ class TestAddressesRepository(BaseDbTestCase):
 
     @pytest.mark.asyncio
     async def test_save_should_save_address_to_db(self) -> None:
-        # Given setUp
+        # Given
+        self.db.add(self.service)
+        await self.db.flush()
 
         # When
         saved_record = await self.address_repository.save(self.address)
@@ -45,11 +50,13 @@ class TestAddressesRepository(BaseDbTestCase):
     @pytest.mark.asyncio
     async def test_update_should_update_db(self) -> None:
         # Given
+        self.db.add(self.service)
+        await self.db.flush()
         address_2 = self.address.model_copy()
         address_2.country_code = CountryAlpha2("BR")
+        created = await self.address_repository.save(self.address)
 
         # When
-        created = await self.address_repository.save(self.address)
         updated = await self.address_repository.update(created.id, address_2.model_dump())
         all_records = await self.address_repository.get_all()
 
@@ -59,12 +66,14 @@ class TestAddressesRepository(BaseDbTestCase):
         assert updated.updated_at != address_2.updated_at  # should update the updated_at field
         address_2.updated_at = updated.updated_at
 
-        assert updated == address_2
+        assert updated.model_dump() == address_2.model_dump()
         assert all_records == [updated]
 
     @pytest.mark.asyncio
     async def test_delete_should_update_db(self) -> None:
-        # Given setUp
+        # Given
+        self.db.add(self.service)
+        await self.db.flush()
 
         # When
         saved_record = await self.address_repository.save(self.address)

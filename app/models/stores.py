@@ -1,5 +1,5 @@
 from typing import Optional
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
 from pydantic import field_validator
 
 from app.models.constants.stores import (
@@ -7,7 +7,8 @@ from app.models.constants.stores import (
     MAX_DELIVERY_RANGE,
     INVALID_DELIVERY_RANGE_MSG,
 )
-from .util import Id, UUIDModel, TimestampModel, OptionalImageUrlModel
+from app.models.service import Service
+from .util import Id, TimestampModel, OptionalImageUrlModel
 
 
 class StoreBase(SQLModel):
@@ -23,8 +24,8 @@ class StoreBase(SQLModel):
 
 
 # What the Store gets from the API (Base + id)
-class StoreRead(StoreBase, UUIDModel):
-    owner_id: Id
+class StoreRead(StoreBase):
+    id: Id = Field(foreign_key="services.id", primary_key=True)
 
 
 class StoreReadWithImage(StoreRead, OptionalImageUrlModel):
@@ -34,6 +35,9 @@ class StoreReadWithImage(StoreRead, OptionalImageUrlModel):
 # Actual data in database table (Base + id + timestamps)
 class Store(StoreRead, TimestampModel, table=True):
     __tablename__ = "stores"
+
+    owner_id: Id
+    service: Service = Relationship(sa_relationship_kwargs={"lazy": "selectin"})
 
 
 # Required attributes for creating a new record

@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, Mock, patch
 from sqlalchemy import ScalarResult
 import pytest
 
+from app.models.service import Service, ServiceType
 from app.models.stores import Store
 from app.repositories.stores import StoresRepository
 from tests.factories.store_factories import StoreCreateFactory
@@ -15,8 +16,9 @@ from tests.factories.store_factories import StoreCreateFactory
 class TestStoresRepository(IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.store_create = StoreCreateFactory.build()
+        service = Service(id=uuid4(), type=ServiceType.STORE)
         self.store = Store(
-            id=uuid4(),
+            service=service,
             owner_id=uuid4(),
             created_at=datetime.datetime(2023, 1, 1),
             updated_at=datetime.datetime(2023, 1, 1),
@@ -31,8 +33,11 @@ class TestStoresRepository(IsolatedAsyncioTestCase):
         # Given
         self.stores_repository.save = AsyncMock(return_value=self.store)
 
-        with patch("app.repositories.stores.Store") as store_cls_mock:
+        with patch("app.repositories.stores.Store") as store_cls_mock, patch(
+            "app.repositories.stores.Service"
+        ) as service_cls_mock:
             store_cls_mock.return_value = self.store
+            service_cls_mock.return_value = self.store.service
 
             # When
             saved_record = await self.stores_repository.create(
@@ -42,8 +47,11 @@ class TestStoresRepository(IsolatedAsyncioTestCase):
             # Then
             assert saved_record == self.store
             store_cls_mock.assert_called_once_with(
-                **self.store_create.__dict__, owner_id=self.store.owner_id
+                **self.store_create.__dict__,
+                owner_id=self.store.owner_id,
+                service=self.store.service
             )
+            service_cls_mock.assert_called_once_with(type=ServiceType.STORE)
             self.stores_repository.save.assert_called_once_with(self.store)
 
     @pytest.mark.asyncio

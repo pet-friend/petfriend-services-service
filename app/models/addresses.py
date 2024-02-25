@@ -5,7 +5,7 @@ from pydantic import field_validator, ValidationInfo, Field as PField
 from pydantic_extra_types.country import CountryAlpha2
 from sqlmodel import SQLModel, Field
 
-from .util import UUIDModel, TimestampModel, Id
+from .util import TimestampModel, Id
 from .constants.addresses import MISSING_APARTMENT_MSG
 
 
@@ -42,7 +42,7 @@ class AddressBase(SQLModel):
 
 # What the user gets from the API (Base + id)
 class AddressRead(AddressBase):
-    pass
+    id: Id = Field(foreign_key="services.id", primary_key=True)
 
 
 class AddressReadRenamed(AddressRead):
@@ -50,7 +50,7 @@ class AddressReadRenamed(AddressRead):
 
 
 # Actual data in database table (Base + id + timestamps)
-class Address(AddressRead, UUIDModel, TimestampModel, table=True):
+class Address(AddressRead, TimestampModel, table=True):
     __tablename__ = "addresses"
 
 

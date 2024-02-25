@@ -6,7 +6,7 @@ from sqlmodel import select
 
 from app.models.addresses import Address, AddressType
 from tests.factories.address_factories import AddressCreateFactory
-
+from tests.fixtures.stores import valid_store
 from tests.tests_setup import BaseAPITestCase
 
 
@@ -18,7 +18,10 @@ class TestAddressesRoute(BaseAPITestCase):
         ).model_dump(mode="json")
 
     async def test_create_address_with_all_fields(self) -> None:
-        service_id = str(uuid4())
+        response = await self.client.post("/stores", json=valid_store)
+        assert response.status_code == 201
+        service_id = response.json()["id"]
+
         self.address_create_json_data["type"] = AddressType.APARTMENT
         self.address_create_json_data["apartment"] = "1A"
 
@@ -36,7 +39,10 @@ class TestAddressesRoute(BaseAPITestCase):
         assert response_text == self.address_create_json_data
 
     async def test_create_address_with_required_fields(self) -> None:
-        service_id = str(uuid4())
+        response = await self.client.post("/stores", json=valid_store)
+        assert response.status_code == 201
+        service_id = response.json()["id"]
+
         self.address_create_json_data["type"] = AddressType.HOUSE
 
         r_address = await self.client.post(
@@ -53,7 +59,10 @@ class TestAddressesRoute(BaseAPITestCase):
         assert response_text == self.address_create_json_data
 
     async def test_create_address_without_some_required_fields(self) -> None:
-        service_id = str(uuid4())
+        response = await self.client.post("/stores", json=valid_store)
+        assert response.status_code == 201
+        service_id = response.json()["id"]
+
         del self.address_create_json_data["country_code"]
 
         r_address = await self.client.post(
@@ -68,7 +77,10 @@ class TestAddressesRoute(BaseAPITestCase):
         assert len(addresses_db) == 0
 
     async def test_create_address_with_invalid_country_code_should_return_400(self) -> None:
-        service_id = str(uuid4())
+        response = await self.client.post("/stores", json=valid_store)
+        assert response.status_code == 201
+        service_id = response.json()["id"]
+
         self.address_create_json_data["country_code"] = "xx"
         r_address = await self.client.post(
             f"/addresses/{service_id}", json=self.address_create_json_data
@@ -83,7 +95,10 @@ class TestAddressesRoute(BaseAPITestCase):
         assert len(addresses_db) == 0
 
     async def test_cant_create_multiple_addresses(self) -> None:
-        service_id = str(uuid4())
+        response = await self.client.post("/stores", json=valid_store)
+        assert response.status_code == 201
+        service_id = response.json()["id"]
+
         address_create_json_data_2 = AddressCreateFactory.build(
             country_code="AR", type="other"
         ).model_dump(mode="json")
@@ -99,7 +114,10 @@ class TestAddressesRoute(BaseAPITestCase):
         assert r_address_2.status_code == 409
 
     async def test_create_and_get(self) -> None:
-        service_id = str(uuid4())
+        response = await self.client.post("/stores", json=valid_store)
+        assert response.status_code == 201
+        service_id = response.json()["id"]
+
         self.address_create_json_data["type"] = AddressType.APARTMENT
         self.address_create_json_data["apartment"] = "1A"
 
@@ -115,7 +133,10 @@ class TestAddressesRoute(BaseAPITestCase):
         assert response_text.items() == self.address_create_json_data.items()
 
     async def test_can_create_with_put(self) -> None:
-        service_id = str(uuid4())
+        response = await self.client.post("/stores", json=valid_store)
+        assert response.status_code == 201
+        service_id = response.json()["id"]
+
         self.address_create_json_data["type"] = AddressType.APARTMENT
         self.address_create_json_data["apartment"] = "1A"
 
@@ -133,7 +154,10 @@ class TestAddressesRoute(BaseAPITestCase):
         assert response_text == self.address_create_json_data
 
     async def test_create_and_modify_address(self) -> None:
-        service_id = str(uuid4())
+        response = await self.client.post("/stores", json=valid_store)
+        assert response.status_code == 201
+        service_id = response.json()["id"]
+
         self.address_create_json_data["type"] = AddressType.APARTMENT
         self.address_create_json_data["apartment"] = "1A"
 
@@ -150,7 +174,10 @@ class TestAddressesRoute(BaseAPITestCase):
         assert response_text_2 == response_text
 
     async def test_create_delete_get_address_returns_404(self) -> None:
-        service_id = str(uuid4())
+        response = await self.client.post("/stores", json=valid_store)
+        assert response.status_code == 201
+        service_id = response.json()["id"]
+
         self.address_create_json_data["type"] = AddressType.APARTMENT
         self.address_create_json_data["apartment"] = "1A"
 
