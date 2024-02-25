@@ -37,7 +37,7 @@ def custom_openapi() -> dict[str, Any]:
                 for _, param in method_item.items():
                     responses = param.get("responses")
                     # remove 422 response, also can remove other status code
-                    if "422" in responses:
+                    if "422" in responses and responses["422"]["description"] == "Validation Error":
                         del responses["422"]
     return app.openapi_schema
 

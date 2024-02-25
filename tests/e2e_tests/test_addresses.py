@@ -1,6 +1,7 @@
 from typing import Sequence, Any
 import json
 from uuid import uuid4
+import pytest
 
 from sqlmodel import select
 
@@ -31,6 +32,8 @@ class TestAddressesRoute(BaseAPITestCase):
         assert r_address.status_code == 201
         response_text: dict[str, Any] = json.loads(r_address.text)
         address: Address | None = await self.db.get(Address, response_text["service_id"])
+        response_text.pop("latitude")
+        response_text.pop("longitude")
 
         assert address is not None
         assert address.created_at is not None
@@ -51,6 +54,8 @@ class TestAddressesRoute(BaseAPITestCase):
         assert r_address.status_code == 201
         response_text: dict[str, Any] = json.loads(r_address.text)
         address: Address | None = await self.db.get(Address, response_text["service_id"])
+        response_text.pop("latitude")
+        response_text.pop("longitude")
 
         assert address is not None
         assert address.created_at is not None
@@ -128,6 +133,8 @@ class TestAddressesRoute(BaseAPITestCase):
         r_get = await self.client.get(f"/addresses/{service_id}")
         assert r_get.status_code == 200
         response_text: dict[str, Any] = json.loads(r_get.text)
+        response_text.pop("latitude")
+        response_text.pop("longitude")
 
         assert response_text.pop("service_id") == service_id
         assert response_text.items() == self.address_create_json_data.items()
@@ -146,6 +153,8 @@ class TestAddressesRoute(BaseAPITestCase):
         assert r_address.status_code == 200
         response_text: dict[str, Any] = json.loads(r_address.text)
         address: Address | None = await self.db.get(Address, response_text["service_id"])
+        response_text.pop("latitude")
+        response_text.pop("longitude")
 
         assert address is not None
         assert address.created_at is not None
@@ -197,3 +206,28 @@ class TestAddressesRoute(BaseAPITestCase):
 
         r_delete = await self.client.delete(f"/addresses/{service_id}")
         assert r_delete.status_code == 404
+
+    @pytest.mark.invalidaddress
+    async def test_create_non_existent_address(self) -> None:
+        response = await self.client.post("/stores", json=valid_store)
+        assert response.status_code == 201
+        service_id = response.json()["id"]
+
+        self.address_create_json_data["type"] = AddressType.APARTMENT
+        self.address_create_json_data["apartment"] = "1A"
+
+        r_address = await self.client.post(
+            f"/addresses/{service_id}", json=self.address_create_json_data
+        )
+        assert r_address.status_code == 422
+
+    async def test_create_address_no_service(self) -> None:
+        service_id = uuid4()
+
+        r_address = await self.client.post(
+            f"/addresses/{service_id}", json=self.address_create_json_data
+        )
+        assert r_address.status_code == 404
+
+        addresses_db: Sequence[Address] = (await self.db.exec(select(Address))).all()
+        assert len(addresses_db) == 0

@@ -5,7 +5,12 @@ from app.services.addresses import AddressesService
 from app.exceptions.addresses import AddressNotFound
 from app.models.addresses import AddressRead, AddressCreate, AddressReadRenamed
 from app.models.util import Id
-from .responses.addresses import ADDRESS_NOT_FOUND_ERROR, ADDRESS_EXISTS_ERROR
+from .responses.addresses import (
+    ADDRESS_NOT_FOUND_ERROR,
+    ADDRESS_EXISTS_ERROR,
+    NON_EXISTENT_ADDRESS_ERROR,
+    SERVICE_NOT_FOUND_ERROR,
+)
 from .util import get_exception_docs
 
 router = APIRouter(
@@ -18,7 +23,9 @@ router = APIRouter(
 @router.post(
     "",
     status_code=http_status.HTTP_201_CREATED,
-    responses=get_exception_docs(ADDRESS_EXISTS_ERROR),
+    responses=get_exception_docs(
+        ADDRESS_EXISTS_ERROR, SERVICE_NOT_FOUND_ERROR, NON_EXISTENT_ADDRESS_ERROR
+    ),
     response_model=AddressReadRenamed,
 )
 async def create_address(
@@ -39,7 +46,11 @@ async def get_service_addresses(
     return await addresses_service.get_address(service_id)
 
 
-@router.put("", response_model=AddressReadRenamed)
+@router.put(
+    "",
+    response_model=AddressReadRenamed,
+    responses=get_exception_docs(ADDRESS_NOT_FOUND_ERROR, NON_EXISTENT_ADDRESS_ERROR),
+)
 async def update_service_addresses(
     service_id: Id,
     data: AddressCreate,

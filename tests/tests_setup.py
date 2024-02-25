@@ -7,6 +7,7 @@ import pytest
 from sqlmodel import SQLModel, text
 from sqlmodel.ext.asyncio.session import AsyncSession
 from httpx import ASGITransport, AsyncClient
+from app.exceptions.addresses import NonExistentAddress
 
 from app.exceptions.users import InvalidToken
 from app.models.util import Id
@@ -54,6 +55,20 @@ class BaseAPITestCase(BaseDbTestCase):
 
             self.headers = {"Authorization": f"Bearer {user_token}"} if mock_auth else {}
             self.user_id = user_id
+            yield
+
+    @pytest.fixture(autouse=True)
+    def mock_google_maps(self, request: pytest.FixtureRequest) -> Generator[None, None, None]:
+        """
+        Mocks google maps requests
+        """
+        mock_lat_long = "invalidaddress" not in request.keywords
+
+        with patch("app.services.addresses.AddressesService.get_address_coordinates") as mock:
+            if mock_lat_long:
+                mock.return_value = (0, 0)
+            else:
+                mock.side_effect = NonExistentAddress
             yield
 
     def setUp(self) -> None:

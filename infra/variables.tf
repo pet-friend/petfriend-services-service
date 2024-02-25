@@ -20,3 +20,14 @@ variable "app_name" {
   description = "Application name, used in the resource names"
   type        = string
 }
+
+variable "users_service_url" {
+  description = "URL of the users service"
+  type        = string
+}
+
+variable "google_maps_api_key" {
+  description = "Google Maps API key"
+  type        = string
+  sensitive   = true
+}

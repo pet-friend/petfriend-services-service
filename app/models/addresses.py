@@ -1,5 +1,4 @@
 from enum import StrEnum
-from decimal import Decimal
 
 from pydantic import field_validator, ValidationInfo, Field as PField
 from pydantic_extra_types.country import CountryAlpha2
@@ -18,16 +17,13 @@ class AddressType(StrEnum):
 
 # Base model
 class AddressBase(SQLModel):
-    country_code: CountryAlpha2
-    region: str  # State, province, etc.
-    city: str
-    postal_code: str
     street: str
     street_number: str
+    city: str
+    region: str  # State, province, etc.
+    country_code: CountryAlpha2
     type: AddressType
     apartment: str | None = Field(default=None)
-    latitude: Decimal = Field(max_digits=9, decimal_places=6, ge=-90, le=90)
-    longitude: Decimal = Field(max_digits=9, decimal_places=6, ge=-180, le=180)
 
     model_config = {"validate_default": True}
 
@@ -43,6 +39,9 @@ class AddressBase(SQLModel):
 # What the user gets from the API (Base + id)
 class AddressRead(AddressBase):
     id: Id = Field(foreign_key="services.id", primary_key=True)
+
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
 
 
 class AddressReadRenamed(AddressRead):

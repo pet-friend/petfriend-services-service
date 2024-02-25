@@ -26,6 +26,8 @@ class TestAddressesRepository(BaseDbTestCase):
             id=self.service.id,
             created_at=datetime.datetime(2023, 1, 1),
             updated_at=datetime.datetime(2023, 1, 1),
+            latitude=-34.6036844,
+            longitude=-58.3815591,
             **self.address_create.model_dump()
         )
         self.address_repository = AddressesRepository(self.db)
