@@ -52,3 +52,8 @@ class WithImage(Protocol):
 
     def __init__(self, *, image_url: str | None, **kwargs: Any) -> None:
         pass
+
+
+class Coordinates(SQLModel):
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)

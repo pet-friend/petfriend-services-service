@@ -45,7 +45,8 @@ class Store(StoreRead, TimestampModel, table=True):
         sa_relationship_kwargs={"lazy": "selectin"}, back_populates="store"
     )
     products: list["Product"] = Relationship(
-        sa_relationship_kwargs={"lazy": "selectin", "cascade": "all, delete-orphan"}
+        sa_relationship_kwargs={"lazy": "selectin", "cascade": "all, delete-orphan"},
+        back_populates="store",
     )
 
 

@@ -33,7 +33,9 @@ class Product(ProductRead, TimestampModel, table=True):
         PrimaryKeyConstraint("store_id", "id"),  # Make sure the order of the PK is (store_id, id)
     )
 
-    store: "Store" = Relationship(sa_relationship_kwargs={"lazy": "selectin"})
+    store: "Store" = Relationship(
+        sa_relationship_kwargs={"lazy": "selectin"}, back_populates="products"
+    )
 
 
 # Required attributes for creating a new record
