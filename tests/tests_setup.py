@@ -1,9 +1,15 @@
+from typing import Generator
 from unittest import IsolatedAsyncioTestCase
+from unittest.mock import patch
+from uuid import uuid4
 
+import pytest
 from sqlmodel import SQLModel, text
 from sqlmodel.ext.asyncio.session import AsyncSession
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 
+from app.exceptions.users import InvalidToken
+from app.models.util import Id
 from app.db import engine
 from app.main import app
 
@@ -28,9 +34,32 @@ class BaseDbTestCase(IsolatedAsyncioTestCase):
 class BaseAPITestCase(BaseDbTestCase):
     client: AsyncClient
 
+    @pytest.fixture(autouse=True)
+    def mock_auth(self, request: pytest.FixtureRequest) -> Generator[None, None, None]:
+        """
+        Mocks the server authentication.
+        """
+        mock_auth = "noauth" not in request.keywords
+        user_token = str(uuid4())
+        user_id = uuid4()
+
+        with patch("app.services.users.UsersService.validate_user") as mock:
+
+            def check_token(token: str) -> Id:
+                if token == user_token and mock_auth:
+                    return user_id
+                raise InvalidToken
+
+            mock.side_effect = check_token
+
+            self.headers = {"Authorization": f"Bearer {user_token}"} if mock_auth else {}
+            self.user_id = user_id
+            yield
+
     def setUp(self) -> None:
         super().setUp()
-        self.client = AsyncClient(app=app, base_url="http://test")
+        transport = ASGITransport(app=app)  # type: ignore
+        self.client = AsyncClient(transport=transport, base_url="http://test", headers=self.headers)
 
     async def asyncTearDown(self) -> None:
         await super().asyncTearDown()

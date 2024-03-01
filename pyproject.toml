@@ -54,6 +54,7 @@ filterwarnings = [
     "ignore::DeprecationWarning:pydantic_core.*:",
     "ignore::DeprecationWarning:azure.*:",
 ]
+markers = ["noauth: fail authentication on e2e tests"]
 
 [tool.coverage.run]
 omit = [

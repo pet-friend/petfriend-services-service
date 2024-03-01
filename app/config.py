@@ -8,6 +8,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     app_name: str = "Services API"
     DB_URL: str = Field(validation_alias="DATABASE_URL")
+    USERS_SERVICE_URL: str = Field(validation_alias="USERS_SERVICE_URL")
     DB_FORCE_ROLLBACK: bool = False
     DB_ARGUMENTS: dict[str, str | bool] = {}
     DEBUG: bool = False
@@ -38,6 +39,7 @@ class TestingSettings(Settings):
     DB_URL: str = "sqlite+aiosqlite:///:memory:"
     DB_FORCE_ROLLBACK: bool = True
     DB_ARGUMENTS: dict[str, str | bool] = {"check_same_thread": False}
+    USERS_SERVICE_URL: str = "http://service_url"
 
     __test__ = False  # Prevent pytest from discovering this class as a test class
 

@@ -4,10 +4,12 @@ from fastapi import APIRouter, Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
-from app.validators.error_schema import ErrorSchema
-
+from .auth import authenticate
+from .validators.error_schema import ErrorSchema
 from .models.util import HealthCheck
 from .validators.validator_schema import ValidatorSchema
+from .routes.responses.auth import UNAUTHORIZED
+from .routes.util import get_exception_docs
 from .routes.stores import router as stores_router
 from .routes.stores_image import router as stores_image_router
 from .routes.products import router as products_router
@@ -21,11 +23,17 @@ api_router = APIRouter(
         "500": {"model": ErrorSchema, "description": "Internal Server Error"},
     },
 )
-api_router.include_router(stores_router)
-api_router.include_router(stores_image_router)
-api_router.include_router(products_router)
-api_router.include_router(products_image_router)
-api_router.include_router(addresses_router)
+
+auth_router = APIRouter(
+    responses=get_exception_docs(UNAUTHORIZED), dependencies=[Depends(authenticate)]
+)
+auth_router.include_router(stores_router)
+auth_router.include_router(stores_image_router)
+auth_router.include_router(products_router)
+auth_router.include_router(products_image_router)
+auth_router.include_router(addresses_router)
+
+api_router.include_router(auth_router)
 
 
 @api_router.get("/health", tags=["Healthcheck"])
