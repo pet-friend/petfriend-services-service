@@ -10,3 +10,7 @@ class StoreCreateFactory(ModelFactory[StoreCreate]):
     @classmethod
     def delivery_range_km(cls) -> float:
         return cls.__random__.uniform(MIN_DELIVERY_RANGE, MAX_DELIVERY_RANGE)
+
+    @classmethod
+    def shipping_cost(cls) -> float:
+        return cls.__random__.uniform(0, 100)
