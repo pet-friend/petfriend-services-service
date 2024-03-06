@@ -1,10 +1,11 @@
+import logging
 from typing import Iterable, Sequence
 from asyncio import gather
 
 from fastapi import Depends
 
 from app.models.util import File, Id
-from app.models.products import ProductCreate, Product, ProductReadWithImage
+from app.models.products import CategoryEnum, ProductCreate, Product, ProductReadWithImage
 from app.repositories.products import ProductsRepository
 from app.exceptions.repository import RecordNotFound
 from app.exceptions.products import ProductAlreadyExists, ProductNotFound
@@ -27,6 +28,9 @@ class ProductsService:
         await self.stores_service.get_store_by_id(store_id)  # assert store exists
         if await self.products_repo.get_by_name(store_id, data.name) is not None:
             raise ProductAlreadyExists
+        # map data.categories to CategoryEnum
+        data.categories = [CategoryEnum(category_id) for category_id in data.categories]
+        logging.info(f"Creating product {data.name} in store {store_id} with data {data}")
         product = Product(store_id=store_id, **data.model_dump())
         return await self.products_repo.save(product)
 
