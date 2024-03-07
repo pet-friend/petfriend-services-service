@@ -45,7 +45,7 @@ class StoresService:
     async def get_stores_with_image(self, stores: Sequence[Store]) -> Sequence[StoreReadWithImage]:
         token = self.files_service.get_token()
         token = self.files_service.get_token()
-        return await gather(*(self.__with_image(store, token) for store in stores))
+        return await gather(*(self.__readable(store, token) for store in stores))
 
     async def update_store(self, service_id: Id, data: StoreCreate) -> Store:
         try:
@@ -76,6 +76,6 @@ class StoresService:
         await self.get_store_by_id(store_id)
         await self.files_service.delete_file(store_id)
 
-    async def __with_image(self, store: Store, token: str) -> StoreReadWithImage:
+    async def __readable(self, store: Store, token: str) -> StoreReadWithImage:
         image = await self.files_service.get_file_url(store.id, token)
         return StoreReadWithImage(**store.model_dump(), image_url=image)

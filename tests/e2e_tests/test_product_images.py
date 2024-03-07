@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from httpx import AsyncClient
 
-from app.models.products import ProductReadWithImage
+from app.models.products import ProductRead
 from tests.factories.product_factories import ProductCreateFactory
 from tests.factories.store_factories import StoreCreateFactory
 from tests.tests_setup import BaseAPITestCase
@@ -39,7 +39,7 @@ class TestProductsRoute(BaseAPITestCase):
 
         r_product_get = await self.client.get(f"/stores/{store_id}/products/{product_id}")
         assert r_product_get.status_code == 200
-        product = ProductReadWithImage.model_validate_json(r_product_get.text)
+        product = ProductRead.model_validate_json(r_product_get.text)
         assert product.image_url is not None
 
         async with AsyncClient() as client:
@@ -68,7 +68,7 @@ class TestProductsRoute(BaseAPITestCase):
 
         r_product_get = await self.client.get(f"/stores/{store_id}/products/{product_id}")
         assert r_product_get.status_code == 200
-        product = ProductReadWithImage.model_validate_json(r_product_get.text)
+        product = ProductRead.model_validate_json(r_product_get.text)
         assert product.image_url is None
 
     async def test_post_put_should_get_second_image(self) -> None:
@@ -94,7 +94,7 @@ class TestProductsRoute(BaseAPITestCase):
 
         r_product_get = await self.client.get(f"/stores/{store_id}/products/{product_id}")
         assert r_product_get.status_code == 200
-        product = ProductReadWithImage.model_validate_json(r_product_get.text)
+        product = ProductRead.model_validate_json(r_product_get.text)
         assert product.image_url is not None
 
         async with AsyncClient() as client:
@@ -120,7 +120,7 @@ class TestProductsRoute(BaseAPITestCase):
 
         r_product_get = await self.client.get(f"/stores/{store_id}/products/{product_id}")
         assert r_product_get.status_code == 200
-        product = ProductReadWithImage.model_validate_json(r_product_get.text)
+        product = ProductRead.model_validate_json(r_product_get.text)
         assert product.image_url is not None
 
     async def test_product_starts_without_image(self) -> None:
@@ -136,7 +136,7 @@ class TestProductsRoute(BaseAPITestCase):
 
         r_product_get = await self.client.get(f"/stores/{store_id}/products/{product_id}")
         assert r_product_get.status_code == 200
-        product = ProductReadWithImage.model_validate_json(r_product_get.text)
+        product = ProductRead.model_validate_json(r_product_get.text)
         assert product.image_url is None
 
     async def test_post_image_no_product_should_return_404(self) -> None:
