@@ -1,10 +1,10 @@
 from uuid import uuid4
 from unittest import IsolatedAsyncioTestCase
-from unittest.mock import AsyncMock, ANY
+from unittest.mock import AsyncMock
 import pytest
 from app.exceptions.stores import StoreNotFound
 
-from app.models.products import Category, Product, ProductCategories, ProductCreate
+from app.models.products import Category, Product, ProductCreate
 from app.models.stores import Store
 from app.services.products import ProductsService
 from app.services.stores import StoresService

@@ -1,3 +1,4 @@
+# pylint: disable=W0212 # access protected member
 import logging
 from typing import Iterable, Sequence
 from asyncio import gather

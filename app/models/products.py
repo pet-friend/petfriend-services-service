@@ -10,16 +10,16 @@ MAX_CATEGORIES_PER_PRODUCT = 3
 
 
 class Category(StrEnum):
-    Alimentos = "alimentos"
-    Juguetes = "juguetes"
-    Higiene_y_Cuidado = "higiene y cuidado"
-    Viajes = "viajes"
-    Accesorios = "accesorios"
-    Salud_y_Bienestar = "salud y bienestar"
-    Correas_y_Collares = "correas y collares"
-    Cuchas = "cuchas"
-    Camas = "camas"
-    Platos_y_Comederos = "platos y comederos"
+    ALIMENTOS = "alimentos"
+    JUGUETES = "juguetes"
+    HIGIENE_Y_CUIDADO = "higiene y cuidado"
+    VIAJES = "viajes"
+    ACCESORIOS = "accesorios"
+    SALUD_Y_BIENESTAR = "salud y bienestar"
+    CORREAS_Y_COLLARES = "correas y collares"
+    CUCHAS = "cuchas"
+    CAMAS = "camas"
+    PLATOS_Y_COMEDEROS = "platos y comederos"
 
 
 class ProductCategories(SQLModel, table=True):
