@@ -62,7 +62,7 @@ class TestProductsRepository(BaseDbTestCase):
         updated = await self.product_repository.update(
             (created.store_id, created.id), product_2.model_dump()
         )
-        updated = Product(**updated.model_dump())
+
         all_records = await self.product_repository.get_all()
 
         # Then
