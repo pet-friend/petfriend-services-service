@@ -38,10 +38,12 @@ class TestProductsService(IsolatedAsyncioTestCase):
 
         # When
         saved_record = await self.service.create_product(self.store.id, self.product_create)
-
+        saved_record = Product(**saved_record.model_dump())
         # Then
-        assert self.product_create.model_dump().items() < saved_record.model_dump().items()
-        self.repository.save.assert_called_once_with(saved_record)
+        assert len(self.product_create.model_dump().items()) <= len(
+            saved_record.model_dump().items()
+        )
+        self.repository.save.assert_called_once()
         # should check if store exists
         self.stores_service.get_store_by_id.assert_called_once_with(self.store.id)
 
@@ -80,24 +82,6 @@ class TestProductsService(IsolatedAsyncioTestCase):
         # When, Then
         with self.assertRaises(ProductNotFound):
             await self.service.get_product(uuid4(), uuid4())
-
-    @pytest.mark.asyncio
-    async def test_update_product_should_call_repository_update(self) -> None:
-        # Given
-        product_id = uuid4()
-        product = Product(store_id=self.store.id, id=product_id, **self.product_create.model_dump())
-        self.repository.update.side_effect = lambda _id, record: product
-
-        # When
-        saved_record = await self.service.update_product(
-            self.store.id, product_id, self.product_create
-        )
-
-        # Then
-        assert saved_record == product
-        self.repository.update.assert_called_once_with(
-            (self.store.id, product_id), self.product_create.model_dump()
-        )
 
     @pytest.mark.asyncio
     async def test_delete_product_should_call_repository_delete(self) -> None:

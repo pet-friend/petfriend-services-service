@@ -4,11 +4,8 @@ from typing import List
 from pydantic import field_validator
 from sqlalchemy import ForeignKeyConstraint, PrimaryKeyConstraint, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
-from sqlalchemy.orm import Mapped
 from .util import Id, UUIDModel, TimestampModel, OptionalImageUrlModel
 
-# Define enum for categories dynamically using the constant
-# CategoryEnum = Enum("CategoryEnum", ALLOWED_PRODUCT_CATEGORIES)
 MAX_CATEGORIES_PER_PRODUCT = 3
 
 
@@ -23,11 +20,6 @@ class Category(StrEnum):
     Cuchas = "cuchas"
     Camas = "camas"
     Platos_y_Comederos = "platos y comederos"
-
-
-# class Category(SQLModel, table=True):
-#     id: int = Field(default=None, primary_key=True, autoincrement=True)
-#     name: str = Field(max_length=100, unique=True)
 
 
 class ProductCategories(SQLModel, table=True):
@@ -70,7 +62,6 @@ class Product(ProductPublic, TimestampModel, table=True):
             "cascade": "all, delete-orphan",
         }
     )
-    # TODO: add min_items=1 and max_items=MAX_CATEGORIES_PER_PRODUCT
 
     # Two products in the same store cannot have the same name:
     __table_args__ = (
