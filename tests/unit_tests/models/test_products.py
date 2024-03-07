@@ -21,8 +21,8 @@ class TestProductsModel(IsolatedAsyncioTestCase):
     async def test_product_create_with_required_fields(self) -> None:
         # Given
         product_create = ProductCreateFactory.build()
-        product_create.description = None
-        product_create.available = None
+        product_create.description = None  # type: ignore
+        product_create.available = None  # type: ignore
         # When
         product_created = ProductCreate(**product_create.__dict__)
         # Then
@@ -49,3 +49,16 @@ class TestProductsModel(IsolatedAsyncioTestCase):
             ProductCreate(**product_create.__dict__)
         # Then
         assert "is not a valid Category" in str(context.exception)
+
+    @pytest.mark.asyncio
+    async def test_product_create_with_too_many_categories(self) -> None:
+        # Given
+        product_create = ProductCreateFactory.build()
+        product_create.categories.append(Category("camas"))
+        product_create.categories.append(Category("platos y comederos"))
+        product_create.categories.append(Category("cuchas"))
+        # When
+        with self.assertRaises(ValueError) as context:
+            ProductCreate(**product_create.__dict__)
+        # Then
+        assert "Cannot have more than" in str(context.exception)

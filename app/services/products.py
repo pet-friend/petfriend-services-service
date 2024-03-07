@@ -29,7 +29,7 @@ class ProductsService:
         await self.stores_service.get_store_by_id(store_id)  # assert store exists
         if await self.products_repo.get_by_name(store_id, data.name) is not None:
             raise ProductAlreadyExists
-        # map data.categories to CategoryEnum
+        # map data.categories to ProductCategories model
         product_id = uuid.uuid4()
         categories = [
             ProductCategories(store_id=store_id, product_id=product_id, category=category)

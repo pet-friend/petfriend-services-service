@@ -1,11 +1,10 @@
 from uuid import uuid4
 from unittest import IsolatedAsyncioTestCase
-from unittest.mock import AsyncMock
-
+from unittest.mock import AsyncMock, ANY
 import pytest
 from app.exceptions.stores import StoreNotFound
 
-from app.models.products import Product
+from app.models.products import Category, Product, ProductCategories, ProductCreate
 from app.models.stores import Store
 from app.services.products import ProductsService
 from app.services.stores import StoresService
@@ -128,3 +127,43 @@ class TestProductsService(IsolatedAsyncioTestCase):
             await self.service.create_product(self.store.id, self.product_create)
 
         self.repository.get_by_name.assert_called_once_with(self.store.id, self.product_create.name)
+
+    @pytest.mark.asyncio
+    async def test_create_product_should_call_repo_save_with_ProductCategories(self) -> None:
+        # Given
+        self.repository.get_by_name.return_value = None
+        self.repository.save.side_effect = lambda x: x
+        self.stores_service.get_store_by_id.return_value = self.store
+
+        # When
+        await self.service.create_product(self.store.id, self.product_create)
+
+        # Then
+        self.repository.save.assert_called_once()
+        save_args = self.repository.save.call_args.args[0]
+        for i in range(len(self.product_create.categories)):
+            assert save_args._categories[i].store_id == self.store.id
+            assert save_args._categories[i].product_id == save_args.id
+            assert save_args._categories[i].category == self.product_create.categories[i]
+
+    @pytest.mark.asyncio
+    async def test_update_product_should_call_repo_update_with_ProductCategories(self) -> None:
+        # Given
+        self.repository.get_by_name.return_value = None
+        self.repository.save.side_effect = lambda x: x
+        self.stores_service.get_store_by_id.return_value = self.store
+
+        # When
+        await self.service.create_product(self.store.id, self.product_create)
+        new_categories = [Category("alimentos")]
+        save_args = self.repository.save.call_args.args[0]
+        product_copy = ProductCreate(**save_args.model_dump() | {"categories": new_categories})
+        await self.service.update_product(self.store.id, save_args.id, product_copy)
+
+        # Then
+        self.repository.update.assert_called_once()
+        update_args = self.repository.update.call_args.args[1]
+        for i in range(len(new_categories)):
+            assert update_args["_categories"][i].store_id == self.store.id
+            assert update_args["_categories"][i].product_id == save_args.id
+            assert update_args["_categories"][i].category == new_categories[i]
