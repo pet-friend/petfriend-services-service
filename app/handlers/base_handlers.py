@@ -29,6 +29,7 @@ async def validation_exception_handler(_req: Request, exc: RequestValidationErro
             field_name = error["loc"][-1]
             error_msg = error["msg"]
         messages_dict.setdefault(field_name, []).append(error_msg)
+    logging.critical(f"Request Validation Error: {messages_dict}")
     json_schema = ValidatorSchema(detail=messages_dict).model_dump()
     return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=json_schema)
 

@@ -1,17 +1,28 @@
 from decimal import Decimal
-from enum import Enum
+from enum import StrEnum
 from typing import List
+from pydantic import field_validator
 from sqlalchemy import ForeignKeyConstraint, PrimaryKeyConstraint, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 from sqlalchemy.orm import Mapped
-from app.models.constants.categories import (
-    ALLOWED_PRODUCT_CATEGORIES,
-    MAX_CATEGORIES_PER_PRODUCT,
-)
 from .util import Id, UUIDModel, TimestampModel, OptionalImageUrlModel
 
 # Define enum for categories dynamically using the constant
-CategoryEnum = Enum("CategoryEnum", ALLOWED_PRODUCT_CATEGORIES)
+# CategoryEnum = Enum("CategoryEnum", ALLOWED_PRODUCT_CATEGORIES)
+MAX_CATEGORIES_PER_PRODUCT = 3
+
+
+class Category(StrEnum):
+    Alimentos = "alimentos"
+    Juguetes = "juguetes"
+    Higiene_y_Cuidado = "higiene y cuidado"
+    Viajes = "viajes"
+    Accesorios = "accesorios"
+    Salud_y_Bienestar = "salud y bienestar"
+    Correas_y_Collares = "correas y collares"
+    Cuchas = "cuchas"
+    Camas = "camas"
+    Platos_y_Comederos = "platos y comederos"
 
 
 # class Category(SQLModel, table=True):
@@ -19,12 +30,12 @@ CategoryEnum = Enum("CategoryEnum", ALLOWED_PRODUCT_CATEGORIES)
 #     name: str = Field(max_length=100, unique=True)
 
 
-class ProductCategoriesLink(SQLModel, table=True):
-    __tablename__ = "product_categories_link"
+class ProductCategories(SQLModel, table=True):
+    __tablename__ = "product_categories"
 
-    product_id: Id | None = Field(default=None, primary_key=True)
-    category: CategoryEnum | None = Field(default=None, primary_key=True)
-    store_id: Id | None = Field(default=None, primary_key=True)
+    store_id: Id = Field(primary_key=True)
+    product_id: Id = Field(primary_key=True)
+    category: Category = Field(primary_key=True)
 
     __table_args__ = (
         ForeignKeyConstraint(["store_id", "product_id"], ["products.store_id", "products.id"]),
@@ -41,21 +52,23 @@ class ProductBase(SQLModel):
 
 
 # What the Product gets from the API (Base + id)
-class ProductRead(ProductBase, UUIDModel):
+class ProductPublic(ProductBase, UUIDModel):
     store_id: Id = Field(foreign_key="stores.id", primary_key=True)
 
 
-class ProductReadWithImage(ProductRead, OptionalImageUrlModel):
-    pass
+class ProductRead(ProductPublic, OptionalImageUrlModel):
+    categories: List[Category]
 
 
 # Actual data in database table (Base + id + timestamps)
-class Product(ProductRead, TimestampModel, table=True):
+class Product(ProductPublic, TimestampModel, table=True):
     __tablename__ = "products"
 
-    categories: List[CategoryEnum] = Relationship(
-        link_model=ProductCategoriesLink,
-        back_populates="products",
+    _categories: list[ProductCategories] = Relationship(
+        sa_relationship_kwargs={
+            "lazy": "selectin",
+            "cascade": "all, delete-orphan",
+        }
     )
     # TODO: add min_items=1 and max_items=MAX_CATEGORIES_PER_PRODUCT
 
@@ -68,5 +81,12 @@ class Product(ProductRead, TimestampModel, table=True):
 
 # Required attributes for creating a new record
 class ProductCreate(ProductBase):
-    # categories: List[CategoryEnum]
-    pass
+    categories: List[Category]
+
+    @field_validator("categories")
+    def validate_categories(cls, v: List[Category]) -> List[Category]:
+        if len(v) > MAX_CATEGORIES_PER_PRODUCT:
+            raise ValueError(
+                f"Cannot have more than {MAX_CATEGORIES_PER_PRODUCT} categories per product"
+            )
+        return v
