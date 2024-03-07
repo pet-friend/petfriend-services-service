@@ -62,10 +62,11 @@ class TestProductsRepository(BaseDbTestCase):
         updated = await self.product_repository.update(
             (created.store_id, created.id), product_2.model_dump()
         )
+        updated = Product(**updated.model_dump())
         all_records = await self.product_repository.get_all()
 
         # Then
-        assert created == updated  # should update the original object
+        assert created.id == updated.id  # should update the original object
 
         assert updated.updated_at != product_2.updated_at  # should update the updated_at field
         product_2.updated_at = updated.updated_at

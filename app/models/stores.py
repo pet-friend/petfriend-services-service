@@ -7,6 +7,7 @@ from app.models.constants.stores import (
     MIN_DELIVERY_RANGE,
     MAX_DELIVERY_RANGE,
     INVALID_DELIVERY_RANGE_MSG,
+    INVALID_SHIPPING_COST_MSG,
 )
 from .util import Id, TimestampModel, OptionalImageUrlModel
 from .service import Service
@@ -19,12 +20,19 @@ class StoreBase(SQLModel):
     name: str = Field(unique=True)
     description: str | None = None
     delivery_range_km: float
+    shipping_cost: float = Field(default=0.0)
 
     @field_validator("delivery_range_km")
     def delivery_range_verification(cls, delivery_range_km: float) -> float:
         if MIN_DELIVERY_RANGE < delivery_range_km <= MAX_DELIVERY_RANGE:
             return delivery_range_km
         raise ValueError(INVALID_DELIVERY_RANGE_MSG)
+
+    @field_validator("shipping_cost")
+    def shipping_cost_verification(cls, shipping_cost: float) -> float:
+        if shipping_cost >= 0:
+            return shipping_cost
+        raise ValueError(INVALID_SHIPPING_COST_MSG)
 
 
 # What the Store gets from the API (Base + id)

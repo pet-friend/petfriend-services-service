@@ -2,4 +2,4 @@ from pydantic import BaseModel
 
 
 class ValidatorSchema(BaseModel):
-    detail: dict[str, list[str]]
+    detail: dict[str | int, list[str]]
