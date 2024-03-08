@@ -43,8 +43,8 @@ class AddressesService:
             status = data["status"]
             if status == "ZERO_RESULTS":
                 raise NonExistentAddress
-            elif status != "OK":
-                raise Exception(f"Failed to fetch address location ({status})")
+            if status != "OK":
+                raise RuntimeError(f"Failed to fetch address location ({status})")
 
             coords = data["results"][0]["geometry"]["location"]
             return (coords["lat"], coords["lng"])

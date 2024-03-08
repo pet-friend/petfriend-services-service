@@ -45,6 +45,20 @@ async def get_my_stores(
     return StoreList(stores=await store_service.get_stores_with_image(stores), amount=stores_amount)
 
 
+@router.get("/nearby", response_model_exclude_none=True)
+async def get_nearby_stores(
+    user_address_id: Id,
+    limit: int = Query(10, ge=1),
+    offset: int = Query(0, ge=0),
+    store_service: StoresService = Depends(StoresService),
+    user_id: Id = Depends(get_caller_id),
+) -> StoreList:
+    stores, stores_amount = await store_service.get_nearby_stores(
+        limit, offset, user_id, user_address_id
+    )
+    return StoreList(stores=await store_service.get_stores_with_image(stores), amount=stores_amount)
+
+
 @router.get(
     "/{store_id}",
     responses=get_exception_docs(STORE_NOT_FOUND_ERROR),
