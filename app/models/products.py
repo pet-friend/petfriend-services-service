@@ -1,6 +1,5 @@
 from decimal import Decimal
 from enum import StrEnum
-from typing import List
 
 from pydantic import field_validator
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint, UniqueConstraint
@@ -52,7 +51,7 @@ class ProductPublic(ProductBase, UUIDModel):
 
 
 class ProductRead(ProductPublic, OptionalImageUrlModel):
-    categories: List[Category]
+    categories: list[Category]
 
 
 # Actual data in database table (Base + id + timestamps)
@@ -79,10 +78,10 @@ class Product(ProductPublic, TimestampModel, table=True):
 
 # Required attributes for creating a new record
 class ProductCreate(ProductBase):
-    categories: List[Category]
+    categories: list[Category]
 
     @field_validator("categories")
-    def validate_categories(cls, v: List[Category]) -> List[Category]:
+    def validate_categories(cls, v: list[Category]) -> list[Category]:
         if len(v) > MAX_CATEGORIES_PER_PRODUCT:
             raise ValueError(
                 f"Cannot have more than {MAX_CATEGORIES_PER_PRODUCT} categories per product"

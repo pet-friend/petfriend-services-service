@@ -13,6 +13,7 @@ from app.exceptions.repository import RecordNotFound
 from app.exceptions.products import ProductAlreadyExists, ProductNotFound
 from app.services.files import FilesService, products_images_service
 from app.services.stores import StoresService
+from app.services.users import UsersService
 
 
 class ProductsService:
@@ -21,10 +22,12 @@ class ProductsService:
         products_repo: ProductsRepository = Depends(ProductsRepository),
         stores_service: StoresService = Depends(StoresService),
         files_service: FilesService = Depends(products_images_service),
+        users_service: UsersService = Depends(UsersService),
     ):
         self.products_repo = products_repo
         self.stores_service = stores_service
         self.files_service = files_service
+        self.users_service = users_service
 
     async def create_product(self, store_id: Id, data: ProductCreate) -> Product:
         await self.stores_service.get_store_by_id(store_id)  # assert store exists
@@ -71,6 +74,19 @@ class ProductsService:
 
     async def get_store_products(self, store_id: Id) -> Sequence[Product]:
         return await self.products_repo.get_all(store_id=store_id)
+
+    async def get_nearby_products(
+        self, limit: int, offset: int, user_id: Id, user_address_id: Id
+    ) -> tuple[Sequence[Product], int]:
+        """
+        Returns a tuple of products and the total amount of products nearby
+        """
+        c = await self.users_service.get_user_address_coordinates(user_id, user_address_id)
+        products = await self.products_repo.get_nearby(
+            c.latitude, c.longitude, skip=offset, limit=limit
+        )
+        amount = await self.products_repo.count_nearby(c.latitude, c.longitude)
+        return products, amount
 
     async def get_products_read(self, products: Iterable[Product]) -> Sequence[ProductRead]:
         token = self.files_service.get_token()
