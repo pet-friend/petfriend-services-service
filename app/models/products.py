@@ -1,7 +1,8 @@
 from decimal import Decimal
 from enum import StrEnum
+from typing import Any
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -14,14 +15,14 @@ MAX_CATEGORIES_PER_PRODUCT = 3
 class Category(StrEnum):
     ALIMENTOS = "alimentos"
     JUGUETES = "juguetes"
-    HIGIENE_Y_CUIDADO = "higiene y cuidado"
+    HIGIENE_Y_CUIDADO = "higiene_y_cuidado"
     VIAJES = "viajes"
     ACCESORIOS = "accesorios"
-    SALUD_Y_BIENESTAR = "salud y bienestar"
-    CORREAS_Y_COLLARES = "correas y collares"
+    SALUD_Y_BIENESTAR = "salud_y_bienestar"
+    CORREAS_Y_COLLARES = "correas_y_collares"
     CUCHAS = "cuchas"
     CAMAS = "camas"
-    PLATOS_Y_COMEDEROS = "platos y comederos"
+    PLATOS_Y_COMEDEROS = "platos_y_comederos"
 
 
 class ProductCategories(SQLModel, table=True):
@@ -52,6 +53,16 @@ class ProductPublic(ProductBase, UUIDModel):
 
 class ProductRead(ProductPublic, OptionalImageUrlModel):
     categories: list[Category]
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_categories_format(cls, data: Any) -> Any:
+        if isinstance(data, Product):
+            new_data = data.model_dump()
+            new_data["categories"] = [c.category for c in data._categories]
+            return new_data
+
+        return data
 
 
 # Actual data in database table (Base + id + timestamps)

@@ -6,7 +6,7 @@ from fastapi import status as http_status
 from app.auth import get_caller_id
 from app.serializers.products import ProductsList
 from app.services.products import ProductsService
-from app.models.products import ProductPublic, ProductCreate, ProductRead
+from app.models.products import Product, ProductCreate, ProductRead
 from app.models.util import Id
 from .responses.addresses import ADDRESS_NOT_FOUND_ERROR
 from .responses.stores import STORE_NOT_FOUND_ERROR
@@ -20,12 +20,13 @@ router = APIRouter(tags=["Products"], prefix="/stores")
     "/{store_id}/products",
     status_code=http_status.HTTP_201_CREATED,
     responses=get_exception_docs(PRODUCT_EXISTS_ERROR),
+    response_model=ProductRead,
 )
 async def create_product(
     store_id: Id,
     data: ProductCreate,
     products_service: ProductsService = Depends(ProductsService),
-) -> ProductPublic:
+) -> Product:
     return await products_service.create_product(store_id, data)
 
 
@@ -74,8 +75,9 @@ async def update_store_product(
     product_id: Id,
     data: ProductCreate,
     products_service: ProductsService = Depends(ProductsService),
-) -> ProductPublic:
-    return await products_service.update_product(store_id, product_id, data)
+) -> ProductRead:
+    product = await products_service.update_product(store_id, product_id, data)
+    return (await products_service.get_products_read((product,)))[0]
 
 
 @router.delete(

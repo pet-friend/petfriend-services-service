@@ -2,7 +2,6 @@
 import logging
 from typing import Iterable, Sequence
 from asyncio import gather
-import uuid
 
 from fastapi import Depends
 
@@ -34,15 +33,9 @@ class ProductsService:
         if await self.products_repo.get_by_name(store_id, data.name) is not None:
             raise ProductAlreadyExists
         # map data.categories to ProductCategories model
-        product_id = uuid.uuid4()
-        categories = [
-            ProductCategories(store_id=store_id, product_id=product_id, category=category)
-            for category in data.categories
-        ]
+        categories = [ProductCategories(category=category) for category in data.categories]
         logging.info(f"Creating product {data.name} in store {store_id} with data {data}")
-        product = Product(
-            id=product_id, store_id=store_id, **data.model_dump(), _categories=categories
-        )
+        product = Product(store_id=store_id, **data.model_dump(), _categories=categories)
         return await self.products_repo.save(product)
 
     async def get_product(self, store_id: Id, product_id: Id) -> Product:

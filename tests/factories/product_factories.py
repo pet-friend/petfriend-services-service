@@ -7,4 +7,4 @@ class ProductCreateFactory(ModelFactory[ProductCreate]):
     __model__ = ProductCreate
 
     name = "product name"
-    categories = [Category(cat_str) for cat_str in ["alimentos", "juguetes", "higiene y cuidado"]]
+    categories = [Category(cat_str) for cat_str in ["alimentos", "juguetes", "higiene_y_cuidado"]]
