@@ -10,7 +10,6 @@ from app.models.stores import Store
 from app.models.addresses import Address, AddressType
 from app.models.util import Coordinates
 from tests.factories.address_factories import AddressCreateFactory
-from tests.factories.store_factories import StoreCreateFactory
 from tests.fixtures.stores import valid_store
 from tests.tests_setup import BaseAPITestCase
 

@@ -3,7 +3,7 @@ import httpx
 from pytest_httpx import HTTPXMock
 
 from app.config import settings
-from app.models.addresses import Address, AddressRead
+from app.models.addresses import AddressRead
 from app.services.addresses import AddressesService
 from app.exceptions.addresses import NonExistentAddress
 from tests.factories.address_factories import AddressCreateFactory

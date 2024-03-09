@@ -1,12 +1,12 @@
 # pylint: disable=W0212 # access protected member
 import logging
-from typing import Iterable, Sequence
+from typing import Any, Iterable, Sequence
 from asyncio import gather
 
 from fastapi import Depends
 
 from app.models.util import File, Id
-from app.models.products import ProductCategories, ProductCreate, Product, ProductRead
+from app.models.products import Category, ProductCategories, ProductCreate, Product, ProductRead
 from app.repositories.products import ProductsRepository
 from app.exceptions.repository import RecordNotFound
 from app.exceptions.products import ProductAlreadyExists, ProductNotFound
@@ -47,10 +47,7 @@ class ProductsService:
 
     async def update_product(self, store_id: Id, product_id: Id, data: ProductCreate) -> Product:
         try:
-            categories = [
-                ProductCategories(store_id=store_id, product_id=product_id, category=category)
-                for category in data.categories
-            ]
+            categories = [ProductCategories(category=category) for category in data.categories]
             return await self.products_repo.update(
                 (store_id, product_id), data.model_dump() | {"_categories": categories}
             )
@@ -69,16 +66,24 @@ class ProductsService:
         return await self.products_repo.get_all(store_id=store_id)
 
     async def get_nearby_products(
-        self, limit: int, offset: int, user_id: Id, user_address_id: Id
+        self,
+        limit: int,
+        offset: int,
+        user_id: Id,
+        user_address_id: Id,
+        categories: list[Category] | None = None,
+        **filters: Any,
     ) -> tuple[Sequence[Product], int]:
         """
         Returns a tuple of products and the total amount of products nearby
         """
         c = await self.users_service.get_user_address_coordinates(user_id, user_address_id)
         products = await self.products_repo.get_nearby(
-            c.latitude, c.longitude, skip=offset, limit=limit
+            c.latitude, c.longitude, skip=offset, limit=limit, categories=categories, **filters
         )
-        amount = await self.products_repo.count_nearby(c.latitude, c.longitude)
+        amount = await self.products_repo.count_nearby(
+            c.latitude, c.longitude, categories=categories, **filters
+        )
         return products, amount
 
     async def get_products_read(self, products: Iterable[Product]) -> Sequence[ProductRead]:

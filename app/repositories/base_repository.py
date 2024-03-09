@@ -1,7 +1,8 @@
 from typing import Any, Sequence, Type, TypeVar, Generic
 from abc import ABC
+from sqlalchemy import ColumnExpressionArgument
 
-from sqlmodel import select, and_, func
+from sqlmodel import AutoString, select, and_, func
 from sqlmodel.sql.expression import SelectOfScalar
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -16,19 +17,26 @@ class BaseRepository(Generic[T, PK], ABC):
         self.db = session
         self.cls = repositor_class
 
-    def _list_select(self, **filters: Any) -> SelectOfScalar[T]:
-        query = select(self.cls)
+    def _filters(self, **filters: Any) -> ColumnExpressionArgument[bool] | bool:
         where_clauses = []
         for c, v in filters.items():
+            if v is None:
+                continue
             if not hasattr(self.cls, c):
                 raise ValueError(f"Invalid column name: '{c}'")
-            where_clauses.append(getattr(self.cls, c) == v)
+            if isinstance(getattr(self.cls, c).type, AutoString):
+                where_clauses.append(getattr(self.cls, c).ilike(f"%{v}%"))
+            else:
+                where_clauses.append(getattr(self.cls, c) == v)
 
         if len(where_clauses) == 0:
-            return query
-
+            return True
         initial, *rest = where_clauses
-        return query.where(and_(initial, *rest))
+        return and_(initial, *rest)
+
+    def _list_select(self, **filters: Any) -> SelectOfScalar[T]:
+        query = select(self.cls)
+        return query.where(self._filters(**filters))
 
     async def get_all(self, skip: int = 0, limit: int | None = None, **filters: Any) -> Sequence[T]:
         query = self._list_select(**filters).offset(skip).limit(limit)
@@ -68,10 +76,5 @@ class BaseRepository(Generic[T, PK], ABC):
     def _count_select(self, **filters: Any) -> SelectOfScalar[int]:
         # pylint bug: https://github.com/pylint-dev/pylint/issues/8138
         query = select(func.count()).select_from(self.cls)  # pylint: disable=not-callable
-
-        # Applying filters, assuming keys in filters are column names of the Product model
-        for key, value in filters.items():
-            if hasattr(self.cls, key):
-                query = query.where(getattr(self.cls, key) == value)
-
+        query = query.where(self._filters(**filters))
         return query

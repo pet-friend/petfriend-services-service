@@ -144,8 +144,6 @@ class TestProductsService(IsolatedAsyncioTestCase):
         self.repository.save.assert_called_once()
         save_args = self.repository.save.call_args.args[0]
         for i in range(len(self.product_create.categories)):
-            assert save_args._categories[i].store_id == self.store.id
-            assert save_args._categories[i].product_id == save_args.id
             assert save_args._categories[i].category == self.product_create.categories[i]
 
     @pytest.mark.asyncio
@@ -166,6 +164,4 @@ class TestProductsService(IsolatedAsyncioTestCase):
         self.repository.update.assert_called_once()
         update_args = self.repository.update.call_args.args[1]
         for i in range(len(new_categories)):
-            assert update_args["_categories"][i].store_id == self.store.id
-            assert update_args["_categories"][i].product_id == save_args.id
             assert update_args["_categories"][i].category == new_categories[i]
