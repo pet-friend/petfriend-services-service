@@ -2,20 +2,21 @@ import datetime
 from unittest import IsolatedAsyncioTestCase
 from app.exceptions.repository import RecordNotFound
 from app.exceptions.stores import StoreAlreadyExists, StoreNotFound
+from app.models.addresses import Address
 from app.models.stores import Store, StoreCreate
 from uuid import uuid4
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 import pytest
 from app.repositories.stores import StoresRepository
 from app.services.stores import StoresService
+from tests.util import CustomMatcher
+from tests.factories.address_factories import AddressCreateFactory
 
 
 class TestStoresService(IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.store_create = StoreCreate(
-            name="test",
-            description="test",
-            delivery_range_km=10,
+            name="test", description="test", delivery_range_km=10, address=None
         )
         self.store = Store(
             id=uuid4(),
@@ -31,7 +32,7 @@ class TestStoresService(IsolatedAsyncioTestCase):
     @pytest.mark.asyncio
     async def test_create_store_should_call_repository_save(self) -> None:
         # Given
-        self.repository.create = AsyncMock(return_value=self.store)
+        self.repository.save = AsyncMock(return_value=self.store)
         self.repository.get_by_name = AsyncMock(return_value=None)
 
         # When
@@ -39,7 +40,12 @@ class TestStoresService(IsolatedAsyncioTestCase):
 
         # Then
         assert saved_record == self.store
-        self.repository.create.assert_called_once_with(self.store_create, self.store.owner_id)
+        self.repository.save.assert_called_once_with(
+            CustomMatcher(
+                lambda s: s.owner_id == self.store.owner_id
+                and all(getattr(s, k, None) == v for k, v in self.store_create.model_dump().items())
+            )
+        )
 
     @pytest.mark.asyncio
     async def test_create_store_with_existing_name_should_raise_store_already_exists(self) -> None:
@@ -139,3 +145,28 @@ class TestStoresService(IsolatedAsyncioTestCase):
         assert fetched_record is None
         self.repository.delete.assert_called_once_with("1")
         self.service.files_service.delete_file.assert_called_once_with("1")
+
+    @pytest.mark.asyncio
+    async def test_create_store_with_address_should_call_address_service_and_repository_save(
+        self,
+    ) -> None:
+        # Given
+        self.repository.save = AsyncMock(return_value=self.store)
+        self.repository.get_by_name = AsyncMock(return_value=None)
+        address_create = AddressCreateFactory.build(country_code="AR", type="other")
+        self.store_create.address = address_create
+
+        expected_address = Address(**address_create.model_dump(), latitude=1, longitude=1)
+        with patch("app.services.stores.AddressesService.get_address") as get_address_mock:
+            get_address_mock.return_value = expected_address
+
+            # When
+            saved_record = await self.service.create_store(self.store_create, self.store.owner_id)
+
+            # Then
+            self.store.address = expected_address
+            assert saved_record == self.store
+            self.repository.save.assert_called_once_with(
+                CustomMatcher(lambda s: s.address == expected_address)
+            )
+            get_address_mock.assert_called_once_with(address_create)

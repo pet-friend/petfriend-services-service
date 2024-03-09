@@ -8,16 +8,16 @@ from app.serializers.products import ProductsList
 from app.services.products import ProductsService
 from app.models.products import ProductPublic, ProductCreate, ProductRead
 from app.models.util import Id
+from .responses.addresses import ADDRESS_NOT_FOUND_ERROR
 from .responses.stores import STORE_NOT_FOUND_ERROR
 from .responses.products import PRODUCT_EXISTS_ERROR, PRODUCT_NOT_FOUND_ERROR
 from .util import get_exception_docs
 
-router = APIRouter(tags=["Products"])
-prefixed_router = APIRouter(prefix="/stores/{store_id}/products")
+router = APIRouter(tags=["Products"], prefix="/stores")
 
 
-@prefixed_router.post(
-    "",
+@router.post(
+    "/{store_id}/products",
     status_code=http_status.HTTP_201_CREATED,
     responses=get_exception_docs(PRODUCT_EXISTS_ERROR),
 )
@@ -29,16 +29,7 @@ async def create_product(
     return await products_service.create_product(store_id, data)
 
 
-@prefixed_router.get("", responses=get_exception_docs(STORE_NOT_FOUND_ERROR))
-async def get_store_products(
-    store_id: Id,
-    products_service: ProductsService = Depends(ProductsService),
-) -> Sequence[ProductRead]:
-    products = await products_service.get_store_products(store_id)
-    return await products_service.get_products_read(products)
-
-
-@router.get("/stores/nearby/products", response_model_exclude_none=True)
+@router.get("/nearby/products", responses=get_exception_docs(ADDRESS_NOT_FOUND_ERROR))
 async def get_nearby_products(
     user_address_id: Id,
     limit: int = Query(10, ge=1),
@@ -54,7 +45,18 @@ async def get_nearby_products(
     )
 
 
-@prefixed_router.get("/{product_id}", responses=get_exception_docs(PRODUCT_NOT_FOUND_ERROR))
+@router.get("/{store_id}/products", responses=get_exception_docs(STORE_NOT_FOUND_ERROR))
+async def get_store_products(
+    store_id: Id,
+    products_service: ProductsService = Depends(ProductsService),
+) -> Sequence[ProductRead]:
+    products = await products_service.get_store_products(store_id)
+    return await products_service.get_products_read(products)
+
+
+@router.get(
+    "/{store_id}/products/{product_id}", responses=get_exception_docs(PRODUCT_NOT_FOUND_ERROR)
+)
 async def get_product(
     store_id: Id,
     product_id: Id,
@@ -64,7 +66,9 @@ async def get_product(
     return (await products_service.get_products_read((product,)))[0]
 
 
-@prefixed_router.put("/{product_id}", responses=get_exception_docs(PRODUCT_NOT_FOUND_ERROR))
+@router.put(
+    "/{store_id}/products/{product_id}", responses=get_exception_docs(PRODUCT_NOT_FOUND_ERROR)
+)
 async def update_store_product(
     store_id: Id,
     product_id: Id,
@@ -74,8 +78,8 @@ async def update_store_product(
     return await products_service.update_product(store_id, product_id, data)
 
 
-@prefixed_router.delete(
-    "/{product_id}",
+@router.delete(
+    "/{store_id}/products/{product_id}",
     responses=get_exception_docs(PRODUCT_NOT_FOUND_ERROR),
     status_code=http_status.HTTP_204_NO_CONTENT,
 )
@@ -85,6 +89,3 @@ async def delete_store_products(
     products_service: ProductsService = Depends(ProductsService),
 ) -> None:
     await products_service.delete_product(store_id, product_id)
-
-
-router.include_router(prefixed_router)

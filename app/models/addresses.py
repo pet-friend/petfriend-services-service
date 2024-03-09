@@ -1,10 +1,11 @@
 from enum import StrEnum
 
-from pydantic import field_validator, ValidationInfo, Field as PField
+from pydantic import field_validator, ValidationInfo
 from pydantic_extra_types.country import CountryAlpha2
+from sqlalchemy import UniqueConstraint
 from sqlmodel import SQLModel, Field
 
-from .util import Coordinates, TimestampModel, Id
+from .util import Coordinates, Id, TimestampModel, UUIDModel
 from .constants.addresses import MISSING_APARTMENT_MSG
 
 
@@ -12,6 +13,7 @@ class AddressType(StrEnum):
     HOUSE = "house"
     APARTMENT = "apartment"
     OFFICE = "office"
+    STOREFRONT = "storefront"
     OTHER = "other"
 
 
@@ -36,20 +38,27 @@ class AddressBase(SQLModel):
         return apartment
 
 
-# What the user gets from the API (Base + id + coordinates)
+# What the user gets from the API (Base + coordinates)
 class AddressRead(AddressBase, Coordinates):
-    id: Id = Field(foreign_key="services.id", primary_key=True)
-
-
-class AddressReadRenamed(AddressRead):
-    id: Id = PField(serialization_alias="service_id")
+    pass
 
 
 # Actual data in database table (Base + id + timestamps)
-class Address(AddressRead, TimestampModel, table=True):
+class Address(AddressRead, UUIDModel, TimestampModel, table=True):
     __tablename__ = "addresses"
 
 
 # Required attributes for creating a new record
 class AddressCreate(AddressBase):
     pass
+
+
+# Use a link table to allow for other services to have a relationship with the address
+# table, and to cascade delete the address when the store is deleted
+class StoreAddressLink(SQLModel, table=True):
+    __tablename__ = "store_address_link"
+
+    store_id: Id = Field(primary_key=True, foreign_key="stores.id")
+    address_id: Id = Field(foreign_key="addresses.id")
+
+    __table_args__ = (UniqueConstraint("address_id", name="store_address_link_address_id_uq"),)

@@ -4,7 +4,6 @@ from sqlmodel import func
 from sqlalchemy import Exists
 
 from ..models.stores import Store
-from ..models.service import Service
 from ..models.addresses import Address
 
 EARTH_RADIUS_KM = 6371.009
@@ -18,10 +17,8 @@ def store_distance_filter(lat: float, long: float) -> Exists:
     """
 
     km_per_deg_long = KM_PER_DEG_LAT * cos(radians(lat))
-    return Store.service.has(  # type: ignore
-        Service.address.has(  # type: ignore
-            func.pow(KM_PER_DEG_LAT * (Address.latitude - lat), 2)
-            + func.pow(km_per_deg_long * (Address.longitude - long), 2)
-            < func.pow(Store.delivery_range_km, 2)
-        )
+    return Store.address.has(  # type: ignore
+        func.pow(KM_PER_DEG_LAT * (Address.latitude - lat), 2)
+        + func.pow(km_per_deg_long * (Address.longitude - long), 2)
+        < func.pow(Store.delivery_range_km, 2)
     )

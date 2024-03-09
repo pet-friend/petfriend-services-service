@@ -31,3 +31,4 @@ docker compose down -v
 # Build and run containers in the background
 echo "Starting docker container..."
 docker compose up --build -d
+docker compose logs --follow

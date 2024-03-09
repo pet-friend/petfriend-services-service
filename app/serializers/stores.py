@@ -1,8 +1,8 @@
 from pydantic import BaseModel
 
-from app.models.stores import StoreReadWithImage
+from app.models.stores import StoreRead
 
 
 class StoreList(BaseModel):
-    stores: list[StoreReadWithImage]
+    stores: list[StoreRead]
     amount: int

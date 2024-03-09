@@ -2,12 +2,11 @@
 import datetime
 from uuid import uuid4
 from unittest import IsolatedAsyncioTestCase
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 from sqlalchemy import ScalarResult
 import pytest
 
-from app.models.service import Service, ServiceType
 from app.models.stores import Store
 from app.repositories.stores import StoresRepository
 from tests.factories.store_factories import StoreCreateFactory
@@ -15,10 +14,8 @@ from tests.factories.store_factories import StoreCreateFactory
 
 class TestStoresRepository(IsolatedAsyncioTestCase):
     def setUp(self) -> None:
-        self.store_create = StoreCreateFactory.build()
-        service = Service(id=uuid4(), type=ServiceType.STORE)
+        self.store_create = StoreCreateFactory.build(address=None)
         self.store = Store(
-            service=service,
             owner_id=uuid4(),
             created_at=datetime.datetime(2023, 1, 1),
             updated_at=datetime.datetime(2023, 1, 1),
@@ -27,32 +24,6 @@ class TestStoresRepository(IsolatedAsyncioTestCase):
 
         self.async_session = AsyncMock()
         self.stores_repository = StoresRepository(self.async_session)
-
-    @pytest.mark.asyncio
-    async def test_save_should_save_store_to_db(self) -> None:
-        # Given
-        self.stores_repository.save = AsyncMock(return_value=self.store)
-
-        with patch("app.repositories.stores.Store") as store_cls_mock, patch(
-            "app.repositories.stores.Service"
-        ) as service_cls_mock:
-            store_cls_mock.return_value = self.store
-            service_cls_mock.return_value = self.store.service
-
-            # When
-            saved_record = await self.stores_repository.create(
-                self.store_create, self.store.owner_id
-            )
-
-            # Then
-            assert saved_record == self.store
-            store_cls_mock.assert_called_once_with(
-                **self.store_create.__dict__,
-                owner_id=self.store.owner_id,
-                service=self.store.service
-            )
-            service_cls_mock.assert_called_once_with(type=ServiceType.STORE)
-            self.stores_repository.save.assert_called_once_with(self.store)
 
     @pytest.mark.asyncio
     async def test_get_by_name_should_get_store_by_name(self) -> None:

@@ -6,7 +6,6 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 from app.models.products import Product
-from app.models.service import Service, ServiceType
 from app.models.stores import Store
 from app.repositories.products import ProductsRepository
 from app.exceptions.repository import RecordNotFound
@@ -20,11 +19,8 @@ class TestProductsRepository(BaseDbTestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.store_create = StoreCreateFactory.build()
-        service = Service(id=uuid4(), type=ServiceType.STORE)
-        self.store = Store(
-            id=service.id, service=service, owner_id=uuid4(), **self.store_create.__dict__
-        )
+        self.store_create = StoreCreateFactory.build(address=None)
+        self.store = Store(owner_id=uuid4(), **self.store_create.__dict__)
         self.product_create = ProductCreateFactory.build()
         self.product = Product(
             id=uuid4(), store_id=self.store.id, **self.product_create.model_dump()

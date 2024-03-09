@@ -21,7 +21,7 @@ class BaseRepository(Generic[T, PK], ABC):
         where_clauses = []
         for c, v in filters.items():
             if not hasattr(self.cls, c):
-                raise ValueError(f"Invalid column name {c}")
+                raise ValueError(f"Invalid column name: '{c}'")
             where_clauses.append(getattr(self.cls, c) == v)
 
         if len(where_clauses) == 0:

@@ -10,7 +10,7 @@ from httpx import ASGITransport, AsyncClient
 from app.exceptions.addresses import NonExistentAddress
 
 from app.exceptions.users import InvalidToken
-from app.models.util import Id
+from app.models.util import Coordinates, Id
 from app.db import engine
 from app.main import app
 
@@ -66,7 +66,7 @@ class BaseAPITestCase(BaseDbTestCase):
 
         with patch("app.services.addresses.AddressesService.get_address_coordinates") as mock:
             if mock_lat_long:
-                mock.return_value = (0, 0)
+                mock.return_value = Coordinates(latitude=0, longitude=0)
             else:
                 mock.side_effect = NonExistentAddress
             yield
