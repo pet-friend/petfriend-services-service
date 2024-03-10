@@ -38,11 +38,11 @@ class ProductCategories(SQLModel, table=True):
 
 
 class ProductBase(SQLModel):
-
     name: str
     description: str | None = None
     enabled: bool = True
     price: Decimal = Field(max_digits=14, decimal_places=2, ge=0)
+    percent_off: Decimal = Field(max_digits=5, decimal_places=2, ge=0, le=100, default=0)
     available: int | None = None
 
 
