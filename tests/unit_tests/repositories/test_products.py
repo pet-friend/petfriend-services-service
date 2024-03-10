@@ -19,8 +19,8 @@ class TestProductsRepository(BaseDbTestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.store_create = StoreCreateFactory.build()
-        self.store = Store(id=uuid4(), **self.store_create.__dict__)
+        self.store_create = StoreCreateFactory.build(address=None)
+        self.store = Store(owner_id=uuid4(), **self.store_create.__dict__)
         self.product_create = ProductCreateFactory.build()
         self.product = Product(
             id=uuid4(), store_id=self.store.id, **self.product_create.model_dump()
@@ -58,7 +58,7 @@ class TestProductsRepository(BaseDbTestCase):
         updated = await self.product_repository.update(
             (created.store_id, created.id), product_2.model_dump()
         )
-        updated = Product(**updated.model_dump())
+
         all_records = await self.product_repository.get_all()
 
         # Then
@@ -67,7 +67,8 @@ class TestProductsRepository(BaseDbTestCase):
         assert updated.updated_at != product_2.updated_at  # should update the updated_at field
         product_2.updated_at = updated.updated_at
 
-        assert len(all_records) == len([updated])
+        assert updated.model_dump() == product_2.model_dump()
+        assert all_records == [updated]
 
     @pytest.mark.asyncio
     async def test_delete_should_update_db(self) -> None:

@@ -1,11 +1,11 @@
 from enum import StrEnum
-from decimal import Decimal
 
-from pydantic import field_validator, ValidationInfo, Field as PField
+from pydantic import field_validator, ValidationInfo
 from pydantic_extra_types.country import CountryAlpha2
+from sqlalchemy import UniqueConstraint
 from sqlmodel import SQLModel, Field
 
-from .util import UUIDModel, TimestampModel, Id
+from .util import Coordinates, Id, TimestampModel, UUIDModel
 from .constants.addresses import MISSING_APARTMENT_MSG
 
 
@@ -13,21 +13,19 @@ class AddressType(StrEnum):
     HOUSE = "house"
     APARTMENT = "apartment"
     OFFICE = "office"
+    STOREFRONT = "storefront"
     OTHER = "other"
 
 
 # Base model
 class AddressBase(SQLModel):
-    country_code: CountryAlpha2
-    region: str  # State, province, etc.
-    city: str
-    postal_code: str
     street: str
     street_number: str
+    city: str
+    region: str  # State, province, etc.
+    country_code: CountryAlpha2
     type: AddressType
     apartment: str | None = Field(default=None)
-    latitude: Decimal = Field(max_digits=9, decimal_places=6, ge=-90, le=90)
-    longitude: Decimal = Field(max_digits=9, decimal_places=6, ge=-180, le=180)
 
     model_config = {"validate_default": True}
 
@@ -40,13 +38,9 @@ class AddressBase(SQLModel):
         return apartment
 
 
-# What the user gets from the API (Base + id)
-class AddressRead(AddressBase):
+# What the user gets from the API (Base + coordinates)
+class AddressRead(AddressBase, Coordinates):
     pass
-
-
-class AddressReadRenamed(AddressRead):
-    id: Id = PField(serialization_alias="service_id")
 
 
 # Actual data in database table (Base + id + timestamps)
@@ -57,3 +51,14 @@ class Address(AddressRead, UUIDModel, TimestampModel, table=True):
 # Required attributes for creating a new record
 class AddressCreate(AddressBase):
     pass
+
+
+# Use a link table to allow for other services to have a relationship with the address
+# table, and to cascade delete the address when the store is deleted
+class StoreAddressLink(SQLModel, table=True):
+    __tablename__ = "store_address_link"
+
+    store_id: Id = Field(primary_key=True, foreign_key="stores.id")
+    address_id: Id = Field(foreign_key="addresses.id")
+
+    __table_args__ = (UniqueConstraint("address_id", name="store_address_link_address_id_uq"),)

@@ -17,6 +17,9 @@ disable = [
     'R0903',
     'E0213',
     'W0511',
+    'R0913',
+    'W0212',
+    'E1101',
 ]
 ignore = ['CVS', 'migrations', 'app/dev_volumes', 'tests']
 jobs = 0
@@ -54,7 +57,10 @@ filterwarnings = [
     "ignore::DeprecationWarning:pydantic_core.*:",
     "ignore::DeprecationWarning:azure.*:",
 ]
-markers = ["noauth: fail authentication on e2e tests"]
+markers = [
+    "noauth: fail authentication on e2e tests",
+    "invalidaddress: fail address validation on e2e tests",
+]
 
 [tool.coverage.run]
 omit = [

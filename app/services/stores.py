@@ -2,13 +2,14 @@ from asyncio import gather
 from typing import Sequence, Any
 
 from fastapi import Depends
+
 from app.exceptions.repository import RecordNotFound
 from app.exceptions.stores import StoreAlreadyExists, StoreNotFound
-
-
-from app.models.stores import StoreCreate, Store, StoreReadWithImage
+from app.models.stores import StoreCreate, Store, StoreRead
 from app.models.util import File, Id
 from app.repositories.stores import StoresRepository
+from app.services.users import UsersService
+from app.services.addresses import AddressesService
 from .files import FilesService, stores_images_service
 
 
@@ -17,20 +18,36 @@ class StoresService:
         self,
         stores_repo: StoresRepository = Depends(StoresRepository),
         files_service: FilesService = Depends(stores_images_service),
+        users_service: UsersService = Depends(UsersService),
     ):
         self.stores_repo = stores_repo
         self.files_service = files_service
+        self.users_service = users_service
 
-    async def create_store(self, data: StoreCreate) -> Store:
+    async def create_store(self, data: StoreCreate, owner_id: Id) -> Store:
         store = await self.stores_repo.get_by_name(data.name)
         if store is not None:
             raise StoreAlreadyExists
-        store = await self.stores_repo.create(data)
-        return store
+        address = await AddressesService.get_address(data.address)
+        store = Store(**data.model_dump(exclude={"address"}), owner_id=owner_id, address=address)
+        return await self.stores_repo.save(store)
 
     async def get_stores(self, limit: int, offset: int, **filters: Any) -> Sequence[Store]:
         stores = await self.stores_repo.get_all(skip=offset, limit=limit, **filters)
         return stores
+
+    async def get_nearby_stores(
+        self, limit: int, offset: int, user_id: Id, user_address_id: Id
+    ) -> tuple[Sequence[Store], int]:
+        """
+        Returns a tuple of stores and the total amount of stores nearby
+        """
+        c = await self.users_service.get_user_address_coordinates(user_id, user_address_id)
+        stores = await self.stores_repo.get_nearby(
+            c.latitude, c.longitude, skip=offset, limit=limit
+        )
+        amount = await self.stores_repo.count_nearby(c.latitude, c.longitude)
+        return stores, amount
 
     async def count_stores(self, **filters: Any) -> int:
         stores_count = await self.stores_repo.count_all(**filters)
@@ -42,14 +59,16 @@ class StoresService:
             raise StoreNotFound
         return store
 
-    async def get_stores_with_image(self, stores: Sequence[Store]) -> Sequence[StoreReadWithImage]:
-        token = self.files_service.get_token()
+    async def get_stores_read(self, stores: Sequence[Store]) -> Sequence[StoreRead]:
         token = self.files_service.get_token()
         return await gather(*(self.__readable(store, token) for store in stores))
 
     async def update_store(self, service_id: Id, data: StoreCreate) -> Store:
+        address = await AddressesService.get_address(data.address)
         try:
-            return await self.stores_repo.update(service_id, data.model_dump())
+            return await self.stores_repo.update(
+                service_id, {**data.model_dump(), "address": address}
+            )
         except RecordNotFound as e:
             raise StoreNotFound from e
 
@@ -76,6 +95,6 @@ class StoresService:
         await self.get_store_by_id(store_id)
         await self.files_service.delete_file(store_id)
 
-    async def __readable(self, store: Store, token: str) -> StoreReadWithImage:
+    async def __readable(self, store: Store, token: str) -> StoreRead:
         image = await self.files_service.get_file_url(store.id, token)
-        return StoreReadWithImage(**store.model_dump(), image_url=image)
+        return StoreRead(**store.model_dump(), address=store.address, image_url=image)

@@ -2,5 +2,5 @@ class AddressNotFound(Exception):
     pass
 
 
-class AddressAlreadyExists(Exception):
+class NonExistentAddress(Exception):
     pass

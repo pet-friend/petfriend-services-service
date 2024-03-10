@@ -15,6 +15,7 @@ services:
       STORES_IMAGES_CONTAINER: ${STORES_IMAGES_CONTAINER}
       PRODUCTS_IMAGES_CONTAINER: ${PRODUCTS_IMAGES_CONTAINER}
       USERS_SERVICE_URL: ${USERS_SERVICE_URL}
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
     depends_on:
       database:
         condition: service_healthy

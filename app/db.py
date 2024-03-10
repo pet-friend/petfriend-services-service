@@ -17,7 +17,7 @@ from .config import settings
 # Enable pool pre-ping to avoid failing when database container scales to 0
 # See https://docs.sqlalchemy.org/en/20/core/pooling.html#disconnect-handling-pessimistic
 engine = create_async_engine(
-    settings.DB_URL, connect_args=settings.DB_ARGUMENTS, pool_pre_ping=True
+    settings.DB_URL, connect_args=settings.DB_ARGUMENTS, pool_pre_ping=True, echo=settings.DEBUG
 )
 
 

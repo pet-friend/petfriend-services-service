@@ -18,7 +18,7 @@ with open("tests/assets/test_image_2.jpg", "rb") as f:
 class TestProductsRoute(BaseAPITestCase):
     def setUp(self) -> None:
         super().setUp()
-        self.store_create_json_data = StoreCreateFactory.build().model_dump(mode="json")
+        self.store_create_json_data = StoreCreateFactory.build(address=None).model_dump(mode="json")
         self.product_create_json_data = ProductCreateFactory.build().model_dump(mode="json")
 
     async def test_post_should_get_image_url(self) -> None:

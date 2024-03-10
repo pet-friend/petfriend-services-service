@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from httpx import AsyncClient
 
-from app.models.stores import StoreReadWithImage
+from app.models.stores import StoreRead
 from tests.factories.store_factories import StoreCreateFactory
 from tests.tests_setup import BaseAPITestCase
 
@@ -17,7 +17,7 @@ with open("tests/assets/test_image_2.jpg", "rb") as f:
 class TestStoresRoute(BaseAPITestCase):
     def setUp(self) -> None:
         super().setUp()
-        self.store_create_json_data = StoreCreateFactory.build().model_dump(mode="json")
+        self.store_create_json_data = StoreCreateFactory.build(address=None).model_dump(mode="json")
 
     async def test_post_should_get_image_url(self) -> None:
         r_store = await self.client.post("/stores", json=self.store_create_json_data)
@@ -30,7 +30,7 @@ class TestStoresRoute(BaseAPITestCase):
 
         r_store_get = await self.client.get(f"/stores/{store_id}")
         assert r_store_get.status_code == 200
-        store = StoreReadWithImage.model_validate_json(r_store_get.text)
+        store = StoreRead.model_validate_json(r_store_get.text)
         assert store.image_url is not None
 
         async with AsyncClient() as client:
@@ -51,7 +51,7 @@ class TestStoresRoute(BaseAPITestCase):
 
         r_store_get = await self.client.get(f"/stores/{store_id}")
         assert r_store_get.status_code == 200
-        store = StoreReadWithImage.model_validate_json(r_store_get.text)
+        store = StoreRead.model_validate_json(r_store_get.text)
         assert store.image_url is None
 
     async def test_post_put_should_get_second_image(self) -> None:
@@ -69,7 +69,7 @@ class TestStoresRoute(BaseAPITestCase):
 
         r_store_get = await self.client.get(f"/stores/{store_id}")
         assert r_store_get.status_code == 200
-        store = StoreReadWithImage.model_validate_json(r_store_get.text)
+        store = StoreRead.model_validate_json(r_store_get.text)
         assert store.image_url is not None
 
         async with AsyncClient() as client:
@@ -88,7 +88,7 @@ class TestStoresRoute(BaseAPITestCase):
 
         r_store_get = await self.client.get(f"/stores/{store_id}")
         assert r_store_get.status_code == 200
-        store = StoreReadWithImage.model_validate_json(r_store_get.text)
+        store = StoreRead.model_validate_json(r_store_get.text)
         assert store.image_url is not None
 
     async def test_store_starts_without_image(self) -> None:
@@ -99,7 +99,7 @@ class TestStoresRoute(BaseAPITestCase):
 
         r_store_get = await self.client.get(f"/stores/{store_id}")
         assert r_store_get.status_code == 200
-        store = StoreReadWithImage.model_validate_json(r_store_get.text)
+        store = StoreRead.model_validate_json(r_store_get.text)
         assert store.image_url is None
 
     async def test_post_image_no_store_should_return_404(self) -> None:

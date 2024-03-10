@@ -17,9 +17,10 @@ from .util import File
 
 class TestStoresService(IsolatedAsyncioTestCase):
     def setUp(self) -> None:
-        self.store_create = StoreCreateFactory.build()
+        self.store_create = StoreCreateFactory.build(address=None)
         self.store = Store(
             id=uuid4(),
+            owner_id=uuid4(),
             created_at=datetime.datetime(2023, 1, 1),
             updated_at=datetime.datetime(2023, 1, 1),
             **self.store_create.__dict__

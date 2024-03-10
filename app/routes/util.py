@@ -21,3 +21,10 @@ def get_image(image: UploadFile) -> UploadFile:
     if not (image.content_type and image.content_type.startswith("image/")):
         raise INVALID_IMAGE_ERROR
     return image
+
+
+def process_list(data: list[Any] | str) -> list[Any]:
+    """
+    Converts a string to a list of strings, or returns the list as is.
+    """
+    return data.split(",") if isinstance(data, str) else data

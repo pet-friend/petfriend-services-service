@@ -55,7 +55,7 @@ class TestProductsModel(IsolatedAsyncioTestCase):
         # Given
         product_create = ProductCreateFactory.build()
         product_create.categories.append(Category("camas"))
-        product_create.categories.append(Category("platos y comederos"))
+        product_create.categories.append(Category("platos_y_comederos"))
         product_create.categories.append(Category("cuchas"))
         # When
         with self.assertRaises(ValueError) as context:

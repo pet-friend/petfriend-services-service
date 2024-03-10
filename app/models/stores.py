@@ -1,19 +1,24 @@
-from typing import Optional
-from sqlmodel import Field, SQLModel
+from typing import TYPE_CHECKING
+
+from sqlmodel import Field, Relationship, SQLModel
 from pydantic import field_validator
 
+from app.models.addresses import AddressRead, AddressCreate, Address, StoreAddressLink
 from app.models.constants.stores import (
     MIN_DELIVERY_RANGE,
     MAX_DELIVERY_RANGE,
     INVALID_DELIVERY_RANGE_MSG,
     INVALID_SHIPPING_COST_MSG,
 )
-from .util import UUIDModel, TimestampModel, OptionalImageUrlModel
+from .util import Id, TimestampModel, OptionalImageUrlModel, UUIDModel
+
+if TYPE_CHECKING:
+    from .products import Product
 
 
 class StoreBase(SQLModel):
     name: str = Field(unique=True)
-    description: Optional[str] = None
+    description: str | None = None
     delivery_range_km: float
     shipping_cost: float = Field(default=0.0)
 
@@ -30,21 +35,31 @@ class StoreBase(SQLModel):
         raise ValueError(INVALID_SHIPPING_COST_MSG)
 
 
-# What the Store gets from the API (Base + id)
-class StoreRead(StoreBase, UUIDModel):
-    # TODO: owner_id: Id (retrieved from auth credentials)
+# Public database fields
+class StorePublic(UUIDModel, StoreBase):
     pass
 
 
-class StoreReadWithImage(StoreRead, OptionalImageUrlModel):
-    pass
+# What the user gets from the API (Public + image)
+class StoreRead(StorePublic, OptionalImageUrlModel):
+    address: AddressRead | None
 
 
 # Actual data in database table (Base + id + timestamps)
-class Store(StoreRead, TimestampModel, table=True):
+class Store(StorePublic, TimestampModel, table=True):
     __tablename__ = "stores"
+
+    owner_id: Id
+    address: Address | None = Relationship(
+        sa_relationship_kwargs={"lazy": "selectin", "cascade": "all, delete", "uselist": False},
+        link_model=StoreAddressLink,
+    )
+    products: list["Product"] = Relationship(
+        sa_relationship_kwargs={"lazy": "selectin", "cascade": "all, delete-orphan"},
+        back_populates="store",
+    )
 
 
 # Required attributes for creating a new record
 class StoreCreate(StoreBase):
-    pass
+    address: AddressCreate | None = None
