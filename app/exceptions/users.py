@@ -4,3 +4,7 @@ class InvalidToken(Exception):
 
 class UnknownUserError(Exception):
     pass
+
+
+class Forbidden(Exception):
+    pass

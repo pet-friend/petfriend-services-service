@@ -78,8 +78,9 @@ async def update_user_store(
     store_id: Id,
     data: StoreCreate,
     stores_service: StoresService = Depends(StoresService),
+    user_id: Id = Depends(get_caller_id),
 ) -> StoreRead:
-    store = await stores_service.update_store(store_id, data)
+    store = await stores_service.update_store(store_id, data, user_id)
     return (await stores_service.get_stores_read([store]))[0]
 
 
@@ -91,5 +92,6 @@ async def update_user_store(
 async def delete_user_store(
     store_id: Id,
     stores_service: StoresService = Depends(StoresService),
+    user_id: Id = Depends(get_caller_id),
 ) -> None:
-    await stores_service.delete_store(store_id)
+    await stores_service.delete_store(store_id, user_id)
