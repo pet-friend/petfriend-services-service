@@ -12,6 +12,7 @@ from app.models.util import Id
 from .responses.addresses import ADDRESS_NOT_FOUND_ERROR
 from .responses.stores import STORE_NOT_FOUND_ERROR
 from .responses.products import PRODUCT_EXISTS_ERROR, PRODUCT_NOT_FOUND_ERROR
+from .responses.auth import FORBIDDEN
 from .util import get_exception_docs, process_list
 
 router = APIRouter(tags=["Products"], prefix="/stores")
@@ -20,15 +21,16 @@ router = APIRouter(tags=["Products"], prefix="/stores")
 @router.post(
     "/{store_id}/products",
     status_code=http_status.HTTP_201_CREATED,
-    responses=get_exception_docs(PRODUCT_EXISTS_ERROR),
+    responses=get_exception_docs(PRODUCT_EXISTS_ERROR, FORBIDDEN),
     response_model=ProductRead,
 )
 async def create_product(
     store_id: Id,
     data: ProductCreate,
     products_service: ProductsService = Depends(ProductsService),
+    user_id: Id = Depends(get_caller_id),
 ) -> Product:
-    return await products_service.create_product(store_id, data)
+    return await products_service.create_product(store_id, data, user_id)
 
 
 @router.get("/nearby/products", responses=get_exception_docs(ADDRESS_NOT_FOUND_ERROR))
@@ -71,26 +73,29 @@ async def get_product(
 
 
 @router.put(
-    "/{store_id}/products/{product_id}", responses=get_exception_docs(PRODUCT_NOT_FOUND_ERROR)
+    "/{store_id}/products/{product_id}",
+    responses=get_exception_docs(PRODUCT_NOT_FOUND_ERROR, FORBIDDEN),
 )
 async def update_store_product(
     store_id: Id,
     product_id: Id,
     data: ProductCreate,
     products_service: ProductsService = Depends(ProductsService),
+    user_id: Id = Depends(get_caller_id),
 ) -> ProductRead:
-    product = await products_service.update_product(store_id, product_id, data)
+    product = await products_service.update_product(store_id, product_id, data, user_id)
     return (await products_service.get_products_read((product,)))[0]
 
 
 @router.delete(
     "/{store_id}/products/{product_id}",
-    responses=get_exception_docs(PRODUCT_NOT_FOUND_ERROR),
+    responses=get_exception_docs(PRODUCT_NOT_FOUND_ERROR, FORBIDDEN),
     status_code=http_status.HTTP_204_NO_CONTENT,
 )
 async def delete_store_products(
     store_id: Id,
     product_id: Id,
     products_service: ProductsService = Depends(ProductsService),
+    user_id: Id = Depends(get_caller_id),
 ) -> None:
-    await products_service.delete_product(store_id, product_id)
+    await products_service.delete_product(store_id, product_id, user_id)

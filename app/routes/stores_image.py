@@ -10,6 +10,7 @@ from .responses.image import (
     NOT_FOUND_ERROR,
 )
 from .responses.stores import STORE_NOT_FOUND_ERROR
+from .responses.auth import FORBIDDEN
 from .util import get_exception_docs, get_image
 
 router = APIRouter(prefix="/stores/{store_id}/image", tags=["Store images"])
@@ -18,7 +19,9 @@ router = APIRouter(prefix="/stores/{store_id}/image", tags=["Store images"])
 @router.post(
     "",
     status_code=status.HTTP_201_CREATED,
-    responses=get_exception_docs(IMAGE_EXISTS_ERROR, INVALID_IMAGE_ERROR, STORE_NOT_FOUND_ERROR),
+    responses=get_exception_docs(
+        IMAGE_EXISTS_ERROR, INVALID_IMAGE_ERROR, STORE_NOT_FOUND_ERROR, FORBIDDEN
+    ),
 )
 async def create_store_image(
     store_id: Id,
@@ -32,7 +35,7 @@ async def create_store_image(
 
 @router.put(
     "",
-    responses=get_exception_docs(INVALID_IMAGE_ERROR, STORE_NOT_FOUND_ERROR),
+    responses=get_exception_docs(INVALID_IMAGE_ERROR, STORE_NOT_FOUND_ERROR, FORBIDDEN),
 )
 async def set_store_image(
     store_id: Id,
@@ -45,7 +48,9 @@ async def set_store_image(
 
 
 @router.delete(
-    "", status_code=status.HTTP_204_NO_CONTENT, responses=get_exception_docs(NOT_FOUND_ERROR)
+    "",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=get_exception_docs(NOT_FOUND_ERROR, FORBIDDEN),
 )
 async def delete_store_image(
     store_id: Id,

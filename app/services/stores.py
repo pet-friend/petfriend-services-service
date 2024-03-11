@@ -76,6 +76,12 @@ class StoresService:
         if store.owner_id != user_id:
             raise Forbidden
 
+        for product in store.products:
+            try:
+                await self.files_service.delete_file(product.id)  # delete image if exists
+            except FileNotFoundError:
+                pass
+
         try:
             await self.files_service.delete_file(store_id)  # delete image if exists
         except FileNotFoundError:
