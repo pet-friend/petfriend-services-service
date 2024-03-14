@@ -1,7 +1,7 @@
 import datetime
 from unittest import IsolatedAsyncioTestCase
-from app.exceptions.repository import RecordNotFound
 from app.exceptions.stores import StoreAlreadyExists, StoreNotFound
+from app.exceptions.users import Forbidden
 from app.models.addresses import Address
 from app.models.stores import Store, StoreCreate
 from uuid import uuid4
@@ -18,9 +18,10 @@ class TestStoresService(IsolatedAsyncioTestCase):
         self.store_create = StoreCreate(
             name="test", description="test", delivery_range_km=10, address=None
         )
+        self.owner_id = uuid4()
         self.store = Store(
             id=uuid4(),
-            owner_id=uuid4(),
+            owner_id=self.owner_id,
             created_at=datetime.datetime(2023, 1, 1),
             updated_at=datetime.datetime(2023, 1, 1),
             **self.store_create.__dict__
@@ -36,13 +37,13 @@ class TestStoresService(IsolatedAsyncioTestCase):
         self.repository.get_by_name = AsyncMock(return_value=None)
 
         # When
-        saved_record = await self.service.create_store(self.store_create, self.store.owner_id)
+        saved_record = await self.service.create_store(self.store_create, self.owner_id)
 
         # Then
         assert saved_record == self.store
         self.repository.save.assert_called_once_with(
             CustomMatcher(
-                lambda s: s.owner_id == self.store.owner_id
+                lambda s: s.owner_id == self.owner_id
                 and all(getattr(s, k, None) == v for k, v in self.store_create.model_dump().items())
             )
         )
@@ -54,7 +55,7 @@ class TestStoresService(IsolatedAsyncioTestCase):
 
         # When
         with pytest.raises(StoreAlreadyExists):
-            await self.service.create_store(self.store_create, self.store.owner_id)
+            await self.service.create_store(self.store_create, self.owner_id)
 
         # Then
         self.repository.get_by_name.assert_called_once_with(self.store_create.name)
@@ -92,57 +93,99 @@ class TestStoresService(IsolatedAsyncioTestCase):
     @pytest.mark.asyncio
     async def test_update_store_should_call_repository_update(self) -> None:
         # Given
+        self.repository.get_by_id = AsyncMock(return_value=self.store)
         self.repository.update = AsyncMock(return_value=self.store)
+
         # When
-        fetched_record = await self.service.update_store("1", self.store_create)  # type: ignore
+        fetched_record = await self.service.update_store(
+            "1", self.store_create, self.owner_id  # type: ignore
+        )
+
         # Then
         assert fetched_record == self.store
         self.repository.update.assert_called_once_with("1", self.store_create.__dict__)
 
     @pytest.mark.asyncio
+    async def test_cant_update_store_if_not_owner(self) -> None:
+        # Given
+        self.repository.get_by_id = AsyncMock(return_value=self.store)
+
+        # When, Then
+        with pytest.raises(Forbidden):
+            await self.service.update_store("1", self.store_create, uuid4())  # type: ignore
+
+        # Then
+        self.repository.update.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_update_inexistent_store_should_raise_store_not_found(self) -> None:
         # Given
-        self.repository.update = AsyncMock(side_effect=RecordNotFound)
+        self.repository.get_by_id = AsyncMock(return_value=None)
+
         # When
         with pytest.raises(StoreNotFound):
-            await self.service.update_store("1", self.store_create)  # type: ignore
+            await self.service.update_store("1", self.store_create, self.owner_id)  # type: ignore
+
         # Then
-        self.repository.update.assert_called_once_with("1", self.store_create.__dict__)
+        self.repository.get_by_id.assert_called_once_with("1")
 
     @pytest.mark.asyncio
     async def test_delete_store_should_call_repository_delete(self) -> None:
         # Given
+        self.repository.get_by_id = AsyncMock(return_value=self.store)
         self.repository.delete = AsyncMock(return_value=None)
         self.service.files_service.delete_file = AsyncMock(return_value=None)  # type: ignore
+
         # When
-        fetched_record = await self.service.delete_store("1")  # type: ignore
+        fetched_record = await self.service.delete_store("1", self.owner_id)  # type: ignore
+
         # Then
         assert fetched_record is None
         self.repository.delete.assert_called_once_with("1")
         self.service.files_service.delete_file.assert_called_once_with("1")
 
     @pytest.mark.asyncio
+    async def test_cant_delete_store_if_not_owner(self) -> None:
+        # Given
+        self.repository.get_by_id = AsyncMock(return_value=self.store)
+        self.service.files_service.delete_file = AsyncMock(return_value=None)  # type: ignore
+
+        # When, Then
+        with pytest.raises(Forbidden):
+            await self.service.delete_store("1", uuid4())  # type: ignore
+
+        # Then
+        self.repository.delete.assert_not_called()
+        self.service.files_service.delete_file.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_delete_inexistent_store_should_raise_store_not_found(self) -> None:
         # Given
-        self.repository.delete = AsyncMock(side_effect=RecordNotFound)
+        # self.repository.delete = AsyncMock(side_effect=RecordNotFound)
+        self.repository.get_by_id = AsyncMock(return_value=None)
         self.service.files_service.delete_file = AsyncMock(return_value=None)  # type: ignore
+
         # When
         with pytest.raises(StoreNotFound):
-            await self.service.delete_store("1")  # type: ignore
+            await self.service.delete_store("1", self.owner_id)  # type: ignore
+
         # Then
-        self.repository.delete.assert_called_once_with("1")
+        # self.repository.delete.assert_called_once_with("1")
+        self.repository.get_by_id.assert_called_once_with("1")
 
     @pytest.mark.asyncio
     async def test_delete_store_without_image_should_ignore_file_not_found(self) -> None:
         # Given
+        self.repository.get_by_id = AsyncMock(return_value=self.store)
         self.repository.delete = AsyncMock(return_value=None)
         self.service.files_service.delete_file = AsyncMock(  # type: ignore
             side_effect=FileNotFoundError
         )
+
         # When
-        fetched_record = await self.service.delete_store("1")  # type: ignore
+        await self.service.delete_store("1", self.owner_id)  # type: ignore
+
         # Then
-        assert fetched_record is None
         self.repository.delete.assert_called_once_with("1")
         self.service.files_service.delete_file.assert_called_once_with("1")
 
@@ -161,7 +204,7 @@ class TestStoresService(IsolatedAsyncioTestCase):
             get_address_mock.return_value = expected_address
 
             # When
-            saved_record = await self.service.create_store(self.store_create, self.store.owner_id)
+            saved_record = await self.service.create_store(self.store_create, self.owner_id)
 
             # Then
             self.store.address = expected_address

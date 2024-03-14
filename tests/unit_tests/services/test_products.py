@@ -3,6 +3,7 @@ from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock
 import pytest
 from app.exceptions.stores import StoreNotFound
+from app.exceptions.users import Forbidden
 
 from app.models.products import Category, Product, ProductCreate
 from app.models.stores import Store
@@ -19,9 +20,11 @@ from tests.factories.store_factories import StoreCreateFactory
 class TestProductsService(IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.product_create = ProductCreateFactory.build()
-
+        self.owner_id = uuid4()
         self.store = Store(
-            id=uuid4(), owner_id=uuid4(), **StoreCreateFactory.build(address=None).model_dump()
+            id=uuid4(),
+            owner_id=self.owner_id,
+            **StoreCreateFactory.build(address=None).model_dump(),
         )
         self.stores_service = AsyncMock(spec=StoresService)
 
@@ -38,7 +41,9 @@ class TestProductsService(IsolatedAsyncioTestCase):
         self.stores_service.get_store_by_id.return_value = self.store
 
         # When
-        saved_record = await self.service.create_product(self.store.id, self.product_create)
+        saved_record = await self.service.create_product(
+            self.store.id, self.product_create, self.owner_id
+        )
         saved_record = Product(**saved_record.model_dump())
         # Then
         assert len(self.product_create.model_dump().items()) <= len(
@@ -57,9 +62,21 @@ class TestProductsService(IsolatedAsyncioTestCase):
 
         # When, Then
         with pytest.raises(StoreNotFound):
-            await self.service.create_product(self.store.id, self.product_create)
+            await self.service.create_product(self.store.id, self.product_create, self.owner_id)
 
         self.stores_service.get_store_by_id.assert_called_once_with(self.store.id)
+
+    @pytest.mark.asyncio
+    async def test_create_product_fails_if_not_the_owner(self) -> None:
+        # Given
+        self.stores_service.get_store_by_id.return_value = self.store
+
+        # When, Then
+        with pytest.raises(Forbidden):
+            await self.service.create_product(self.store.id, self.product_create, uuid4())
+
+        self.stores_service.get_store_by_id.assert_called_once_with(self.store.id)
+        self.repository.save.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_get_product_should_call_repository_get_by_id(self) -> None:
@@ -89,9 +106,10 @@ class TestProductsService(IsolatedAsyncioTestCase):
         # Given
         product_id = uuid4()
         self.files_service.file_exists.return_value = False
+        self.stores_service.get_store_by_id.return_value = self.store
 
         # When
-        await self.service.delete_product(self.store.id, product_id)
+        await self.service.delete_product(self.store.id, product_id, self.owner_id)
 
         # Then
         self.repository.delete.assert_called_once_with((self.store.id, product_id))
@@ -103,30 +121,61 @@ class TestProductsService(IsolatedAsyncioTestCase):
         product_id = uuid4()
         self.repository.update.side_effect = RecordNotFound()
         self.files_service.file_exists.return_value = False
+        self.stores_service.get_store_by_id.return_value = self.store
 
         # When, Then
         with self.assertRaises(ProductNotFound):
-            await self.service.update_product(self.store.id, product_id, self.product_create)
+            await self.service.update_product(
+                self.store.id, product_id, self.product_create, self.owner_id
+            )
+
+    @pytest.mark.asyncio
+    async def test_update_product_fails_if_not_the_owner(self) -> None:
+        # Given
+        product_id = uuid4()
+        self.stores_service.get_store_by_id.return_value = self.store
+
+        # When, Then
+        with self.assertRaises(Forbidden):
+            await self.service.update_product(
+                self.store.id, product_id, self.product_create, uuid4()
+            )
+
+        self.repository.update.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_delete_product_not_exists_should_raise(self) -> None:
         # Given
         product_id = uuid4()
         self.repository.delete.side_effect = RecordNotFound()
+        self.stores_service.get_store_by_id.return_value = self.store
 
         # When, Then
         with self.assertRaises(ProductNotFound):
-            await self.service.delete_product(self.store.id, product_id)
+            await self.service.delete_product(self.store.id, product_id, self.owner_id)
+
+    @pytest.mark.asyncio
+    async def test_delete_product_fails_if_not_the_owner(self) -> None:
+        # Given
+        product_id = uuid4()
+        self.stores_service.get_store_by_id.return_value = self.store
+
+        # When, Then
+        with self.assertRaises(Forbidden):
+            await self.service.delete_product(self.store.id, product_id, uuid4())
+
+        self.repository.delete.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_create_product_already_exists_should_raise(self) -> None:
         # Given
         product = Product(store_id=self.store.id, id=uuid4(), **self.product_create.model_dump())
         self.repository.get_by_name.return_value = product
+        self.stores_service.get_store_by_id.return_value = self.store
 
         # When, Then
         with self.assertRaises(ProductAlreadyExists):
-            await self.service.create_product(self.store.id, self.product_create)
+            await self.service.create_product(self.store.id, self.product_create, self.owner_id)
 
         self.repository.get_by_name.assert_called_once_with(self.store.id, self.product_create.name)
 
@@ -138,7 +187,7 @@ class TestProductsService(IsolatedAsyncioTestCase):
         self.stores_service.get_store_by_id.return_value = self.store
 
         # When
-        await self.service.create_product(self.store.id, self.product_create)
+        await self.service.create_product(self.store.id, self.product_create, self.owner_id)
 
         # Then
         self.repository.save.assert_called_once()
@@ -154,11 +203,11 @@ class TestProductsService(IsolatedAsyncioTestCase):
         self.stores_service.get_store_by_id.return_value = self.store
 
         # When
-        await self.service.create_product(self.store.id, self.product_create)
+        await self.service.create_product(self.store.id, self.product_create, self.owner_id)
         new_categories = [Category("alimentos")]
         save_args = self.repository.save.call_args.args[0]
         product_copy = ProductCreate(**save_args.model_dump() | {"categories": new_categories})
-        await self.service.update_product(self.store.id, save_args.id, product_copy)
+        await self.service.update_product(self.store.id, save_args.id, product_copy, self.owner_id)
 
         # Then
         self.repository.update.assert_called_once()

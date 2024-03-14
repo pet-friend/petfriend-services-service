@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import pytest
 from app.exceptions.stores import StoreNotFound
+from app.exceptions.users import Forbidden
 
 from app.models.stores import Store
 from app.services.files import FilesService
@@ -18,9 +19,10 @@ from .util import File
 class TestStoresService(IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.store_create = StoreCreateFactory.build(address=None)
+        self.owner_id = uuid4()
         self.store = Store(
             id=uuid4(),
-            owner_id=uuid4(),
+            owner_id=self.owner_id,
             created_at=datetime.datetime(2023, 1, 1),
             updated_at=datetime.datetime(2023, 1, 1),
             **self.store_create.__dict__
@@ -41,7 +43,7 @@ class TestStoresService(IsolatedAsyncioTestCase):
 
         # When, Then
         with self.assertRaises(StoreNotFound):
-            await self.service.create_store_image(self.store.id, self.file)
+            await self.service.create_store_image(self.store.id, self.file, self.owner_id)
 
         self.repository.get_by_id.assert_called_once_with(self.store.id)
 
@@ -52,7 +54,7 @@ class TestStoresService(IsolatedAsyncioTestCase):
 
         # When, Then
         with self.assertRaises(StoreNotFound):
-            await self.service.set_store_image(self.store.id, self.file)
+            await self.service.set_store_image(self.store.id, self.file, self.owner_id)
 
         self.repository.get_by_id.assert_called_once_with(self.store.id)
 
@@ -63,7 +65,7 @@ class TestStoresService(IsolatedAsyncioTestCase):
 
         # When, Then
         with self.assertRaises(StoreNotFound):
-            await self.service.delete_store_image(self.store.id)
+            await self.service.delete_store_image(self.store.id, self.owner_id)
 
         self.repository.get_by_id.assert_called_once_with(self.store.id)
 
@@ -73,11 +75,24 @@ class TestStoresService(IsolatedAsyncioTestCase):
         self.repository.get_by_id.return_value = self.store
 
         # When
-        await self.service.create_store_image(self.store.id, self.file)
+        await self.service.create_store_image(self.store.id, self.file, self.owner_id)
 
         # Then
         self.repository.get_by_id.assert_called_once_with(self.store.id)
         self.files_service.create_file.assert_called_once_with(self.store.id, self.file)
+
+    @pytest.mark.asyncio
+    async def test_cant_create_image_if_not_owner(self) -> None:
+        # Given
+        self.repository.get_by_id.return_value = self.store
+
+        # When, Then
+        with pytest.raises(Forbidden):
+            await self.service.create_store_image(self.store.id, self.file, uuid4())
+
+        # Then
+        self.repository.get_by_id.assert_called_once_with(self.store.id)
+        self.files_service.create_file.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_set_image_calls_set_file(self) -> None:
@@ -85,11 +100,24 @@ class TestStoresService(IsolatedAsyncioTestCase):
         self.repository.get_by_id.return_value = self.store
 
         # When
-        await self.service.set_store_image(self.store.id, self.file)
+        await self.service.set_store_image(self.store.id, self.file, self.owner_id)
 
         # Then
         self.repository.get_by_id.assert_called_once_with(self.store.id)
         self.files_service.set_file.assert_called_once_with(self.store.id, self.file)
+
+    @pytest.mark.asyncio
+    async def test_cant_set_image_if_not_owner(self) -> None:
+        # Given
+        self.repository.get_by_id.return_value = self.store
+
+        # When, Then
+        with pytest.raises(Forbidden):
+            await self.service.set_store_image(self.store.id, self.file, uuid4())
+
+        # Then
+        self.repository.get_by_id.assert_called_once_with(self.store.id)
+        self.files_service.set_file.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_delete_image_calls_delete_file(self) -> None:
@@ -97,8 +125,21 @@ class TestStoresService(IsolatedAsyncioTestCase):
         self.repository.get_by_id.return_value = self.store
 
         # When
-        await self.service.delete_store_image(self.store.id)
+        await self.service.delete_store_image(self.store.id, self.owner_id)
 
         # Then
         self.repository.get_by_id.assert_called_once_with(self.store.id)
         self.files_service.delete_file.assert_called_once_with(self.store.id)
+
+    @pytest.mark.asyncio
+    async def test_cant_delete_image_if_not_owner(self) -> None:
+        # Given
+        self.repository.get_by_id.return_value = self.store
+
+        # When, Then
+        with pytest.raises(Forbidden):
+            await self.service.delete_store_image(self.store.id, uuid4())
+
+        # Then
+        self.repository.get_by_id.assert_called_once_with(self.store.id)
+        self.files_service.delete_file.assert_not_called()

@@ -5,6 +5,8 @@ from sqlalchemy.exc import IntegrityError
 from app.exceptions.addresses import NonExistentAddress
 from app.exceptions.stores import StoreNotFound, StoreAlreadyExists
 from app.exceptions.products import ProductNotFound, ProductAlreadyExists
+from app.exceptions.users import Forbidden
+from app.handlers.user_handlers import forbidden_handler
 from .base_handlers import handle_exception, validation_exception_handler, handle_http_exception
 from .db_handlers import validation_integrity_error_handler
 from .addresses_handlers import non_existent_address_handler
@@ -25,3 +27,4 @@ def add_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(FileNotFoundError, file_not_found_handler)
     app.add_exception_handler(ProductNotFound, product_not_found_handler)
     app.add_exception_handler(ProductAlreadyExists, product_already_exists_handler)
+    app.add_exception_handler(Forbidden, forbidden_handler)

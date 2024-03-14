@@ -3,8 +3,8 @@ from typing import Sequence, Any
 
 from fastapi import Depends
 
-from app.exceptions.repository import RecordNotFound
 from app.exceptions.stores import StoreAlreadyExists, StoreNotFound
+from app.exceptions.users import Forbidden
 from app.models.stores import StoreCreate, Store, StoreRead
 from app.models.util import File, Id
 from app.repositories.stores import StoresRepository
@@ -63,36 +63,50 @@ class StoresService:
         token = self.files_service.get_token()
         return await gather(*(self.__readable(store, token) for store in stores))
 
-    async def update_store(self, service_id: Id, data: StoreCreate) -> Store:
-        address = await AddressesService.get_address(data.address)
-        try:
-            return await self.stores_repo.update(
-                service_id, {**data.model_dump(), "address": address}
-            )
-        except RecordNotFound as e:
-            raise StoreNotFound from e
+    async def update_store(self, store_id: Id, data: StoreCreate, user_id: Id) -> Store:
+        store = await self.get_store_by_id(store_id)
+        if store.owner_id != user_id:
+            raise Forbidden
 
-    async def delete_store(self, service_id: Id) -> None:
+        address = await AddressesService.get_address(data.address)
+        return await self.stores_repo.update(store_id, {**data.model_dump(), "address": address})
+
+    async def delete_store(self, store_id: Id, user_id: Id) -> None:
+        store = await self.get_store_by_id(store_id)
+        if store.owner_id != user_id:
+            raise Forbidden
+
+        for product in store.products:
+            try:
+                await self.files_service.delete_file(product.id)  # delete image if exists
+            except FileNotFoundError:
+                pass
+
         try:
-            await self.delete_store_image(service_id)  # delete image if exists
+            await self.files_service.delete_file(store_id)  # delete image if exists
         except FileNotFoundError:
             pass
-        try:
-            await self.stores_repo.delete(service_id)
-        except RecordNotFound as e:
-            raise StoreNotFound from e
+        await self.stores_repo.delete(store_id)
 
-    async def create_store_image(self, store_id: Id, image: File) -> str:
-        # assert store exists
-        await self.get_store_by_id(store_id)
+    async def create_store_image(self, store_id: Id, image: File, user_id: Id) -> str:
+        store = await self.get_store_by_id(store_id)
+        if store.owner_id != user_id:
+            raise Forbidden
+
         return await self.files_service.create_file(store_id, image)
 
-    async def set_store_image(self, store_id: Id, image: File) -> str:
-        await self.get_store_by_id(store_id)
+    async def set_store_image(self, store_id: Id, image: File, user_id: Id) -> str:
+        store = await self.get_store_by_id(store_id)
+        if store.owner_id != user_id:
+            raise Forbidden
+
         return await self.files_service.set_file(store_id, image)
 
-    async def delete_store_image(self, store_id: Id) -> None:
-        await self.get_store_by_id(store_id)
+    async def delete_store_image(self, store_id: Id, user_id: Id) -> None:
+        store = await self.get_store_by_id(store_id)
+        if store.owner_id != user_id:
+            raise Forbidden
+
         await self.files_service.delete_file(store_id)
 
     async def __readable(self, store: Store, token: str) -> StoreRead:

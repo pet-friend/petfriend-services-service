@@ -1,8 +1,8 @@
 import json
 from uuid import uuid4
-from tests.tests_setup import BaseAPITestCase
 
 from app.models.stores import Store
+from tests.tests_setup import BaseAPITestCase
 from tests.fixtures.stores import valid_store, valid_store2, invalid_store
 
 
@@ -100,6 +100,21 @@ class TestStoresRoute(BaseAPITestCase):
     async def test_delete_store_not_found(self) -> None:
         response = await self.client.delete(f"/stores/{uuid4()}")
         assert response.status_code == 404
+
+    async def test_delete_store_not_owner_is_forbidden(self) -> None:
+        response = await self.client.post("/stores", json=valid_store)
+        assert response.status_code == 201
+        store_id = response.json()["id"]
+
+        # Change store owner
+        store = await self.db.get(Store, store_id)
+        assert store
+        store.owner_id = uuid4()
+        self.db.add(store)
+        await self.db.flush()
+
+        response2 = await self.client.delete(f"/stores/{store_id}")
+        assert response2.status_code == 403
 
 
 # Aux

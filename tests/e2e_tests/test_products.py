@@ -4,6 +4,7 @@ from uuid import uuid4
 from sqlmodel import select
 
 from app.models.products import Product
+from app.models.stores import Store
 from tests.factories.store_factories import StoreCreateFactory
 from tests.factories.product_factories import ProductCreateFactory
 
@@ -184,3 +185,24 @@ class TestStoresProductsRoute(BaseAPITestCase):
         store_id = uuid4()
         r_delete = await self.client.delete(f"/stores/{store_id}/products/{store_id}")
         assert r_delete.status_code == 404
+
+    async def test_delete_product_not_owner_is_forbidden(self) -> None:
+        response = await self.client.post("/stores", json=self.store_create_json_data)
+        assert response.status_code == 201
+        store_id = response.json()["id"]
+
+        r_post = await self.client.post(
+            f"/stores/{store_id}/products", json=self.product_create_json_data
+        )
+        assert r_post.status_code == 201
+        product_id = r_post.json()["id"]
+
+        # Change store owner
+        store = await self.db.get(Store, store_id)
+        assert store
+        store.owner_id = uuid4()
+        self.db.add(store)
+        await self.db.flush()
+
+        response2 = await self.client.delete(f"/stores/{store_id}/products/{product_id}")
+        assert response2.status_code == 403

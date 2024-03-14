@@ -4,6 +4,7 @@ from typing import Any, Iterable, Sequence
 from asyncio import gather
 
 from fastapi import Depends
+from app.exceptions.users import Forbidden
 
 from app.models.util import File, Id
 from app.models.products import Category, ProductCategories, ProductCreate, Product, ProductRead
@@ -28,10 +29,13 @@ class ProductsService:
         self.files_service = files_service
         self.users_service = users_service
 
-    async def create_product(self, store_id: Id, data: ProductCreate) -> Product:
-        await self.stores_service.get_store_by_id(store_id)  # assert store exists
+    async def create_product(self, store_id: Id, data: ProductCreate, user_id: Id) -> Product:
+        store = await self.stores_service.get_store_by_id(store_id)
+        if store.owner_id != user_id:
+            raise Forbidden
         if await self.products_repo.get_by_name(store_id, data.name) is not None:
             raise ProductAlreadyExists
+
         # map data.categories to ProductCategories model
         categories = [ProductCategories(category=category) for category in data.categories]
         logging.info(f"Creating product {data.name} in store {store_id} with data {data}")
@@ -45,7 +49,13 @@ class ProductsService:
 
         return product
 
-    async def update_product(self, store_id: Id, product_id: Id, data: ProductCreate) -> Product:
+    async def update_product(
+        self, store_id: Id, product_id: Id, data: ProductCreate, user_id: Id
+    ) -> Product:
+        store = await self.stores_service.get_store_by_id(store_id)
+        if store.owner_id != user_id:
+            raise Forbidden
+
         try:
             categories = [ProductCategories(category=category) for category in data.categories]
             return await self.products_repo.update(
@@ -54,9 +64,14 @@ class ProductsService:
         except RecordNotFound as e:
             raise ProductNotFound from e
 
-    async def delete_product(self, store_id: Id, product_id: Id) -> None:
-        if await self.files_service.file_exists(self.__get_image_id(store_id, product_id)):
-            await self.delete_product_image(store_id, product_id)
+    async def delete_product(self, store_id: Id, product_id: Id, user_id: Id) -> None:
+        store = await self.stores_service.get_store_by_id(store_id)
+        if store.owner_id != user_id:
+            raise Forbidden
+
+        image_id = self.__get_image_id(store_id, product_id)
+        if await self.files_service.file_exists(image_id):
+            await self.files_service.delete_file(image_id)
         try:
             await self.products_repo.delete((store_id, product_id))
         except RecordNotFound as e:
@@ -90,18 +105,31 @@ class ProductsService:
         token = self.files_service.get_token()
         return await gather(*(self.__readable(product, token) for product in products))
 
-    async def create_product_image(self, store_id: Id, product_id: Id, image: File) -> str:
-        await self.get_product(store_id, product_id)
+    async def create_product_image(
+        self, store_id: Id, product_id: Id, image: File, user_id: Id
+    ) -> str:
+        product = await self.get_product(store_id, product_id)
+        if product.store.owner_id != user_id:
+            raise Forbidden
+
         return await self.files_service.create_file(
             self.__get_image_id(store_id, product_id), image
         )
 
-    async def set_product_image(self, store_id: Id, product_id: Id, image: File) -> str:
-        await self.get_product(store_id, product_id)
+    async def set_product_image(
+        self, store_id: Id, product_id: Id, image: File, user_id: Id
+    ) -> str:
+        product = await self.get_product(store_id, product_id)
+        if product.store.owner_id != user_id:
+            raise Forbidden
+
         return await self.files_service.set_file(self.__get_image_id(store_id, product_id), image)
 
-    async def delete_product_image(self, store_id: Id, product_id: Id) -> None:
-        await self.get_product(store_id, product_id)
+    async def delete_product_image(self, store_id: Id, product_id: Id, user_id: Id) -> None:
+        product = await self.get_product(store_id, product_id)
+        if product.store.owner_id != user_id:
+            raise Forbidden
+
         await self.files_service.delete_file(self.__get_image_id(store_id, product_id))
 
     async def __readable(self, product: Product, token: str) -> ProductRead:
