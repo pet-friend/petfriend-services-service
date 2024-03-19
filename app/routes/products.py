@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from fastapi import status as http_status
 from pydantic import BeforeValidator
 
-from app.auth import get_caller_id
+from app.auth import get_caller_id, get_caller_token
 from app.serializers.products import ProductsList
 from app.services.products import ProductsService
 from app.models.products import Category, Product, ProductCreate, ProductRead
@@ -36,6 +36,7 @@ async def create_product(
 @router.get("/nearby/products", responses=get_exception_docs(ADDRESS_NOT_FOUND_ERROR))
 async def get_nearby_products(
     user_address_id: Id,
+    user_token: str = Depends(get_caller_token),
     name: str | None = Query(None),
     categories: Annotated[list[Category], BeforeValidator(process_list)] = Query([]),
     limit: int = Query(10, ge=1),
@@ -44,7 +45,7 @@ async def get_nearby_products(
     user_id: Id = Depends(get_caller_id),
 ) -> ProductsList:
     products, products_amount = await store_service.get_nearby_products(
-        limit, offset, user_id, user_address_id, categories, name=name
+        user_token, limit, offset, user_id, user_address_id, categories, name=name
     )
     return ProductsList(
         products=await store_service.get_products_read(products), amount=products_amount

@@ -82,6 +82,7 @@ class ProductsService:
 
     async def get_nearby_products(
         self,
+        user_token: str,
         limit: int,
         offset: int,
         user_id: Id,
@@ -92,7 +93,9 @@ class ProductsService:
         """
         Returns a tuple of products and the total amount of products nearby
         """
-        c = await self.users_service.get_user_address_coordinates(user_id, user_address_id)
+        c = await self.users_service.get_user_address_coordinates(
+            user_id, user_address_id, user_token
+        )
         products = await self.products_repo.get_nearby(
             c.latitude, c.longitude, skip=offset, limit=limit, categories=categories, **filters
         )

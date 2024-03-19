@@ -37,12 +37,14 @@ class StoresService:
         return stores
 
     async def get_nearby_stores(
-        self, limit: int, offset: int, user_id: Id, user_address_id: Id
+        self, user_token: str, limit: int, offset: int, user_id: Id, user_address_id: Id
     ) -> tuple[Sequence[Store], int]:
         """
         Returns a tuple of stores and the total amount of stores nearby
         """
-        c = await self.users_service.get_user_address_coordinates(user_id, user_address_id)
+        c = await self.users_service.get_user_address_coordinates(
+            user_id, user_address_id, user_token
+        )
         stores = await self.stores_repo.get_nearby(
             c.latitude, c.longitude, skip=offset, limit=limit
         )

@@ -5,7 +5,7 @@ from app.models.stores import StoreCreate, StorePublic, StoreRead
 from app.models.util import Id
 from app.serializers.stores import StoreList
 from app.services.stores import StoresService
-from app.auth import get_caller_id
+from app.auth import get_caller_id, get_caller_token
 from .responses.addresses import NON_EXISTENT_ADDRESS_ERROR, ADDRESS_NOT_FOUND_ERROR
 from .responses.stores import STORE_NOT_FOUND_ERROR
 from .responses.auth import FORBIDDEN
@@ -55,13 +55,14 @@ async def get_my_stores(
 @router.get("/nearby", responses=get_exception_docs(ADDRESS_NOT_FOUND_ERROR))
 async def get_nearby_stores(
     user_address_id: Id,
+    user_token: str = Depends(get_caller_token),
     limit: int = Query(10, ge=1),
     offset: int = Query(0, ge=0),
     store_service: StoresService = Depends(StoresService),
     user_id: Id = Depends(get_caller_id),
 ) -> StoreList:
     stores, stores_amount = await store_service.get_nearby_stores(
-        limit, offset, user_id, user_address_id
+        user_token, limit, offset, user_id, user_address_id
     )
     return StoreList(stores=await store_service.get_stores_read(stores), amount=stores_amount)
 

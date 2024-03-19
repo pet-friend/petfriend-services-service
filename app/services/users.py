@@ -31,8 +31,13 @@ class UsersService:
 
         raise UnknownUserError(response.text)
 
-    async def get_user_address_coordinates(self, user_id: Id, address_id: Id) -> Coordinates:
-        response = await self.client.get(f"/users/{user_id}/addresses/{address_id}")
+    async def get_user_address_coordinates(
+        self, user_id: Id, address_id: Id, user_token: str
+    ) -> Coordinates:
+        response = await self.client.get(
+            f"/users/{user_id}/addresses/{address_id}",
+            headers={"Authorization": f"Bearer {user_token}"},
+        )
 
         if response.is_success:
             result = response.json()

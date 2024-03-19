@@ -18,6 +18,14 @@ async def get_caller_id(request: Request) -> Id:
     return user_id
 
 
+async def get_caller_token(
+    auth: HTTPAuthorizationCredentials | None = Depends(oauth2_scheme),
+) -> str:
+    if auth is None:
+        raise UNAUTHORIZED
+    return auth.credentials
+
+
 async def authenticate(
     req: Request,
     auth: HTTPAuthorizationCredentials | None = Depends(oauth2_scheme),

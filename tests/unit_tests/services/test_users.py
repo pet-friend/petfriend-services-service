@@ -60,14 +60,16 @@ class TestUserService:
         address_id = uuid4()
         lat = 1.0
         long = 8.0
+        token = str(uuid4())
         httpx_mock.add_response(
             url=f"{settings.USERS_SERVICE_URL}/users/{user_id}/addresses/{address_id}",
             method="GET",
             json={"latitude": lat, "longitude": long},
+            headers={"Authorization": f"Bearer {token}"},
         )
 
         # When
-        coords = await self.users_service.get_user_address_coordinates(user_id, address_id)
+        coords = await self.users_service.get_user_address_coordinates(user_id, address_id, token)
 
         # Then
         assert coords.latitude == lat
@@ -78,12 +80,14 @@ class TestUserService:
         # Given
         user_id = uuid4()
         address_id = uuid4()
+        token = str(uuid4())
         httpx_mock.add_response(
             url=f"{settings.USERS_SERVICE_URL}/users/{user_id}/addresses/{address_id}",
             method="GET",
             status_code=404,
+            headers={"Authorization": f"Bearer {token}"},
         )
 
         # When, Then
         with pytest.raises(AddressNotFound):
-            await self.users_service.get_user_address_coordinates(user_id, address_id)
+            await self.users_service.get_user_address_coordinates(user_id, address_id, token)
