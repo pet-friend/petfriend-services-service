@@ -1,3 +1,4 @@
+from decimal import Decimal
 import os
 from typing import Type
 
@@ -9,6 +10,10 @@ class Settings(BaseSettings):
     app_name: str = "Services API"
     DB_URL: str = Field(validation_alias="DATABASE_URL")
     USERS_SERVICE_URL: str
+    PAYMENTS_SERVICE_URL: str
+    FEE_PERCENTAGE: Decimal = Field(
+        ge=0, le=100, default=Decimal(3), max_digits=5, decimal_places=3
+    )
     GOOGLE_MAPS_URL: str = "https://maps.googleapis.com/maps/api/geocode/json"
     GOOGLE_MAPS_API_KEY: str
 

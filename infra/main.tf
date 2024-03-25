@@ -47,6 +47,7 @@ module "microservice" {
     PRODUCTS_IMAGES_CONTAINER = local.products_images_container
     STORES_IMAGES_CONTAINER   = local.stores_images_container
     USERS_SERVICE_URL         = var.users_service_url
+    PAYMENTS_SERVICE_URL      = var.payments_service_url
     GOOGLE_MAPS_API_KEY       = var.google_maps_api_key
   }
 }
