@@ -31,12 +31,13 @@ async def create_store(
 
 @router.get("")
 async def get_stores(
+    owner_id: Id | None = None,
     limit: int = Query(10, ge=1),
     offset: int = Query(0, ge=0),
     store_service: StoresService = Depends(StoresService),
 ) -> StoreList:
-    stores = await store_service.get_stores(limit, offset)
-    stores_amount = await store_service.count_stores()
+    stores = await store_service.get_stores(limit, offset, owner_id=owner_id)
+    stores_amount = await store_service.count_stores(owner_id=owner_id)
     return StoreList(stores=await store_service.get_stores_read(stores), amount=stores_amount)
 
 
