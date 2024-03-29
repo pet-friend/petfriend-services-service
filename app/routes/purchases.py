@@ -2,7 +2,7 @@ from decimal import Decimal
 from fastapi import APIRouter, Depends
 from pydantic import PositiveInt
 
-from app.auth import get_caller_token
+from app.auth import get_caller_id, get_caller_token
 from app.models.util import Id
 from app.routes.responses.products import PRODUCT_NOT_FOUND_ERROR
 from app.routes.util import get_exception_docs
@@ -18,12 +18,16 @@ router = APIRouter(prefix="", tags=["Purchases"])
 )
 async def purchase(
     store_id: Id,
+    ship_to_address_id: Id,
     products_quantities: dict[Id, PositiveInt],
     purchases_service: PurchasesService = Depends(),
+    user_id: Id = Depends(get_caller_id),
     token: str = Depends(get_caller_token),
 ) -> str:
     """Body must be a dictionary with product ids as keys and quantities as values."""
-    return await purchases_service.purchase(store_id, products_quantities, token)
+    return await purchases_service.purchase(
+        store_id, products_quantities, user_id, ship_to_address_id, token
+    )
 
 
 @router.get(

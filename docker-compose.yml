@@ -1,4 +1,3 @@
-version: "3.5"
 services:
   api:
     image: ${WEB_CONTAINER_NAME}
@@ -25,7 +24,7 @@ services:
     volumes:
       - ./:/app
       - /var/run/docker.sock:/var/run/docker.sock # Docker in docker for tests
-  
+
   database:
     container_name: ${DB_CONTAINER_NAME}
     image: postgres:latest
