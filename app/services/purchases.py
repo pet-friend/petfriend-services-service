@@ -1,4 +1,5 @@
 from decimal import Decimal
+import logging
 from typing import Any, Sequence
 from asyncio import gather
 
@@ -31,6 +32,12 @@ class PurchasesService:
         self.users_service = users_service
         self.purchases_repo = purchases_repo
 
+    # TODO:
+    # - tests
+    # - check that user can't buy from his own store?
+    # - routes and exception handlers for routes
+    # - update state from notification
+
     async def purchase(
         self,
         store_id: Id,
@@ -54,6 +61,8 @@ class PurchasesService:
             self.build_order(purchase.id, products, products_quantities),
         )
         purchase.items = items
+
+        logging.debug(f"Creating preference for payment:\n{payload}")
 
         async with AsyncClient(
             headers={"Authorization": f"Bearer {token}"}, timeout=REQUEST_TIMEOUT
@@ -122,7 +131,7 @@ class PurchasesService:
             items.append(
                 PurchaseItem(
                     product_id=p.id, quantity=products_quantities[p.id], unit_price=unit_price
-                )
+                )  # type: ignore
             )
 
         return items, jsonable_encoder(
@@ -132,6 +141,10 @@ class PurchasesService:
                     "type": "P",
                     "items": json_items,
                     "marketplace_fee": total_cost * settings.FEE_PERCENTAGE / 100,
-                }
+                    "shipments": {
+                        "cost": store.shipping_cost,
+                        "mode": "not_specified",
+                    },
+                },
             }
         )

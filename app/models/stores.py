@@ -37,7 +37,7 @@ class StoreBase(SQLModel):
 
 # Public database fields
 class StorePublic(UUIDModel, StoreBase):
-    pass
+    owner_id: Id
 
 
 # What the user gets from the API (Public + image)
@@ -49,7 +49,6 @@ class StoreRead(StorePublic, OptionalImageUrlModel):
 class Store(StorePublic, TimestampModel, table=True):
     __tablename__ = "stores"
 
-    owner_id: Id
     address: Address | None = Relationship(
         sa_relationship_kwargs={"lazy": "selectin", "cascade": "all, delete", "uselist": False},
         link_model=StoreAddressLink,
