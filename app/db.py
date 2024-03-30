@@ -27,12 +27,9 @@ SessionLocal = async_sessionmaker(
 
 
 async def get_db(req: Request) -> AsyncGenerator[AsyncSession, None]:
-    try:
-        async with SessionLocal() as db:
-            req.state.db = db
-            yield db
-    finally:
-        req.state.db = None
+    async with SessionLocal() as db:
+        req.state.db = db
+        yield db
 
 
 async def commit_db(req: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
@@ -40,7 +37,12 @@ async def commit_db(req: Request, call_next: Callable[[Request], Awaitable[Respo
     db: AsyncSession | None = getattr(req.state, "db", None)
     if db is None:
         return response
+
     try:
+        if response.status_code >= 400:
+            logging.debug("Request returned an error: rolling back database changes")
+            await db.rollback()
+            return response
         logging.debug("Committing database changes")
         await db.commit()
         return response

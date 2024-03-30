@@ -12,7 +12,7 @@ from app.services.stores import StoresService
 from app.services.files import FilesService
 from app.repositories.products import ProductsRepository
 from app.exceptions.repository import RecordNotFound
-from app.exceptions.products import ProductNotFound, ProductAlreadyExists
+from app.exceptions.products import ProductNotFound, ProductAlreadyExists, ProductOutOfStock
 from tests.factories.product_factories import ProductCreateFactory
 from tests.factories.store_factories import StoreCreateFactory
 
@@ -214,3 +214,50 @@ class TestProductsService(IsolatedAsyncioTestCase):
         update_args = self.repository.update.call_args.args[1]
         for i in range(len(new_categories)):
             assert update_args["_categories"][i].category == new_categories[i]
+
+    @pytest.mark.asyncio
+    async def test_update_stock_should_call_repo_save(self) -> None:
+        # Given
+        product = Product(
+            store_id=self.store.id,
+            id=uuid4(),
+            **{**self.product_create.model_dump(), "available": 3},
+        )
+
+        # When
+        await self.service.update_stock(product, 5)
+
+        # Then
+        assert product.available == 8
+        self.repository.save.assert_called_once_with(product)
+
+    @pytest.mark.asyncio
+    async def test_update_stock_should_not_call_repo_save_if_not_specified(self) -> None:
+        # Given
+        product = Product(
+            store_id=self.store.id,
+            id=uuid4(),
+            **{**self.product_create.model_dump(), "available": None},
+        )
+
+        # When
+        await self.service.update_stock(product, 5)
+
+        # Then
+        assert product.available is None
+        self.repository.save.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_update_stock_should_raise_if_not_enough(self) -> None:
+        # Given
+        product = Product(
+            store_id=self.store.id,
+            id=uuid4(),
+            **{**self.product_create.model_dump(), "available": 4},
+        )
+
+        # When, Then
+        with pytest.raises(ProductOutOfStock):
+            await self.service.update_stock(product, -5)
+
+        self.repository.save.assert_not_called()

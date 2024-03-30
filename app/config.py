@@ -47,7 +47,8 @@ class TestingSettings(Settings):
     DB_URL: str = "sqlite+aiosqlite:///:memory:"
     DB_FORCE_ROLLBACK: bool = True
     DB_ARGUMENTS: dict[str, str | bool] = {"check_same_thread": False}
-    USERS_SERVICE_URL: str = "http://service_url"
+    USERS_SERVICE_URL: str = "http://users_service_url"
+    PAYMENTS_SERVICE_URL: str = "http://payments_service_url"
     GOOGLE_MAPS_URL: str = "https://map_url"
     GOOGLE_MAPS_API_KEY: str = "API_KEY"
 

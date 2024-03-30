@@ -4,3 +4,7 @@ class StoreNotReady(Exception):
 
 class OutsideDeliveryRange(Exception):
     pass
+
+
+class PurchaseNotFound(Exception):
+    pass

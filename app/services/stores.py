@@ -32,12 +32,12 @@ class StoresService:
         store = Store(**data.model_dump(exclude={"address"}), owner_id=owner_id, address=address)
         return await self.stores_repo.save(store)
 
-    async def get_stores(self, limit: int, offset: int, **filters: Any) -> Sequence[Store]:
-        stores = await self.stores_repo.get_all(skip=offset, limit=limit, **filters)
+    async def get_stores(self, limit: int, skip: int, **filters: Any) -> Sequence[Store]:
+        stores = await self.stores_repo.get_all(skip=skip, limit=limit, **filters)
         return stores
 
     async def get_nearby_stores(
-        self, user_token: str, limit: int, offset: int, user_id: Id, user_address_id: Id
+        self, user_token: str, limit: int, skip: int, user_id: Id, user_address_id: Id
     ) -> tuple[Sequence[Store], int]:
         """
         Returns a tuple of stores and the total amount of stores nearby
@@ -45,9 +45,7 @@ class StoresService:
         c = await self.users_service.get_user_address_coordinates(
             user_id, user_address_id, user_token
         )
-        stores = await self.stores_repo.get_nearby(
-            c.latitude, c.longitude, skip=offset, limit=limit
-        )
+        stores = await self.stores_repo.get_nearby(c.latitude, c.longitude, skip=skip, limit=limit)
         amount = await self.stores_repo.count_nearby(c.latitude, c.longitude)
         return stores, amount
 
