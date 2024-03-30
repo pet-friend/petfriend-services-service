@@ -9,6 +9,7 @@ from httpx import URL, AsyncClient, Timeout
 
 from app.exceptions.products import ProductNotFound
 from app.exceptions.purchases import (
+    CantPurchaseFromOwnStore,
     OutsideDeliveryRange,
     PurchaseNotFound,
     StoreNotReady,
@@ -94,7 +95,7 @@ class PurchasesService:
             raise ProductNotFound
         store = await self.stores_service.get_store_by_id(store_id)
         if store.owner_id == user_id:
-            raise Forbidden
+            raise CantPurchaseFromOwnStore
 
         purchase = Purchase(store=store, status=PurchaseStatus.CREATED, buyer=user_id)
 

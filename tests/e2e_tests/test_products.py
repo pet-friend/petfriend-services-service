@@ -12,8 +12,7 @@ from tests.tests_setup import BaseAPITestCase
 
 
 class TestStoresProductsRoute(BaseAPITestCase):
-    def setUp(self) -> None:
-        super().setUp()
+    def setup_method(self) -> None:
         self.store_create_json_data = StoreCreateFactory.build(address=None).model_dump(mode="json")
         self.product_create_json_data = ProductCreateFactory.build().model_dump(mode="json")
 

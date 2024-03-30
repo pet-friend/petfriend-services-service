@@ -30,7 +30,6 @@ class TestStoresService(IsolatedAsyncioTestCase):
         self.repository = AsyncMock(spec=StoresRepository)
         self.service = StoresService(self.repository)
 
-    @pytest.mark.asyncio
     async def test_create_store_should_call_repository_save(self) -> None:
         # Given
         self.repository.save = AsyncMock(return_value=self.store)
@@ -48,7 +47,6 @@ class TestStoresService(IsolatedAsyncioTestCase):
             )
         )
 
-    @pytest.mark.asyncio
     async def test_create_store_with_existing_name_should_raise_store_already_exists(self) -> None:
         # Given
         self.repository.get_by_name = AsyncMock(return_value=self.store)
@@ -60,7 +58,6 @@ class TestStoresService(IsolatedAsyncioTestCase):
         # Then
         self.repository.get_by_name.assert_called_once_with(self.store_create.name)
 
-    @pytest.mark.asyncio
     async def test_get_stores_should_call_repository_get_all(self) -> None:
         # Given
         self.repository.get_all = AsyncMock(return_value=self.store)
@@ -70,7 +67,6 @@ class TestStoresService(IsolatedAsyncioTestCase):
         assert fetched_record == self.store
         self.repository.get_all.assert_called_once_with(skip=1, limit=1)
 
-    @pytest.mark.asyncio
     async def test_count_stores_should_call_repository_count_all(self) -> None:
         # Given
         self.repository.count_all = AsyncMock(return_value=1)
@@ -80,7 +76,6 @@ class TestStoresService(IsolatedAsyncioTestCase):
         assert fetched_record == 1
         self.repository.count_all.assert_called_once_with()
 
-    @pytest.mark.asyncio
     async def test_get_store_by_id_should_call_repository_get_by_id(self) -> None:
         # Given
         self.repository.get_by_id = AsyncMock(return_value=self.store)
@@ -90,7 +85,6 @@ class TestStoresService(IsolatedAsyncioTestCase):
         assert fetched_record == self.store
         self.repository.get_by_id.assert_called_once_with("1")
 
-    @pytest.mark.asyncio
     async def test_update_store_should_call_repository_update(self) -> None:
         # Given
         self.repository.get_by_id = AsyncMock(return_value=self.store)
@@ -105,7 +99,6 @@ class TestStoresService(IsolatedAsyncioTestCase):
         assert fetched_record == self.store
         self.repository.update.assert_called_once_with("1", self.store_create.__dict__)
 
-    @pytest.mark.asyncio
     async def test_cant_update_store_if_not_owner(self) -> None:
         # Given
         self.repository.get_by_id = AsyncMock(return_value=self.store)
@@ -117,7 +110,6 @@ class TestStoresService(IsolatedAsyncioTestCase):
         # Then
         self.repository.update.assert_not_called()
 
-    @pytest.mark.asyncio
     async def test_update_inexistent_store_should_raise_store_not_found(self) -> None:
         # Given
         self.repository.get_by_id = AsyncMock(return_value=None)
@@ -129,7 +121,6 @@ class TestStoresService(IsolatedAsyncioTestCase):
         # Then
         self.repository.get_by_id.assert_called_once_with("1")
 
-    @pytest.mark.asyncio
     async def test_delete_store_should_call_repository_delete(self) -> None:
         # Given
         self.repository.get_by_id = AsyncMock(return_value=self.store)
@@ -144,7 +135,6 @@ class TestStoresService(IsolatedAsyncioTestCase):
         self.repository.delete.assert_called_once_with("1")
         self.service.files_service.delete_file.assert_called_once_with("1")
 
-    @pytest.mark.asyncio
     async def test_cant_delete_store_if_not_owner(self) -> None:
         # Given
         self.repository.get_by_id = AsyncMock(return_value=self.store)
@@ -158,7 +148,6 @@ class TestStoresService(IsolatedAsyncioTestCase):
         self.repository.delete.assert_not_called()
         self.service.files_service.delete_file.assert_not_called()
 
-    @pytest.mark.asyncio
     async def test_delete_inexistent_store_should_raise_store_not_found(self) -> None:
         # Given
         # self.repository.delete = AsyncMock(side_effect=RecordNotFound)
@@ -173,7 +162,6 @@ class TestStoresService(IsolatedAsyncioTestCase):
         # self.repository.delete.assert_called_once_with("1")
         self.repository.get_by_id.assert_called_once_with("1")
 
-    @pytest.mark.asyncio
     async def test_delete_store_without_image_should_ignore_file_not_found(self) -> None:
         # Given
         self.repository.get_by_id = AsyncMock(return_value=self.store)
@@ -189,7 +177,6 @@ class TestStoresService(IsolatedAsyncioTestCase):
         self.repository.delete.assert_called_once_with("1")
         self.service.files_service.delete_file.assert_called_once_with("1")
 
-    @pytest.mark.asyncio
     async def test_create_store_with_address_should_call_address_service_and_repository_save(
         self,
     ) -> None:

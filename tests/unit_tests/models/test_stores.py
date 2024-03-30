@@ -5,7 +5,6 @@ import pytest
 
 
 class TestStoresModel(IsolatedAsyncioTestCase):
-    @pytest.mark.asyncio
     async def test_store_create_validate_delivery_range(self) -> None:
         # Given
         delivery_range_km = -1
@@ -22,7 +21,6 @@ class TestStoresModel(IsolatedAsyncioTestCase):
         # Then
         assert INVALID_DELIVERY_RANGE_MSG in str(context.exception)
 
-    @pytest.mark.asyncio
     async def test_store_create_with_correct_delivery_range(self) -> None:
         # Given
         delivery_range_km = 5
@@ -38,7 +36,6 @@ class TestStoresModel(IsolatedAsyncioTestCase):
         # Then
         assert store_created.delivery_range_km == delivery_range_km
 
-    @pytest.mark.asyncio
     async def test_store_create_validate_shipping_cost(self) -> None:
         # Given
         shipping_cost = -1
@@ -55,7 +52,6 @@ class TestStoresModel(IsolatedAsyncioTestCase):
         # Then
         assert INVALID_SHIPPING_COST_MSG in str(context.exception)
 
-    @pytest.mark.asyncio
     async def test_store_create_with_correct_shipping_cost(self) -> None:
         # Given
         shipping_cost = 5

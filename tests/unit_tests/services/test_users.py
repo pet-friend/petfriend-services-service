@@ -22,7 +22,6 @@ class TestUserService:
             self.users_service = UsersService(client)
             yield
 
-    @pytest.mark.asyncio
     async def test_validate_user_id_is_valid(self, httpx_mock: HTTPXMock) -> None:
         # Given
         user_id = uuid4()
@@ -39,7 +38,6 @@ class TestUserService:
         # Then
         assert result_id == user_id
 
-    @pytest.mark.asyncio
     async def test_validate_user_id_is_not_valid(self, httpx_mock: HTTPXMock) -> None:
         # Given
         httpx_mock.add_response(
@@ -53,7 +51,6 @@ class TestUserService:
         with pytest.raises(InvalidToken):
             await self.users_service.validate_user(self.token)
 
-    @pytest.mark.asyncio
     async def test_get_coordinates_is_valid(self, httpx_mock: HTTPXMock) -> None:
         # Given
         user_id = uuid4()
@@ -75,7 +72,6 @@ class TestUserService:
         assert coords.latitude == lat
         assert coords.longitude == long
 
-    @pytest.mark.asyncio
     async def test_get_coordinates_not_found(self, httpx_mock: HTTPXMock) -> None:
         # Given
         user_id = uuid4()

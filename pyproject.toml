@@ -1,6 +1,7 @@
 [tool.black]
 line-length = 100
 preview = true
+enable-unstable-feature = ["string_processing"]
 
 [tool.pylint.'MAIN']
 source-roots = '.'
@@ -57,10 +58,7 @@ filterwarnings = [
     "ignore::DeprecationWarning:pydantic_core.*:",
     "ignore::DeprecationWarning:azure.*:",
 ]
-markers = [
-    "noauth: fail authentication on e2e tests",
-    "invalidaddress: fail address validation on e2e tests",
-]
+asyncio_mode = "auto"
 
 [tool.coverage.run]
 omit = [

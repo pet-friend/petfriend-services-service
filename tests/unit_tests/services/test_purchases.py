@@ -9,7 +9,12 @@ from pytest_httpx import HTTPXMock
 
 from app.exceptions.products import ProductNotFound, ProductOutOfStock
 from app.exceptions.users import Forbidden
-from app.exceptions.purchases import OutsideDeliveryRange, PurchaseNotFound, StoreNotReady
+from app.exceptions.purchases import (
+    CantPurchaseFromOwnStore,
+    OutsideDeliveryRange,
+    PurchaseNotFound,
+    StoreNotReady,
+)
 
 from app.models.addresses import Address
 from app.models.products import Product, ProductRead
@@ -62,7 +67,6 @@ class TestPurchasesService:
             self.stores_service, self.products_service, self.users_service, self.repository
         )
 
-    @pytest.mark.asyncio
     async def test_get_purchase_by_store_owner_should_call_repository_get_by_id(self) -> None:
         # Given
         purchase_id = uuid4()
@@ -89,7 +93,6 @@ class TestPurchasesService:
         assert saved_record == purchase
         self.repository.get_by_id.assert_called_once_with((self.store.id, purchase_id))
 
-    @pytest.mark.asyncio
     async def test_get_purchase_by_buyer_should_call_repository_get_by_id(self) -> None:
         # Given
         purchase_id = uuid4()
@@ -115,7 +118,6 @@ class TestPurchasesService:
         assert saved_record == purchase
         self.repository.get_by_id.assert_called_once_with((self.store.id, purchase_id))
 
-    @pytest.mark.asyncio
     async def test_get_purchase_unrelated_user_should_raise(self) -> None:
         # Given
         purchase_id = uuid4()
@@ -139,7 +141,6 @@ class TestPurchasesService:
 
         self.repository.get_by_id.assert_called_once_with((self.store.id, purchase_id))
 
-    @pytest.mark.asyncio
     async def test_get_purchase_not_exists_should_raise(self) -> None:
         # Given
         purchase_id = uuid4()
@@ -151,7 +152,6 @@ class TestPurchasesService:
 
         self.repository.get_by_id.assert_called_once_with((self.store.id, purchase_id))
 
-    @pytest.mark.asyncio
     async def test_get_store_purchases_unrelated_user_should_raise(self) -> None:
         # Given
         self.stores_service.get_store_by_id.return_value = self.store
@@ -162,7 +162,6 @@ class TestPurchasesService:
 
         self.stores_service.get_store_by_id.assert_called_once_with(self.store.id)
 
-    @pytest.mark.asyncio
     async def test_get_store_purchases_store_owner_user_should_return(self) -> None:
         # Given
         items = [
@@ -193,7 +192,6 @@ class TestPurchasesService:
         self.repository.get_all.assert_called_once_with(store_id=self.store.id, limit=5, skip=0)
         self.repository.count_all.assert_called_once_with(store_id=self.store.id)
 
-    @pytest.mark.asyncio
     async def test_purchase_no_products_should_raise(self) -> None:
         # Given
         quantities: dict[Id, int] = {}
@@ -202,20 +200,18 @@ class TestPurchasesService:
         with pytest.raises(ProductNotFound):
             await self.service.purchase(self.store.id, quantities, uuid4(), uuid4(), "token")
 
-    @pytest.mark.asyncio
     async def test_purchase_from_self_should_raise(self) -> None:
         # Given
         self.stores_service.get_store_by_id.return_value = self.store
 
         # When, Then
-        with pytest.raises(Forbidden):
+        with pytest.raises(CantPurchaseFromOwnStore):
             await self.service.purchase(
                 self.store.id, {uuid4(): 1}, self.store.owner_id, uuid4(), "token"
             )
 
         self.stores_service.get_store_by_id.assert_called_once_with(self.store.id)
 
-    @pytest.mark.asyncio
     async def test_purchase_store_has_no_address_raises(self) -> None:
         # Given
         self.stores_service.get_store_by_id.return_value = self.store
@@ -232,7 +228,6 @@ class TestPurchasesService:
 
         self.stores_service.get_store_by_id.assert_called_once_with(self.store.id)
 
-    @pytest.mark.asyncio
     async def test_purchase_too_far_should_raise(self) -> None:
         # Given
         self.stores_service.get_store_by_id.return_value = self.store
@@ -256,7 +251,6 @@ class TestPurchasesService:
             user_id, user_address_id, "token"
         )
 
-    @pytest.mark.asyncio
     async def test_purchase_no_stock_should_raise(self) -> None:
         # Given
         self.product.available = 2
@@ -286,7 +280,6 @@ class TestPurchasesService:
             self.product, -1 * quantities[self.product.id]
         )
 
-    @pytest.mark.asyncio
     async def test_purchase_one_item(self, httpx_mock: HTTPXMock) -> None:
         # Given
         self.product.available = 2

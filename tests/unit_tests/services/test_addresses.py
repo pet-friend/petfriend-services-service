@@ -21,7 +21,6 @@ class TestAddressesService:
             },
         )
 
-    @pytest.mark.asyncio
     async def test_get_address_returns_valid_lat_long(self, httpx_mock: HTTPXMock) -> None:
         # Given
         lat = -34.6036844
@@ -43,7 +42,6 @@ class TestAddressesService:
             **self.address_create.model_dump(), latitude=lat, longitude=long
         )
 
-    @pytest.mark.asyncio
     async def test_get_invalid_address_should_raise(self, httpx_mock: HTTPXMock) -> None:
         # Given
         httpx_mock.add_response(

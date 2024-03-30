@@ -3,7 +3,6 @@ import json
 from unittest.mock import patch
 from uuid import uuid4
 
-import pytest
 from sqlmodel import select
 
 from app.models.stores import Store
@@ -15,13 +14,12 @@ from tests.tests_setup import BaseAPITestCase
 
 
 class TestAddresses(BaseAPITestCase):
-    def setUp(self) -> None:
-        super().setUp()
+    def setup_method(self) -> None:
         self.address_create_json_data = AddressCreateFactory.build(
             country_code="AR", type="other"
         ).model_dump(mode="json")
 
-    async def test_post_address_with_all_fields(self) -> None:
+    async def test_post_address_with_all_fields(self, mock_google_maps: None) -> None:
         self.address_create_json_data["type"] = AddressType.APARTMENT
         self.address_create_json_data["apartment"] = "1A"
 
@@ -41,7 +39,7 @@ class TestAddresses(BaseAPITestCase):
         assert address_db.updated_at is not None
         assert address_response.items() < address_db.model_dump(mode="json").items()
 
-    async def test_post_address_with_required_fields(self) -> None:
+    async def test_post_address_with_required_fields(self, mock_google_maps: None) -> None:
         self.address_create_json_data["type"] = AddressType.HOUSE
         self.address_create_json_data.pop("apartment", None)
 
@@ -73,7 +71,7 @@ class TestAddresses(BaseAPITestCase):
 
         assert len(addresses_db) == 0
 
-    async def test_create_and_get(self) -> None:
+    async def test_create_and_get(self, mock_google_maps: None) -> None:
         self.address_create_json_data["type"] = AddressType.HOUSE
         self.address_create_json_data["apartment"] = None
 
@@ -93,7 +91,7 @@ class TestAddresses(BaseAPITestCase):
 
         assert response_text.items() == self.address_create_json_data.items()
 
-    async def test_put_address_with_all_fields(self) -> None:
+    async def test_put_address_with_all_fields(self, mock_google_maps: None) -> None:
         r_0 = await self.client.post("/stores", json=valid_store)
         assert r_0.status_code == 201
         store_id = r_0.json()["id"]
@@ -117,8 +115,7 @@ class TestAddresses(BaseAPITestCase):
         assert address_db.updated_at is not None
         assert address_response.items() < address_db.model_dump(mode="json").items()
 
-    @pytest.mark.invalidaddress
-    async def test_create_non_existent_address(self) -> None:
+    async def test_create_non_existent_address(self, mock_google_maps_error: None) -> None:
         data = {**valid_store, "address": self.address_create_json_data}
 
         response = await self.client.post("/stores", json=data)
@@ -128,7 +125,7 @@ class TestAddresses(BaseAPITestCase):
 
         assert len(addresses_db) == 0
 
-    async def test_post_delete_address_should_remove_from_db(self) -> None:
+    async def test_post_delete_address_should_remove_from_db(self, mock_google_maps: None) -> None:
         data = {**valid_store, "address": self.address_create_json_data}
 
         response = await self.client.post("/stores", json=data)

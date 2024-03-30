@@ -37,4 +37,5 @@ pylint~=3.0.2
 flake8~=6.1.0
 mypy~=1.7.1
 types-PyYAML~=6.0.12.12
+black~=24.3.0
 importlib-metadata 

@@ -22,7 +22,6 @@ class TestUsersService(IsolatedAsyncioTestCase):
         self.file.file.close()
 
     @patch("app.services.files.FilesService.get_token")
-    @pytest.mark.asyncio
     async def test_create_file_calls_upload_blob(self, mock: Mock) -> None:
         # Given
         file_id = uuid4()
@@ -41,7 +40,6 @@ class TestUsersService(IsolatedAsyncioTestCase):
         assert url == "blob?token"
 
     @patch("app.services.files.FilesService.get_token")
-    @pytest.mark.asyncio
     async def test_set_file_calls_upload_blob(self, mock: Mock) -> None:
         # Given
         file_id = uuid4()
@@ -59,7 +57,6 @@ class TestUsersService(IsolatedAsyncioTestCase):
         )
         assert url == "blob?token"
 
-    @pytest.mark.asyncio
     async def test_delete_file_calls_delete_blob(self) -> None:
         # Given
         file_id = uuid4()
@@ -75,7 +72,6 @@ class TestUsersService(IsolatedAsyncioTestCase):
         blob.delete_blob.assert_called_once_with()
         blob.exists.assert_called_once_with()
 
-    @pytest.mark.asyncio
     async def test_delete_file_not_exists_raises_exception(self) -> None:
         # Given
         file_id = uuid4()
@@ -91,7 +87,6 @@ class TestUsersService(IsolatedAsyncioTestCase):
         self.container.get_blob_client.assert_called_once_with(str(file_id))
         blob.exists.assert_called_once_with()
 
-    @pytest.mark.asyncio
     async def test_get_file_url_with_given_token(self) -> None:
         # Given
         file_id = uuid4()
@@ -111,7 +106,6 @@ class TestUsersService(IsolatedAsyncioTestCase):
         assert url == f"{blob_url}?{token}"
         blob.exists.assert_called_once_with()
 
-    @pytest.mark.asyncio
     async def test_get_file_url_blob_does_not_exist_is_none(self) -> None:
         # Given
         file_id = uuid4()
@@ -128,7 +122,6 @@ class TestUsersService(IsolatedAsyncioTestCase):
         assert url is None
         blob.exists.assert_called_once_with()
 
-    @pytest.mark.asyncio
     async def test_create_file_already_exists_raises_exception(self) -> None:
         # Given
         file_id = uuid4()
@@ -143,7 +136,6 @@ class TestUsersService(IsolatedAsyncioTestCase):
             str(file_id), self.file.file, overwrite=False
         )
 
-    @pytest.mark.asyncio
     async def test_file_exists_calls_method(self) -> None:
         # Given
         file_id = uuid4()

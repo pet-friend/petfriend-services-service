@@ -8,3 +8,7 @@ class OutsideDeliveryRange(Exception):
 
 class PurchaseNotFound(Exception):
     pass
+
+
+class CantPurchaseFromOwnStore(Exception):
+    pass

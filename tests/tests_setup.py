@@ -1,5 +1,4 @@
-from typing import Generator
-from unittest import IsolatedAsyncioTestCase
+from typing import AsyncGenerator, Generator
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -15,19 +14,16 @@ from app.db import engine
 from app.main import app
 
 
-class BaseDbTestCase(IsolatedAsyncioTestCase):
+class BaseDbTestCase:
     db: AsyncSession
 
-    def setUp(self) -> None:
+    @pytest.fixture(autouse=True)
+    async def setup_db(self) -> AsyncGenerator[None, None]:
         self.db = AsyncSession(bind=engine)
-
-    async def asyncSetUp(self) -> None:
         async with engine.begin() as conn:
             await conn.execute(text("PRAGMA foreign_keys=ON"))
             await conn.run_sync(SQLModel.metadata.create_all)
-
-    async def asyncTearDown(self) -> None:
-        async with engine.begin() as conn:
+            yield
             await conn.run_sync(SQLModel.metadata.drop_all)
         await self.db.close()
 
@@ -36,46 +32,52 @@ class BaseAPITestCase(BaseDbTestCase):
     client: AsyncClient
 
     @pytest.fixture(autouse=True)
-    def mock_auth(self, request: pytest.FixtureRequest) -> Generator[None, None, None]:
+    async def setup_api(self) -> AsyncGenerator[None, None]:
+        transport = ASGITransport(app=app)  # type: ignore
+        self.client = AsyncClient(transport=transport, base_url="http://test", headers=self.headers)
+        yield
+        await self.client.aclose()
+
+    @pytest.fixture(autouse=True)
+    def mock_auth(self) -> Generator[None, None, None]:
         """
         Mocks the server authentication.
         """
-        mock_auth = "noauth" not in request.keywords
         user_token = str(uuid4())
         user_id = uuid4()
 
         with patch("app.services.users.UsersService.validate_user") as mock:
 
             def check_token(token: str) -> Id:
-                if token == user_token and mock_auth:
+                if token == user_token:
                     return user_id
                 raise InvalidToken
 
             mock.side_effect = check_token
-
-            self.headers = {"Authorization": f"Bearer {user_token}"} if mock_auth else {}
+            self.headers = {"Authorization": f"Bearer {user_token}"}
             self.user_id = user_id
             yield
 
-    @pytest.fixture(autouse=True)
-    def mock_google_maps(self, request: pytest.FixtureRequest) -> Generator[None, None, None]:
+    @pytest.fixture
+    def mock_auth_error(self, mock_auth: None) -> Generator[None, None, None]:
         """
-        Mocks google maps requests
+        Mocks a server authentication error.
         """
-        mock_lat_long = "invalidaddress" not in request.keywords
-
-        with patch("app.services.addresses.AddressesService.get_address_coordinates") as mock:
-            if mock_lat_long:
-                mock.return_value = Coordinates(latitude=0, longitude=0)
-            else:
-                mock.side_effect = NonExistentAddress
+        # Added mock_auth as a dependency in the function signature to make sure it is called before
+        # this one and we override the mock and headers
+        with patch("app.services.users.UsersService.validate_user") as mock:
+            mock.side_effect = InvalidToken
+            self.headers = {}
             yield
 
-    def setUp(self) -> None:
-        super().setUp()
-        transport = ASGITransport(app=app)  # type: ignore
-        self.client = AsyncClient(transport=transport, base_url="http://test", headers=self.headers)
+    @pytest.fixture
+    def mock_google_maps(self) -> Generator[None, None, None]:
+        with patch("app.services.addresses.AddressesService.get_address_coordinates") as mock:
+            mock.return_value = Coordinates(latitude=0, longitude=0)
+            yield
 
-    async def asyncTearDown(self) -> None:
-        await super().asyncTearDown()
-        await self.client.aclose()
+    @pytest.fixture
+    def mock_google_maps_error(self) -> Generator[None, None, None]:
+        with patch("app.services.addresses.AddressesService.get_address_coordinates") as mock:
+            mock.side_effect = NonExistentAddress
+            yield

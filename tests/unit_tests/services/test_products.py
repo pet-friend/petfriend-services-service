@@ -33,7 +33,6 @@ class TestProductsService(IsolatedAsyncioTestCase):
 
         self.service = ProductsService(self.repository, self.stores_service, self.files_service)
 
-    @pytest.mark.asyncio
     async def test_create_product_should_call_repository_save(self) -> None:
         # Given
         self.repository.get_by_name.return_value = None
@@ -53,7 +52,6 @@ class TestProductsService(IsolatedAsyncioTestCase):
         # should check if store exists
         self.stores_service.get_store_by_id.assert_called_once_with(self.store.id)
 
-    @pytest.mark.asyncio
     async def test_create_product_fails_if_store_does_not_exist(self) -> None:
         # Given
         self.repository.get_by_id.return_value = None
@@ -66,7 +64,6 @@ class TestProductsService(IsolatedAsyncioTestCase):
 
         self.stores_service.get_store_by_id.assert_called_once_with(self.store.id)
 
-    @pytest.mark.asyncio
     async def test_create_product_fails_if_not_the_owner(self) -> None:
         # Given
         self.stores_service.get_store_by_id.return_value = self.store
@@ -78,7 +75,6 @@ class TestProductsService(IsolatedAsyncioTestCase):
         self.stores_service.get_store_by_id.assert_called_once_with(self.store.id)
         self.repository.save.assert_not_called()
 
-    @pytest.mark.asyncio
     async def test_get_product_should_call_repository_get_by_id(self) -> None:
         # Given
         product_id = uuid4()
@@ -92,7 +88,6 @@ class TestProductsService(IsolatedAsyncioTestCase):
         assert saved_record == product
         self.repository.get_by_id.assert_called_once_with((self.store.id, product_id))
 
-    @pytest.mark.asyncio
     async def test_get_product_invalid_product_should_raise_exception(self) -> None:
         # Given
         self.repository.get_by_id.side_effect = ProductNotFound()
@@ -101,7 +96,6 @@ class TestProductsService(IsolatedAsyncioTestCase):
         with self.assertRaises(ProductNotFound):
             await self.service.get_product(uuid4(), uuid4())
 
-    @pytest.mark.asyncio
     async def test_delete_product_should_call_repository_delete(self) -> None:
         # Given
         product_id = uuid4()
@@ -115,7 +109,6 @@ class TestProductsService(IsolatedAsyncioTestCase):
         self.repository.delete.assert_called_once_with((self.store.id, product_id))
         self.files_service.file_exists.assert_called_once_with(f"{self.store.id}-{product_id}")
 
-    @pytest.mark.asyncio
     async def test_update_product_not_exists_should_raise(self) -> None:
         # Given
         product_id = uuid4()
@@ -129,7 +122,6 @@ class TestProductsService(IsolatedAsyncioTestCase):
                 self.store.id, product_id, self.product_create, self.owner_id
             )
 
-    @pytest.mark.asyncio
     async def test_update_product_fails_if_not_the_owner(self) -> None:
         # Given
         product_id = uuid4()
@@ -143,7 +135,6 @@ class TestProductsService(IsolatedAsyncioTestCase):
 
         self.repository.update.assert_not_called()
 
-    @pytest.mark.asyncio
     async def test_delete_product_not_exists_should_raise(self) -> None:
         # Given
         product_id = uuid4()
@@ -154,7 +145,6 @@ class TestProductsService(IsolatedAsyncioTestCase):
         with self.assertRaises(ProductNotFound):
             await self.service.delete_product(self.store.id, product_id, self.owner_id)
 
-    @pytest.mark.asyncio
     async def test_delete_product_fails_if_not_the_owner(self) -> None:
         # Given
         product_id = uuid4()
@@ -166,7 +156,6 @@ class TestProductsService(IsolatedAsyncioTestCase):
 
         self.repository.delete.assert_not_called()
 
-    @pytest.mark.asyncio
     async def test_create_product_already_exists_should_raise(self) -> None:
         # Given
         product = Product(store_id=self.store.id, id=uuid4(), **self.product_create.model_dump())
@@ -179,7 +168,6 @@ class TestProductsService(IsolatedAsyncioTestCase):
 
         self.repository.get_by_name.assert_called_once_with(self.store.id, self.product_create.name)
 
-    @pytest.mark.asyncio
     async def test_create_product_should_call_repo_save_with_ProductCategories(self) -> None:
         # Given
         self.repository.get_by_name.return_value = None
@@ -195,7 +183,6 @@ class TestProductsService(IsolatedAsyncioTestCase):
         for i in range(len(self.product_create.categories)):
             assert save_args._categories[i].category == self.product_create.categories[i]
 
-    @pytest.mark.asyncio
     async def test_update_product_should_call_repo_update_with_ProductCategories(self) -> None:
         # Given
         self.repository.get_by_name.return_value = None
@@ -215,7 +202,6 @@ class TestProductsService(IsolatedAsyncioTestCase):
         for i in range(len(new_categories)):
             assert update_args["_categories"][i].category == new_categories[i]
 
-    @pytest.mark.asyncio
     async def test_update_stock_should_call_repo_save(self) -> None:
         # Given
         product = Product(
@@ -231,7 +217,6 @@ class TestProductsService(IsolatedAsyncioTestCase):
         assert product.available == 8
         self.repository.save.assert_called_once_with(product)
 
-    @pytest.mark.asyncio
     async def test_update_stock_should_not_call_repo_save_if_not_specified(self) -> None:
         # Given
         product = Product(
@@ -247,7 +232,6 @@ class TestProductsService(IsolatedAsyncioTestCase):
         assert product.available is None
         self.repository.save.assert_not_called()
 
-    @pytest.mark.asyncio
     async def test_update_stock_should_raise_if_not_enough(self) -> None:
         # Given
         product = Product(

@@ -11,7 +11,6 @@ class TestAddressesModel:
             mode="json"
         )
 
-    @pytest.mark.asyncio
     async def test_apartment_is_required_when_type_is_apartment(self) -> None:
         # Given
         self.address["type"] = AddressType.APARTMENT
@@ -24,7 +23,6 @@ class TestAddressesModel:
         # Then
         assert MISSING_APARTMENT_MSG in str(context.value)
 
-    @pytest.mark.asyncio
     async def test_apartment_is_none_when_type_is_not_apartment(self) -> None:
         # Given
         self.address["type"] = "house"
@@ -36,7 +34,6 @@ class TestAddressesModel:
         # Then
         assert add.apartment is None
 
-    @pytest.mark.asyncio
     async def test_country_code_must_be_valid(self) -> None:
         # Given
         self.address["country_code"] = "ZZ"

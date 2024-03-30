@@ -8,7 +8,6 @@ import pytest
 
 
 class TestProductsModel(IsolatedAsyncioTestCase):
-    @pytest.mark.asyncio
     async def test_product_create_with_all_fields(self) -> None:
         # Given
         product_create = ProductCreateFactory.build()
@@ -17,7 +16,6 @@ class TestProductsModel(IsolatedAsyncioTestCase):
         # Then
         assert product_created == product_create
 
-    @pytest.mark.asyncio
     async def test_product_create_with_required_fields(self) -> None:
         # Given
         product_create = ProductCreateFactory.build()
@@ -28,7 +26,6 @@ class TestProductsModel(IsolatedAsyncioTestCase):
         # Then
         assert product_created == product_create
 
-    @pytest.mark.asyncio
     async def test_product_create_without_some_required_fields(self) -> None:
         # Given
         product_create = ProductCreateFactory.build()
@@ -39,7 +36,6 @@ class TestProductsModel(IsolatedAsyncioTestCase):
         # Then
         assert "valid string" in str(context.exception)
 
-    @pytest.mark.asyncio
     async def test_product_create_with_invalid_categories(self) -> None:
         # Given
         product_create = ProductCreateFactory.build()
@@ -50,7 +46,6 @@ class TestProductsModel(IsolatedAsyncioTestCase):
         # Then
         assert "is not a valid Category" in str(context.exception)
 
-    @pytest.mark.asyncio
     async def test_product_create_with_too_many_categories(self) -> None:
         # Given
         product_create = ProductCreateFactory.build()
