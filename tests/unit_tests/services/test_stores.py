@@ -67,6 +67,15 @@ class TestStoresService(IsolatedAsyncioTestCase):
         assert fetched_record == self.store
         self.repository.get_all.assert_called_once_with(skip=1, limit=1)
 
+    async def test_get_stores_by_owner_should_call_repository_get_all_with_owner_id(self) -> None:
+        # Given
+        self.repository.get_all = AsyncMock(return_value=self.store)
+        # When
+        fetched_record = await self.service.get_stores(1, 1, owner_id=self.owner_id)
+        # Then
+        assert fetched_record == self.store
+        self.repository.get_all.assert_called_once_with(skip=1, limit=1, owner_id=self.owner_id)
+
     async def test_count_stores_should_call_repository_count_all(self) -> None:
         # Given
         self.repository.count_all = AsyncMock(return_value=1)

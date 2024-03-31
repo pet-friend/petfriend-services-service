@@ -71,6 +71,26 @@ class TestStoresRoute(BaseAPITestCase):
         response = await self.client.get(f"/stores/{uuid4()}")
         assert response.status_code == 404
 
+    async def test_get_store_filtering_by_owner(self) -> None:
+        response = await self.client.post("/stores", json=valid_store)
+        assert response.status_code == 201
+
+        # get existing store
+        response2 = await self.client.get(f"/stores?owner_id={self.user_id}")
+        assert response2.status_code == 200
+
+        # get non existing store
+        response3 = await self.client.get(f"/stores?owner_id={uuid4()}")
+        assert response3.status_code == 200
+
+        # check that the store is in the first response
+        response_text = json.loads(response2.text)
+        assert len(response_text["stores"]) == 1
+
+        # check that the store is not in the second response
+        response_text2 = json.loads(response3.text)
+        assert len(response_text2["stores"]) == 0
+
     async def test_update_store(self) -> None:
         response = await self.client.post("/stores", json=valid_store)
         assert response.status_code == 201
