@@ -7,7 +7,7 @@ from azure.storage.blob import BlobServiceClient
 
 os.environ["ENVIRONMENT"] = "TESTING"
 
-azurite = AzuriteContainer()
+azurite = AzuriteContainer(ports_to_expose=[AzuriteContainer._BLOB_SERVICE_PORT])
 azurite.with_command("azurite-blob --blobHost 0.0.0.0 --inMemoryPersistence")
 azurite.start()
 connection_string = azurite.get_connection_string()
