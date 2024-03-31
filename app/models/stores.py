@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlmodel import Field, Relationship, SQLModel
@@ -20,7 +21,7 @@ class StoreBase(SQLModel):
     name: str = Field(unique=True)
     description: str | None = None
     delivery_range_km: float
-    shipping_cost: float = Field(default=0.0)
+    shipping_cost: Decimal = Field(max_digits=14, decimal_places=2, default=Decimal(0))
 
     @field_validator("delivery_range_km")
     def delivery_range_verification(cls, delivery_range_km: float) -> float:
@@ -29,7 +30,7 @@ class StoreBase(SQLModel):
         raise ValueError(INVALID_DELIVERY_RANGE_MSG)
 
     @field_validator("shipping_cost")
-    def shipping_cost_verification(cls, shipping_cost: float) -> float:
+    def shipping_cost_verification(cls, shipping_cost: Decimal) -> Decimal:
         if shipping_cost >= 0:
             return shipping_cost
         raise ValueError(INVALID_SHIPPING_COST_MSG)

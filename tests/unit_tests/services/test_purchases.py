@@ -17,6 +17,7 @@ from app.exceptions.purchases import (
 )
 
 from app.models.addresses import Address
+from app.models.preferences import PurchaseTypes
 from app.models.products import Product, ProductRead
 from app.models.util import Coordinates, Id
 from app.services.purchases import PurchasesService
@@ -318,7 +319,7 @@ class TestPurchasesService:
             data = data["payment_data"]
             reference = data["external_reference"]
 
-            assert data["type"] == "P"
+            assert data["type"] == PurchaseTypes.STORE_PURCHASE
             assert len(data["items"]) == 1
             assert data["items"][0] == {
                 "title": self.product.name,
@@ -330,6 +331,11 @@ class TestPurchasesService:
             }
             assert data["marketplace_fee"] == float(fee)
             assert data["shipments"] == {"cost": self.store.shipping_cost, "mode": "not_specified"}
+            assert data["metadata"] == {
+                "store_id": str(self.store.id),
+                "purchase_id": reference,
+                "type": PurchaseTypes.STORE_PURCHASE,
+            }
 
         httpx_mock.add_response(
             url=url,

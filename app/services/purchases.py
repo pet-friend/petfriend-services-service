@@ -1,6 +1,6 @@
 from decimal import Decimal
 import logging
-from typing import Any, Literal, Sequence, TypedDict
+from typing import Sequence
 from asyncio import gather
 
 from fastapi import Depends, status
@@ -15,6 +15,7 @@ from app.exceptions.purchases import (
     StoreNotReady,
 )
 from app.exceptions.users import Forbidden
+from app.models.preferences import PaymentData, PreferenceItem, PurchaseTypes
 from app.models.purchases import Purchase, PurchaseItem, PurchaseStatus
 from app.models.products import Product, ProductRead
 from app.models.stores import Store
@@ -26,15 +27,6 @@ from app.services.stores import StoresService
 from app.services.users import UsersService
 
 REQUEST_TIMEOUT = Timeout(5, read=45)
-
-
-class PurchaseItemData(TypedDict):
-    title: str
-    currency_id: Literal["ARS"]
-    picture_url: str | None
-    description: str
-    quantity: int
-    unit_price: Decimal
 
 
 class PurchasesService:
@@ -121,7 +113,7 @@ class PurchasesService:
                     "user_to_be_payed_id": str(store.owner_id),
                 },
             )
-            r = await client.post(url, json=payload)
+            r = await client.post(url, json=jsonable_encoder(payload))
             if r.status_code == status.HTTP_404_NOT_FOUND:
                 raise StoreNotReady
             r.raise_for_status()
@@ -151,7 +143,7 @@ class PurchasesService:
 
     async def __build_order(
         self, order_id: Id, products: Sequence[Product], products_quantities: dict[Id, int]
-    ) -> tuple[Sequence[PurchaseItem], dict[str, Any]]:
+    ) -> tuple[list[PurchaseItem], PaymentData]:
         products_map = {p.id: p for p in products if p.id in products_quantities}
         if len(products_map) != len(products_quantities):
             raise ProductNotFound
@@ -167,34 +159,37 @@ class PurchasesService:
             )
         )
         items: list[PurchaseItem]
-        items_data: list[PurchaseItemData]
+        items_data: list[PreferenceItem]
         items, items_data = map(list, zip(*x))
         total_cost = sum(
             (item["unit_price"] * item["quantity"] for item in items_data), start=Decimal(0)
         )
 
-        return items, jsonable_encoder(
-            {
-                "payment_data": {
-                    "external_reference": order_id,
-                    "type": "P",
-                    "items": items_data,
-                    "marketplace_fee": total_cost * settings.FEE_PERCENTAGE / 100,
-                    "shipments": {
-                        "cost": store.shipping_cost,
-                        "mode": "not_specified",
-                    },
+        return items, {
+            "payment_data": {
+                "external_reference": order_id,
+                "items": items_data,
+                "marketplace_fee": total_cost * settings.FEE_PERCENTAGE / 100,
+                "shipments": {
+                    "cost": store.shipping_cost,
+                    "mode": "not_specified",
                 },
-            }
-        )
+                "type": PurchaseTypes.STORE_PURCHASE,
+                "metadata": {
+                    "store_id": store.id,
+                    "purchase_id": order_id,
+                    "type": PurchaseTypes.STORE_PURCHASE,
+                },
+            },
+        }
 
     async def __build_order_item(
         self, product: Product, product_read: ProductRead, quantity: int
-    ) -> tuple[PurchaseItem, PurchaseItemData]:
+    ) -> tuple[PurchaseItem, PreferenceItem]:
         await self.products_service.update_stock(product, -quantity)
 
         unit_price = product.price * (100 - product.percent_off) / 100
-        purchase_item_data: PurchaseItemData = {
+        purchase_item_data: PreferenceItem = {
             "title": product_read.name,
             "currency_id": "ARS",
             "picture_url": product_read.image_url,

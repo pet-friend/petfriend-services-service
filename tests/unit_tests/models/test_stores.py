@@ -1,7 +1,6 @@
 from unittest import IsolatedAsyncioTestCase
 from app.models.constants.stores import INVALID_DELIVERY_RANGE_MSG, INVALID_SHIPPING_COST_MSG
 from app.models.stores import StoreCreate
-import pytest
 
 
 class TestStoresModel(IsolatedAsyncioTestCase):
