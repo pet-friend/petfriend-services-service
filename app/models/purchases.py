@@ -44,7 +44,8 @@ class PurchaseBase(SQLModel):
     store_id: Id = Field(primary_key=True, foreign_key="stores.id")
     status: PurchaseStatus
     payment_url: str | None = None
-    buyer: Id
+    buyer_id: Id
+    delivery_address_id: Id
 
 
 # Public database fields: id + timestamps

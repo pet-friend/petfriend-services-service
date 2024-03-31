@@ -27,7 +27,7 @@ router = APIRouter(prefix="", tags=["Purchases"])
 )
 async def create_store_purchase(
     store_id: Id,
-    ship_to_address_id: Id,
+    delivery_address_id: Id,
     products_quantities: dict[Id, PositiveInt],
     purchases_service: PurchasesService = Depends(),
     user_id: Id = Depends(get_caller_id),
@@ -35,7 +35,7 @@ async def create_store_purchase(
 ) -> Purchase:
     """Body must be a dictionary with product ids as keys and quantities as values."""
     return await purchases_service.purchase(
-        store_id, products_quantities, user_id, ship_to_address_id, token
+        store_id, products_quantities, user_id, delivery_address_id, token
     )
 
 

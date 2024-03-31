@@ -59,7 +59,7 @@ class PurchasesService:
         purchase = await self.purchases_repo.get_by_id((store_id, purchase_id))
         if purchase is None:
             raise PurchaseNotFound
-        if user_id not in (purchase.buyer, purchase.store.owner_id):
+        if user_id not in (purchase.buyer_id, purchase.store.owner_id):
             raise Forbidden
         return purchase
 
@@ -76,8 +76,8 @@ class PurchasesService:
     async def get_user_purchases(
         self, user_id: Id, limit: int, skip: int
     ) -> tuple[Sequence[Purchase], int]:
-        purchases = await self.purchases_repo.get_all(buyer=user_id, limit=limit, skip=skip)
-        amount = await self.purchases_repo.count_all(buyer=user_id)
+        purchases = await self.purchases_repo.get_all(buyer_id=user_id, limit=limit, skip=skip)
+        amount = await self.purchases_repo.count_all(buyer_id=user_id)
         return purchases, amount
 
     async def purchase(
@@ -85,7 +85,7 @@ class PurchasesService:
         store_id: Id,
         products_quantities: dict[Id, int],
         user_id: Id,
-        ship_to_address_id: Id,
+        delivery_address_id: Id,
         token: str,
     ) -> Purchase:
         """
@@ -97,10 +97,15 @@ class PurchasesService:
         if store.owner_id == user_id:
             raise CantPurchaseFromOwnStore
 
-        purchase = Purchase(store=store, status=PurchaseStatus.CREATED, buyer=user_id)
+        purchase = Purchase(
+            store=store,
+            status=PurchaseStatus.CREATED,
+            buyer_id=user_id,
+            delivery_address_id=delivery_address_id,
+        )
 
         _, (items, payload) = await gather(
-            self.__check_purchase_conditions(store, user_id, ship_to_address_id, token),
+            self.__check_purchase_conditions(store, user_id, delivery_address_id, token),
             self.__build_order(purchase.id, store.products, products_quantities),
         )
         purchase.items = items
@@ -120,20 +125,19 @@ class PurchasesService:
             if r.status_code == status.HTTP_404_NOT_FOUND:
                 raise StoreNotReady
             r.raise_for_status()
-            payment_url = r.json()
+            purchase.payment_url = r.json()
 
-        purchase.payment_url = payment_url
         await self.purchases_repo.save(purchase)
         return purchase
 
     async def __check_purchase_conditions(
-        self, store: Store, user_id: Id, ship_to_address_id: Id, token: str
+        self, store: Store, user_id: Id, delivery_address_id: Id, token: str
     ) -> None:
         if store.address is None:
             raise StoreNotReady
 
         user_coords = await self.users_service.get_user_address_coordinates(
-            user_id, ship_to_address_id, token
+            user_id, delivery_address_id, token
         )
 
         if (
@@ -187,7 +191,6 @@ class PurchasesService:
     async def __build_order_item(
         self, product: Product, product_read: ProductRead, quantity: int
     ) -> tuple[PurchaseItem, PurchaseItemData]:
-        print("PRODUCT: ", product, "QUANTITY:", quantity)
         await self.products_service.update_stock(product, -quantity)
 
         unit_price = product.price * (100 - product.percent_off) / 100

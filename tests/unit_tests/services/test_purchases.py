@@ -78,9 +78,10 @@ class TestPurchasesService:
             store=self.store,
             id=purchase_id,
             items=items,
-            buyer=uuid4(),
+            buyer_id=uuid4(),
             status=PurchaseStatus.CREATED,
             payment_url="http://payment.url",
+            delivery_address_id=uuid4(),
         )
         self.repository.get_by_id.return_value = purchase
 
@@ -105,9 +106,10 @@ class TestPurchasesService:
             store=self.store,
             id=purchase_id,
             items=items,
-            buyer=buyer,
+            buyer_id=buyer,
             status=PurchaseStatus.CREATED,
             payment_url="http://payment.url",
+            delivery_address_id=uuid4(),
         )
         self.repository.get_by_id.return_value = purchase
 
@@ -129,9 +131,10 @@ class TestPurchasesService:
             store=self.store,
             id=purchase_id,
             items=items,
-            buyer=uuid4(),
+            buyer_id=uuid4(),
             status=PurchaseStatus.CREATED,
             payment_url="http://payment.url",
+            delivery_address_id=uuid4(),
         )
         self.repository.get_by_id.return_value = purchase
 
@@ -172,9 +175,10 @@ class TestPurchasesService:
             store=self.store,
             id=uuid4(),
             items=items,
-            buyer=uuid4(),
+            buyer_id=uuid4(),
             status=PurchaseStatus.CREATED,
             payment_url="http://payment.url",
+            delivery_address_id=uuid4(),
         )
         self.stores_service.get_store_by_id.return_value = self.store
         self.repository.get_all.return_value = [purchase]
@@ -294,7 +298,7 @@ class TestPurchasesService:
         user_id = uuid4()
         user_address_id = uuid4()
         quantities = {self.product.id: 3}
-        self.product.percent_off = Decimal(0)
+        self.product.percent_off = Decimal(10)
 
         token = "token"
         result_url = "result url"
@@ -306,12 +310,13 @@ class TestPurchasesService:
         )
 
         reference: str
+        unit_price = self.product.price * (100 - self.product.percent_off) / 100
+        fee = unit_price * quantities[self.product.id] * settings.FEE_PERCENTAGE / 100
 
         def check_request_body(data: dict[str, Any]) -> None:
             nonlocal reference
             data = data["payment_data"]
             reference = data["external_reference"]
-            fee = self.product.price * quantities[self.product.id] * settings.FEE_PERCENTAGE / 100
 
             assert data["type"] == "P"
             assert len(data["items"]) == 1
@@ -320,7 +325,7 @@ class TestPurchasesService:
                 "description": self.product.description,
                 "currency_id": "ARS",
                 "quantity": quantities[self.product.id],
-                "unit_price": float(self.product.price),
+                "unit_price": float(unit_price),
                 "picture_url": image_url,
             }
             assert data["marketplace_fee"] == float(fee)
@@ -350,7 +355,36 @@ class TestPurchasesService:
         assert purchase.payment_url == result_url
         assert str(purchase.id) == reference
         assert purchase.store == self.store
+        assert purchase.buyer_id == user_id
         assert len(purchase.items) == 1
         assert purchase.items[0].product_id == self.product.id
         assert purchase.items[0].quantity == quantities[self.product.id]
-        assert purchase.items[0].unit_price == self.product.price
+        assert purchase.items[0].unit_price == unit_price
+
+    async def test_purchase_store_payment_not_linked(self, httpx_mock: HTTPXMock) -> None:
+        # Given
+        self.product.available = 2
+        self.stores_service.get_store_by_id.return_value = self.store
+        image_url = "http://image.url"
+        self.products_service.get_products_read.return_value = [
+            ProductRead(categories=[], image_url=image_url, **self.product.model_dump())
+        ]
+        self.users_service.get_user_address_coordinates.return_value = Coordinates(
+            latitude=0, longitude=0
+        )
+        quantities = {self.product.id: 3}
+
+        token = "token"
+        url = URL(
+            settings.PAYMENTS_SERVICE_URL + "/payment",
+            params={
+                "user_to_be_payed_id": str(self.store.owner_id),
+            },
+        )
+        httpx_mock.add_response(
+            url=url, headers={"Authorization": f"Bearer {token}"}, status_code=404
+        )
+
+        # When, Then
+        with pytest.raises(StoreNotReady):
+            await self.service.purchase(self.store.id, quantities, uuid4(), uuid4(), "token")
