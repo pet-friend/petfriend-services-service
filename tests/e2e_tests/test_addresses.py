@@ -140,7 +140,7 @@ class TestAddresses(BaseAPITestCase):
         assert len(addresses_db_2) == 0
 
     async def test_get_nearby(self) -> None:
-        store_base = {"owner_id": uuid4(), "shipping_cost": 0, "description": ":D"}
+        store_base: dict[str, Any] = {"owner_id": uuid4(), "shipping_cost": 0, "description": ":D"}
         addr_base = self.address_create_json_data
 
         # Tienda 1: a menos de 500m del obelisco, radio de 1km -> debería aparecer

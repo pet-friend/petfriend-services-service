@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import Any
 from uuid import uuid4
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, call
 
 from httpx import URL
 import pytest
@@ -330,7 +330,10 @@ class TestPurchasesService:
                 "picture_url": image_url,
             }
             assert data["marketplace_fee"] == float(fee)
-            assert data["shipments"] == {"cost": self.store.shipping_cost, "mode": "not_specified"}
+            assert data["shipments"] == {
+                "cost": float(self.store.shipping_cost),
+                "mode": "not_specified",
+            }
             assert data["metadata"] == {
                 "store_id": str(self.store.id),
                 "purchase_id": reference,
@@ -394,3 +397,206 @@ class TestPurchasesService:
         # When, Then
         with pytest.raises(StoreNotReady):
             await self.service.purchase(self.store.id, quantities, uuid4(), uuid4(), "token")
+
+    async def test_cant_update_completed_purchase(self) -> None:
+        # Given
+        purchase_id = uuid4()
+        items = [
+            PurchaseItem(product_id=uuid4(), quantity=1, unit_price=10),  # type: ignore
+            PurchaseItem(product_id=uuid4(), quantity=2, unit_price=20),  # type: ignore
+        ]
+        purchase = Purchase(
+            store=self.store,
+            id=purchase_id,
+            items=items,
+            buyer_id=uuid4(),
+            status=PurchaseStatus.COMPLETED,
+            payment_url=None,
+            delivery_address_id=uuid4(),
+        )
+        self.repository.get_by_id.return_value = purchase
+
+        # When, Then
+        with pytest.raises(Forbidden):
+            await self.service.update_purchase_status(
+                self.store.id, purchase_id, PurchaseStatus.IN_PROGRESS
+            )
+
+        self.repository.get_by_id.assert_called_once_with((self.store.id, purchase_id))
+        self.repository.save.assert_not_called()
+        self.products_service.update_stock.assert_not_called()
+
+    async def test_cant_update_cancelled_purchase(self) -> None:
+        # Given
+        purchase_id = uuid4()
+        items = [
+            PurchaseItem(product_id=uuid4(), quantity=1, unit_price=10),  # type: ignore
+            PurchaseItem(product_id=uuid4(), quantity=2, unit_price=20),  # type: ignore
+        ]
+        purchase = Purchase(
+            store=self.store,
+            id=purchase_id,
+            items=items,
+            buyer_id=uuid4(),
+            status=PurchaseStatus.CANCELLED,
+            payment_url=None,
+            delivery_address_id=uuid4(),
+        )
+        self.repository.get_by_id.return_value = purchase
+
+        # When, Then
+        with pytest.raises(Forbidden):
+            await self.service.update_purchase_status(
+                self.store.id, purchase_id, PurchaseStatus.IN_PROGRESS
+            )
+
+        self.repository.get_by_id.assert_called_once_with((self.store.id, purchase_id))
+        self.repository.save.assert_not_called()
+        self.products_service.update_stock.assert_not_called()
+
+    async def test_update_purchase_cancelled_idempotent(self) -> None:
+        # Given
+        purchase_id = uuid4()
+        items = [
+            PurchaseItem(product_id=uuid4(), quantity=1, unit_price=10),  # type: ignore
+            PurchaseItem(product_id=uuid4(), quantity=2, unit_price=20),  # type: ignore
+        ]
+        purchase = Purchase(
+            store=self.store,
+            id=purchase_id,
+            items=items,
+            buyer_id=uuid4(),
+            status=PurchaseStatus.CANCELLED,
+            payment_url=None,
+            delivery_address_id=uuid4(),
+        )
+        self.repository.get_by_id.return_value = purchase
+
+        # When
+        await self.service.update_purchase_status(
+            self.store.id, purchase_id, PurchaseStatus.CANCELLED
+        )
+
+        # Then
+        self.repository.get_by_id.assert_called_once_with((self.store.id, purchase_id))
+        self.repository.save.assert_not_called()
+        self.products_service.update_stock.assert_not_called()
+
+    async def test_update_purchase_completed_idempotent(self) -> None:
+        # Given
+        purchase_id = uuid4()
+        items = [
+            PurchaseItem(product_id=uuid4(), quantity=1, unit_price=10),  # type: ignore
+            PurchaseItem(product_id=uuid4(), quantity=2, unit_price=20),  # type: ignore
+        ]
+        purchase = Purchase(
+            store=self.store,
+            id=purchase_id,
+            items=items,
+            buyer_id=uuid4(),
+            status=PurchaseStatus.COMPLETED,
+            payment_url=None,
+            delivery_address_id=uuid4(),
+        )
+        self.repository.get_by_id.return_value = purchase
+
+        # When
+        await self.service.update_purchase_status(
+            self.store.id, purchase_id, PurchaseStatus.COMPLETED
+        )
+
+        # Then
+        self.repository.get_by_id.assert_called_once_with((self.store.id, purchase_id))
+        self.repository.save.assert_not_called()
+        self.products_service.update_stock.assert_not_called()
+
+    async def test_update_purchase_completed(self) -> None:
+        # Given
+        purchase_id = uuid4()
+        items = [
+            PurchaseItem(product_id=uuid4(), quantity=1, unit_price=10),  # type: ignore
+            PurchaseItem(product_id=uuid4(), quantity=2, unit_price=20),  # type: ignore
+        ]
+        purchase = Purchase(
+            store=self.store,
+            id=purchase_id,
+            items=items,
+            buyer_id=uuid4(),
+            status=PurchaseStatus.CREATED,
+            payment_url="http://payment.url",
+            delivery_address_id=uuid4(),
+        )
+        self.repository.get_by_id.return_value = purchase
+
+        # When
+        await self.service.update_purchase_status(
+            self.store.id, purchase_id, PurchaseStatus.COMPLETED
+        )
+
+        # Then
+        self.repository.get_by_id.assert_called_once_with((self.store.id, purchase_id))
+        purchase.status = PurchaseStatus.COMPLETED
+        purchase.payment_url = None  # type: ignore
+        self.repository.save.assert_called_once_with(purchase)
+        self.products_service.update_stock.assert_not_called()
+
+    async def test_update_purchase_cancelled(self) -> None:
+        # Given
+        purchase_id = uuid4()
+        items = [
+            PurchaseItem(product_id=uuid4(), product=AsyncMock(), quantity=5, unit_price=10),  # type: ignore # noqa
+            PurchaseItem(product_id=uuid4(), product=AsyncMock(), quantity=2, unit_price=20),  # type: ignore # noqa
+        ]
+        purchase = Purchase(
+            store=self.store,
+            id=purchase_id,
+            items=items,
+            buyer_id=uuid4(),
+            status=PurchaseStatus.CREATED,
+            payment_url="http://payment.url",
+            delivery_address_id=uuid4(),
+        )
+        self.repository.get_by_id.return_value = purchase
+
+        # When
+        await self.service.update_purchase_status(
+            self.store.id, purchase_id, PurchaseStatus.CANCELLED
+        )
+
+        # Then
+        self.repository.get_by_id.assert_called_once_with((self.store.id, purchase_id))
+        purchase.status = PurchaseStatus.CANCELLED
+        purchase.payment_url = None  # type: ignore
+        self.repository.save.assert_called_once_with(purchase)
+        stock_calls = [call(item.product, item.quantity) for item in items]
+        self.products_service.update_stock.assert_has_calls(stock_calls)
+
+    async def test_update_purchase_in_progress(self) -> None:
+        # Given
+        purchase_id = uuid4()
+        items = [
+            PurchaseItem(product_id=uuid4(), product=AsyncMock(), quantity=5, unit_price=10),  # type: ignore # noqa
+            PurchaseItem(product_id=uuid4(), product=AsyncMock(), quantity=2, unit_price=20),  # type: ignore # noqa
+        ]
+        purchase = Purchase(
+            store=self.store,
+            id=purchase_id,
+            items=items,
+            buyer_id=uuid4(),
+            status=PurchaseStatus.CREATED,
+            payment_url="http://payment.url",
+            delivery_address_id=uuid4(),
+        )
+        self.repository.get_by_id.return_value = purchase
+
+        # When
+        await self.service.update_purchase_status(
+            self.store.id, purchase_id, PurchaseStatus.IN_PROGRESS
+        )
+
+        # Then
+        self.repository.get_by_id.assert_called_once_with((self.store.id, purchase_id))
+        purchase.status = PurchaseStatus.IN_PROGRESS
+        purchase.payment_url = None  # type: ignore
+        self.repository.save.assert_called_once_with(purchase)
+        self.products_service.update_stock.assert_not_called()

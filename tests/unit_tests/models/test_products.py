@@ -4,8 +4,6 @@ from pydantic import ValidationError
 from app.models.products import Category, ProductCreate
 from tests.factories.product_factories import ProductCreateFactory
 
-import pytest
-
 
 class TestProductsModel(IsolatedAsyncioTestCase):
     async def test_product_create_with_all_fields(self) -> None:

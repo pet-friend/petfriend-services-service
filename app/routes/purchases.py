@@ -1,9 +1,9 @@
 from decimal import Decimal
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, status
 from pydantic import PositiveInt
 
 from app.auth import get_caller_id, get_caller_token
-from app.models.purchases import Purchase, PurchaseRead
+from app.models.purchases import Purchase, PurchaseRead, PurchaseUpdate
 from app.models.util import Id
 from app.routes.util import get_exception_docs
 from app.serializers.purchases import PurchaseList
@@ -18,6 +18,7 @@ from .responses.purchases import (
 from .responses.auth import FORBIDDEN
 
 router = APIRouter(prefix="", tags=["Purchases"])
+router_payments = APIRouter(prefix="", tags=["Purchases"])
 
 
 @router.post(
@@ -74,6 +75,19 @@ async def get_store_purchase(
     user_id: Id = Depends(get_caller_id),
 ) -> Purchase:
     return await purchases_service.get_purchase(store_id, purchase_id, user_id)
+
+
+@router_payments.put(
+    "/stores/{store_id}/purchases/{purchase_id}",
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def update_purchase_status(
+    update: PurchaseUpdate,
+    store_id: Id,
+    purchase_id: Id,
+    purchases_service: PurchasesService = Depends(),
+) -> None:
+    await purchases_service.update_purchase_status(store_id, purchase_id, update.status)
 
 
 @router.get(

@@ -11,7 +11,7 @@ from app.handlers import add_exception_handlers
 from app.router import api_router
 from .log import setup_logs
 from .config import settings
-from .db import commit_db, run_migrations
+from .db import run_migrations
 
 setup_logs()
 
@@ -48,7 +48,6 @@ def create_app() -> FastAPI:
     new_app.include_router(api_router)
     new_app.openapi = custom_openapi  # type: ignore[method-assign]
     add_exception_handlers(new_app)
-    new_app.middleware("http")(commit_db)
     return new_app
 
 

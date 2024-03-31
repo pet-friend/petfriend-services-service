@@ -16,7 +16,7 @@ from app.exceptions.purchases import (
 )
 from app.exceptions.users import Forbidden
 from app.models.preferences import PaymentData, PreferenceItem, PurchaseTypes
-from app.models.purchases import Purchase, PurchaseItem, PurchaseStatus
+from app.models.purchases import Purchase, PurchaseItem, PurchaseStatus, PurchaseStatusUpdate
 from app.models.products import Product, ProductRead
 from app.models.stores import Store
 from app.models.util import Coordinates, Id, distance_squared
@@ -27,6 +27,7 @@ from app.services.stores import StoresService
 from app.services.users import UsersService
 
 REQUEST_TIMEOUT = Timeout(5, read=45)
+FORBIDDEN_STATUS_CHANGES = [PurchaseStatus.COMPLETED, PurchaseStatus.CANCELLED]
 
 
 class PurchasesService:
@@ -117,10 +118,38 @@ class PurchasesService:
             if r.status_code == status.HTTP_404_NOT_FOUND:
                 raise StoreNotReady
             r.raise_for_status()
-            purchase.payment_url = r.json()
+            preference_url: str = r.json()
+            purchase.payment_url = preference_url
 
         await self.purchases_repo.save(purchase)
         return purchase
+
+    async def update_purchase_status(
+        self, store_id: Id, purchase_id: Id, new_status: PurchaseStatusUpdate
+    ) -> None:
+        purchase = await self.purchases_repo.get_by_id((store_id, purchase_id))
+        if purchase is None:
+            raise PurchaseNotFound
+
+        if purchase.status == new_status:
+            # No update
+            return
+
+        if purchase.status in FORBIDDEN_STATUS_CHANGES:
+            logging.warning(
+                f"Tried to update status of purchase from '{purchase.status}' to '{new_status}'"
+            )
+            raise Forbidden
+
+        if new_status == PurchaseStatus.CANCELLED:
+            # Restore stock
+            for item in purchase.items:
+                await self.products_service.update_stock(item.product, item.quantity)
+
+        purchase.status = new_status
+        # For some reason mypy doesn't like this: https://github.com/pydantic/pydantic/issues/7482
+        purchase.payment_url = None  # type: ignore
+        await self.purchases_repo.save(purchase)
 
     async def __check_purchase_conditions(
         self, store: Store, user_id: Id, delivery_address_id: Id, token: str

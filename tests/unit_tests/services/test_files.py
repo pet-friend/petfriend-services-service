@@ -5,7 +5,6 @@ from uuid import uuid4
 
 from azure.storage.blob.aio import ContainerClient, BlobClient
 from azure.core.exceptions import ResourceExistsError
-import pytest
 
 from app.services.files import FilesService
 from .util import File

@@ -4,7 +4,6 @@ from unittest.mock import AsyncMock
 from unittest import IsolatedAsyncioTestCase
 from uuid import uuid4
 
-import pytest
 from app.exceptions.products import ProductNotFound
 from app.exceptions.users import Forbidden
 

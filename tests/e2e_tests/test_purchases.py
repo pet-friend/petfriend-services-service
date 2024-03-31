@@ -6,6 +6,7 @@ import pytest
 from pytest_httpx import HTTPXMock
 from app.config import settings
 
+from app.models.purchases import PurchaseStatus
 from app.models.stores import Store
 from app.models.util import Coordinates, Id
 from tests.factories.address_factories import AddressCreateFactory
@@ -169,8 +170,8 @@ class TestStoresProductsRoute(BaseAPITestCase):
                 "user_to_be_payed_id": str(store_owner),
             },
         )
-        payment_url = "http://payment.com"
-        httpx_mock.add_response(url=url, json=payment_url)
+        preference_url = "http://payment.com"
+        httpx_mock.add_response(url=url, json=preference_url)
         address_id = str(uuid4())
 
         with patch("app.services.users.UsersService.get_user_address_coordinates") as mock:
@@ -183,10 +184,254 @@ class TestStoresProductsRoute(BaseAPITestCase):
         assert r.status_code == 200
         data = r.json()
 
-        assert data["payment_url"] == payment_url
+        assert data["payment_url"] == preference_url
         assert data["status"] == "created"
         assert data["store_id"] == store["id"]
         assert data["buyer_id"] == str(self.user_id)
         assert data["delivery_address_id"] == address_id
         assert len(data["items"]) == 1
         assert data["items"][0]["product_id"] == product["id"]
+
+    async def test_purchase_one_item_reduces_stock(self, httpx_mock: HTTPXMock) -> None:
+        r_store = await self.client.post("/stores", json=self.store_create_json_data)
+        assert r_store.status_code == 201
+        store = r_store.json()
+        self.product_create_json_data["available"] = 5
+        r_product = await self.client.post(
+            f"/stores/{store['id']}/products", json=self.product_create_json_data
+        )
+        assert r_product.status_code == 201
+        product = r_product.json()
+
+        store_owner = await self.change_store_owner(store["id"])
+
+        quantities = {product["id"]: 2}
+
+        url = URL(
+            settings.PAYMENTS_SERVICE_URL + "/payment",
+            params={
+                "user_to_be_payed_id": str(store_owner),
+            },
+        )
+        httpx_mock.add_response(url=url, json="http://payment.com")
+
+        with patch("app.services.users.UsersService.get_user_address_coordinates") as mock:
+            mock.return_value = Coordinates(latitude=0, longitude=0)
+            r = await self.client.post(
+                f"/stores/{store['id']}/purchases",
+                json=quantities,
+                params={"delivery_address_id": str(uuid4())},
+            )
+        assert r.status_code == 200
+
+        r_product_get = await self.client.get(f"/stores/{store['id']}/products/{product['id']}")
+        assert r_product_get.status_code == 200
+        assert (
+            r_product_get.json()["available"]
+            == self.product_create_json_data["available"] - quantities[product["id"]]
+        )
+
+    async def test_purchase_one_item_does_not_reduces_stock_if_fails(
+        self, httpx_mock: HTTPXMock
+    ) -> None:
+        r_store = await self.client.post("/stores", json=self.store_create_json_data)
+        assert r_store.status_code == 201
+        store = r_store.json()
+        self.product_create_json_data["available"] = 5
+        r_product = await self.client.post(
+            f"/stores/{store['id']}/products", json=self.product_create_json_data
+        )
+        assert r_product.status_code == 201
+        product = r_product.json()
+
+        store_owner = await self.change_store_owner(store["id"])
+
+        quantities = {product["id"]: 2}
+
+        url = URL(
+            settings.PAYMENTS_SERVICE_URL + "/payment",
+            params={
+                "user_to_be_payed_id": str(store_owner),
+            },
+        )
+        httpx_mock.add_response(url=url, status_code=404)
+
+        with patch("app.services.users.UsersService.get_user_address_coordinates") as mock:
+            mock.return_value = Coordinates(latitude=0, longitude=0)
+            r = await self.client.post(
+                f"/stores/{store['id']}/purchases",
+                json=quantities,
+                params={"delivery_address_id": str(uuid4())},
+            )
+        assert r.status_code == 409
+
+        r_product_get = await self.client.get(f"/stores/{store['id']}/products/{product['id']}")
+        assert r_product_get.status_code == 200
+        assert r_product_get.json()["available"]
+
+    async def test_cant_update_purchase_without_api_key(self, httpx_mock: HTTPXMock) -> None:
+        r_store = await self.client.post("/stores", json=self.store_create_json_data)
+        assert r_store.status_code == 201
+        store = r_store.json()
+        self.product_create_json_data["available"] = 5
+        r_product = await self.client.post(
+            f"/stores/{store['id']}/products", json=self.product_create_json_data
+        )
+        assert r_product.status_code == 201
+        product = r_product.json()
+        store_owner = await self.change_store_owner(store["id"])
+        quantities = {product["id"]: 2}
+        url = URL(
+            settings.PAYMENTS_SERVICE_URL + "/payment",
+            params={
+                "user_to_be_payed_id": str(store_owner),
+            },
+        )
+        httpx_mock.add_response(url=url, json="http://payment.com")
+        with patch("app.services.users.UsersService.get_user_address_coordinates") as mock:
+            mock.return_value = Coordinates(latitude=0, longitude=0)
+            r = await self.client.post(
+                f"/stores/{store['id']}/purchases",
+                json=quantities,
+                params={"delivery_address_id": str(uuid4())},
+            )
+        assert r.status_code == 200
+        purchase_id = r.json()["id"]
+
+        r = await self.client.put(f"/stores/{store['id']}/purchases/{purchase_id}")
+        assert r.status_code == 401
+
+    async def test_can_update_purchase_to_in_progress(self, httpx_mock: HTTPXMock) -> None:
+        r_store = await self.client.post("/stores", json=self.store_create_json_data)
+        assert r_store.status_code == 201
+        store = r_store.json()
+        self.product_create_json_data["available"] = 5
+        r_product = await self.client.post(
+            f"/stores/{store['id']}/products", json=self.product_create_json_data
+        )
+        assert r_product.status_code == 201
+        product = r_product.json()
+        store_owner = await self.change_store_owner(store["id"])
+        quantities = {product["id"]: 2}
+        url = URL(
+            settings.PAYMENTS_SERVICE_URL + "/payment",
+            params={
+                "user_to_be_payed_id": str(store_owner),
+            },
+        )
+        httpx_mock.add_response(url=url, json="http://payment.com")
+        with patch("app.services.users.UsersService.get_user_address_coordinates") as mock:
+            mock.return_value = Coordinates(latitude=0, longitude=0)
+            r = await self.client.post(
+                f"/stores/{store['id']}/purchases",
+                json=quantities,
+                params={"delivery_address_id": str(uuid4())},
+            )
+        assert r.status_code == 200
+        p = r.json()
+        assert p["status"] == PurchaseStatus.CREATED
+
+        r_put = await self.client.put(
+            f"/stores/{store['id']}/purchases/{p['id']}",
+            headers={"api-key": settings.PAYMENTS_API_KEY},
+            json={"status": PurchaseStatus.IN_PROGRESS},
+        )
+        assert r_put.status_code == 202
+
+        r_get = await self.client.get(f"/stores/{store['id']}/purchases/{p['id']}")
+        assert r_get.status_code == 200
+        data = r_get.json()
+        assert data["status"] == PurchaseStatus.IN_PROGRESS
+        assert data.get("payment_url", None) is None
+
+    async def test_can_update_purchase_to_completed(self, httpx_mock: HTTPXMock) -> None:
+        r_store = await self.client.post("/stores", json=self.store_create_json_data)
+        assert r_store.status_code == 201
+        store = r_store.json()
+        self.product_create_json_data["available"] = 5
+        r_product = await self.client.post(
+            f"/stores/{store['id']}/products", json=self.product_create_json_data
+        )
+        assert r_product.status_code == 201
+        product = r_product.json()
+        store_owner = await self.change_store_owner(store["id"])
+        quantities = {product["id"]: 2}
+        url = URL(
+            settings.PAYMENTS_SERVICE_URL + "/payment",
+            params={
+                "user_to_be_payed_id": str(store_owner),
+            },
+        )
+        httpx_mock.add_response(url=url, json="http://payment.com")
+        with patch("app.services.users.UsersService.get_user_address_coordinates") as mock:
+            mock.return_value = Coordinates(latitude=0, longitude=0)
+            r = await self.client.post(
+                f"/stores/{store['id']}/purchases",
+                json=quantities,
+                params={"delivery_address_id": str(uuid4())},
+            )
+        assert r.status_code == 200
+        p = r.json()
+        assert p["status"] == PurchaseStatus.CREATED
+
+        r_put = await self.client.put(
+            f"/stores/{store['id']}/purchases/{p['id']}",
+            headers={"api-key": settings.PAYMENTS_API_KEY},
+            json={"status": PurchaseStatus.COMPLETED},
+        )
+        assert r_put.status_code == 202
+
+        r_get = await self.client.get(f"/stores/{store['id']}/purchases/{p['id']}")
+        assert r_get.status_code == 200
+        data = r_get.json()
+        assert data["status"] == PurchaseStatus.COMPLETED
+        assert data.get("payment_url", None) is None
+
+    async def test_can_update_purchase_to_cancelled_and_restores_stock(
+        self, httpx_mock: HTTPXMock
+    ) -> None:
+        r_store = await self.client.post("/stores", json=self.store_create_json_data)
+        assert r_store.status_code == 201
+        store = r_store.json()
+        self.product_create_json_data["available"] = 5
+        r_product = await self.client.post(
+            f"/stores/{store['id']}/products", json=self.product_create_json_data
+        )
+        assert r_product.status_code == 201
+        product = r_product.json()
+        store_owner = await self.change_store_owner(store["id"])
+        quantities = {product["id"]: 2}
+        url = URL(
+            settings.PAYMENTS_SERVICE_URL + "/payment",
+            params={
+                "user_to_be_payed_id": str(store_owner),
+            },
+        )
+        httpx_mock.add_response(url=url, json="http://payment.com")
+        with patch("app.services.users.UsersService.get_user_address_coordinates") as mock:
+            mock.return_value = Coordinates(latitude=0, longitude=0)
+            r = await self.client.post(
+                f"/stores/{store['id']}/purchases",
+                json=quantities,
+                params={"delivery_address_id": str(uuid4())},
+            )
+        assert r.status_code == 200
+        p = r.json()
+        assert p["status"] == PurchaseStatus.CREATED
+
+        r_put = await self.client.put(
+            f"/stores/{store['id']}/purchases/{p['id']}",
+            headers={"api-key": settings.PAYMENTS_API_KEY},
+            json={"status": PurchaseStatus.CANCELLED},
+        )
+        assert r_put.status_code == 202
+
+        r_get = await self.client.get(f"/stores/{store['id']}/purchases/{p['id']}")
+        assert r_get.status_code == 200
+        data = r_get.json()
+        assert data["status"] == PurchaseStatus.CANCELLED
+        assert data.get("payment_url", None) is None
+
+        r_product_get = await self.client.get(f"/stores/{store['id']}/products/{product['id']}")
+        assert r_product_get.status_code == 200
+        assert r_product_get.json()["available"] == self.product_create_json_data["available"]

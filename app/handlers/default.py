@@ -1,3 +1,9 @@
+"""
+This module maps all of the tuples (Exception type, HTTPException) from app.routes.responses.*
+to FastAPI's exception handlers. To add a new exception mapping, we can simply add one of these
+tuples to any of the files in that directory and it will be added automatically.
+"""
+
 import importlib
 import logging
 from typing import Any, Callable, Type
@@ -5,10 +11,10 @@ import os
 from pathlib import Path
 from inspect import getmembers
 
-import app.routes.responses as responses
 from fastapi import FastAPI, HTTPException, Request, Response
 
-from app.handlers.base_handlers import handle_http_exception
+from app.routes import responses
+from .base_handlers import handle_http_exception
 
 
 # checks which objects are exception mappings
@@ -38,5 +44,5 @@ def add_default_handlers(app: FastAPI) -> None:
         app.add_exception_handler(exc_type, __get_handler(exc_to_throw))
 
 
-def __get_handler(exc_to_throw: HTTPException) -> Callable[[Request, Type[Exception]], Response]:
+def __get_handler(exc_to_throw: HTTPException) -> Callable[[Request, Exception], Response]:
     return lambda req, _: handle_http_exception(req, exc_to_throw)

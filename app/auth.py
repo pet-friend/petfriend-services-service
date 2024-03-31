@@ -1,6 +1,7 @@
-from fastapi import Depends, HTTPException, Request
+from fastapi import Depends, HTTPException, Header, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from .config import settings
 from .routes.responses.auth import UNAUTHORIZED
 from .exceptions.users import InvalidToken
 from .models.util import Id
@@ -42,3 +43,12 @@ async def authenticate(
 
     setattr(req.state, "user_id", user_id)
     return user_id
+
+
+async def validate_payments_key(
+    api_key: str = Header(None, description="API Key", required=True),
+) -> str:
+    if api_key is not None and api_key == settings.PAYMENTS_API_KEY:
+        return api_key
+
+    raise UNAUTHORIZED

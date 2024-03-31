@@ -1,9 +1,9 @@
 from contextlib import asynccontextmanager
 import logging
 from asyncio import sleep
-from typing import AsyncGenerator, AsyncIterator, Callable, Awaitable
+from typing import AsyncGenerator, AsyncIterator
 
-from fastapi import FastAPI, HTTPException, Request, Response, status
+from fastapi import FastAPI, HTTPException, status
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.engine.base import Connection
@@ -11,7 +11,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from alembic import command
 from alembic.config import Config
 
-from app.handlers.base_handlers import handle_http_exception
 from .config import settings
 
 # Enable pool pre-ping to avoid failing when database container scales to 0
@@ -26,35 +25,23 @@ SessionLocal = async_sessionmaker(
 )
 
 
-async def get_db(req: Request) -> AsyncGenerator[AsyncSession, None]:
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with SessionLocal() as db:
-        req.state.db = db
-        yield db
-
-
-async def commit_db(req: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
-    response = await call_next(req)
-    db: AsyncSession | None = getattr(req.state, "db", None)
-    if db is None:
-        return response
-
-    try:
-        if response.status_code >= 400:
+        try:
+            yield db
+        except Exception:
             logging.debug("Request returned an error: rolling back database changes")
             await db.rollback()
-            return response
-        logging.debug("Committing database changes")
-        await db.commit()
-        return response
-    except Exception as e:
-        logging.error("Error committing database changes", exc_info=e)
-        await db.rollback()
-        return handle_http_exception(
-            req,
-            HTTPException(
+            raise
+
+        try:
+            await db.commit()
+        except Exception as e:
+            logging.error("Error committing database changes", exc_info=e)
+            await db.rollback()
+            raise HTTPException(
                 status.HTTP_500_INTERNAL_SERVER_ERROR, "Failed to persist database changes"
-            ),
-        )
+            ) from e
 
 
 @asynccontextmanager

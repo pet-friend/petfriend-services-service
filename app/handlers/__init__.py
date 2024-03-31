@@ -1,3 +1,4 @@
+# mypy: disable-error-code="arg-type"
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy.exc import IntegrityError

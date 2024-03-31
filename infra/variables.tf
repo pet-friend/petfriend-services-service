@@ -31,7 +31,14 @@ variable "google_maps_api_key" {
   type        = string
   sensitive   = true
 }
+
 variable "payments_service_url" {
   description = "URL of the payments service"
   type        = string
+}
+
+variable "payments_api_key" {
+  description = "Payments service API key"
+  type        = string
+  sensitive   = true
 }

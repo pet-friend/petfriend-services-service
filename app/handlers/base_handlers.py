@@ -19,7 +19,7 @@ def handle_exception(_req: Request, exc: Exception) -> Response:
 
 async def validation_exception_handler(_req: Request, exc: RequestValidationError) -> JSONResponse:
     logging.error("Request Validation Error", exc_info=exc)
-    messages_dict: dict[str, list[str]] = {}
+    messages_dict: dict[str | int, list[str]] = {}
 
     for error in exc.errors():
         if error["type"] == "json_invalid":

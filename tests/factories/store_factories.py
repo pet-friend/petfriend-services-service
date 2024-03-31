@@ -1,4 +1,4 @@
-from decimal import Context, Decimal
+from decimal import Decimal
 from polyfactory.factories.pydantic_factory import ModelFactory
 from app.models.constants.stores import MAX_DELIVERY_RANGE, MIN_DELIVERY_RANGE
 
@@ -14,4 +14,4 @@ class StoreCreateFactory(ModelFactory[StoreCreate]):
 
     @classmethod
     def shipping_cost(cls) -> Decimal:
-        return Context(prec=2).create_decimal_from_float(cls.__random__.uniform(0, 100))
+        return Decimal(cls.__random__.uniform(0, 100)).quantize(Decimal(".01"))

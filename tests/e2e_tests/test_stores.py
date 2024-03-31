@@ -16,7 +16,8 @@ class TestStoresRoute(BaseAPITestCase):
         assert response_text["id"] is not None
         assert response_text["name"] == "test store"
 
-        store_db: Store = await self.db.get(Store, response_text["id"])  # type: ignore
+        store_db: Store | None = await self.db.get(Store, response_text["id"])
+        assert store_db
         assert_store_db_equals_response(store_db, response_text)
         assert store_db.owner_id == self.user_id
         assert store_db.created_at is not None
