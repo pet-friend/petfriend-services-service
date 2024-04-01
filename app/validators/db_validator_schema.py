@@ -7,7 +7,7 @@ from app.config import Settings
 class DatabaseValidatorSchema(BaseModel):
     error: str
 
-    def get_error_detail(self, settings: Settings) -> dict[str, list[str]]:
+    def get_error_detail(self, settings: Settings) -> dict[str | int, list[str]]:
         if settings.TESTING:
             error_message, _, table_field = str(self.error).partition(":")
             column_name = table_field.split(".")[-1].lstrip()

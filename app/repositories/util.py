@@ -1,13 +1,12 @@
-from math import pi, radians, cos
+from math import radians, cos
 
 from sqlmodel import func
 from sqlalchemy import Exists
 
+from app.models.util import KM_PER_DEG_LAT
+
 from ..models.stores import Store
 from ..models.addresses import Address
-
-EARTH_RADIUS_KM = 6371.009
-KM_PER_DEG_LAT = 2 * pi * EARTH_RADIUS_KM / 360.0
 
 
 def store_distance_filter(lat: float, long: float) -> Exists:

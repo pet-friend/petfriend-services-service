@@ -10,7 +10,7 @@ from app.models.util import File, Id
 from app.models.products import Category, ProductCategories, ProductCreate, Product, ProductRead
 from app.repositories.products import ProductsRepository
 from app.exceptions.repository import RecordNotFound
-from app.exceptions.products import ProductAlreadyExists, ProductNotFound
+from app.exceptions.products import ProductAlreadyExists, ProductNotFound, ProductOutOfStock
 from app.services.files import FilesService, products_images_service
 from app.services.stores import StoresService
 from app.services.users import UsersService
@@ -36,10 +36,10 @@ class ProductsService:
         if await self.products_repo.get_by_name(store_id, data.name) is not None:
             raise ProductAlreadyExists
 
-        # map data.categories to ProductCategories model
-        categories = [ProductCategories(category=category) for category in data.categories]
         logging.info(f"Creating product {data.name} in store {store_id} with data {data}")
-        product = Product(store_id=store_id, **data.model_dump(), _categories=categories)
+        product = Product(store_id=store_id, **data.model_dump())
+        # map data.categories to ProductCategories model
+        product._categories = [ProductCategories(category=category) for category in data.categories]
         return await self.products_repo.save(product)
 
     async def get_product(self, store_id: Id, product_id: Id) -> Product:
@@ -134,6 +134,18 @@ class ProductsService:
             raise Forbidden
 
         await self.files_service.delete_file(self.__get_image_id(store_id, product_id))
+
+    async def update_stock(self, product: Product, amount: int) -> None:
+        """
+        Amount can be a negative number to decrease stock
+        Raises ProductOutOfStock if the product would have negative stock
+        """
+        if product.available is None:
+            return
+        if product.available + amount < 0:
+            raise ProductOutOfStock
+        product.available += amount
+        await self.products_repo.save(product)
 
     async def __readable(self, product: Product, token: str) -> ProductRead:
         image = await self.files_service.get_file_url(

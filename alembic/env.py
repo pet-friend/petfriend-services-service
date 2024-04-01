@@ -11,6 +11,7 @@ from app.db import engine
 from app.models.stores import Store  # noqa
 from app.models.addresses import Address  # noqa
 from app.models.products import Product  # noqa
+from app.models.purchases import Purchase  # noqa
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

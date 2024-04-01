@@ -36,7 +36,6 @@ class TestStoresService(IsolatedAsyncioTestCase):
     def tearDown(self) -> None:
         self.file.file.close()
 
-    @pytest.mark.asyncio
     async def test_create_image_fail_if_store_not_exists(self) -> None:
         # Given
         self.repository.get_by_id.return_value = None
@@ -47,7 +46,6 @@ class TestStoresService(IsolatedAsyncioTestCase):
 
         self.repository.get_by_id.assert_called_once_with(self.store.id)
 
-    @pytest.mark.asyncio
     async def test_set_image_fail_if_store_not_exists(self) -> None:
         # Given
         self.repository.get_by_id.return_value = None
@@ -58,7 +56,6 @@ class TestStoresService(IsolatedAsyncioTestCase):
 
         self.repository.get_by_id.assert_called_once_with(self.store.id)
 
-    @pytest.mark.asyncio
     async def test_delete_image_fail_if_store_not_exists(self) -> None:
         # Given
         self.repository.get_by_id.return_value = None
@@ -69,7 +66,6 @@ class TestStoresService(IsolatedAsyncioTestCase):
 
         self.repository.get_by_id.assert_called_once_with(self.store.id)
 
-    @pytest.mark.asyncio
     async def test_create_image_calls_create_file(self) -> None:
         # Given
         self.repository.get_by_id.return_value = self.store
@@ -81,7 +77,6 @@ class TestStoresService(IsolatedAsyncioTestCase):
         self.repository.get_by_id.assert_called_once_with(self.store.id)
         self.files_service.create_file.assert_called_once_with(self.store.id, self.file)
 
-    @pytest.mark.asyncio
     async def test_cant_create_image_if_not_owner(self) -> None:
         # Given
         self.repository.get_by_id.return_value = self.store
@@ -94,7 +89,6 @@ class TestStoresService(IsolatedAsyncioTestCase):
         self.repository.get_by_id.assert_called_once_with(self.store.id)
         self.files_service.create_file.assert_not_called()
 
-    @pytest.mark.asyncio
     async def test_set_image_calls_set_file(self) -> None:
         # Given
         self.repository.get_by_id.return_value = self.store
@@ -106,7 +100,6 @@ class TestStoresService(IsolatedAsyncioTestCase):
         self.repository.get_by_id.assert_called_once_with(self.store.id)
         self.files_service.set_file.assert_called_once_with(self.store.id, self.file)
 
-    @pytest.mark.asyncio
     async def test_cant_set_image_if_not_owner(self) -> None:
         # Given
         self.repository.get_by_id.return_value = self.store
@@ -119,7 +112,6 @@ class TestStoresService(IsolatedAsyncioTestCase):
         self.repository.get_by_id.assert_called_once_with(self.store.id)
         self.files_service.set_file.assert_not_called()
 
-    @pytest.mark.asyncio
     async def test_delete_image_calls_delete_file(self) -> None:
         # Given
         self.repository.get_by_id.return_value = self.store
@@ -131,7 +123,6 @@ class TestStoresService(IsolatedAsyncioTestCase):
         self.repository.get_by_id.assert_called_once_with(self.store.id)
         self.files_service.delete_file.assert_called_once_with(self.store.id)
 
-    @pytest.mark.asyncio
     async def test_cant_delete_image_if_not_owner(self) -> None:
         # Given
         self.repository.get_by_id.return_value = self.store

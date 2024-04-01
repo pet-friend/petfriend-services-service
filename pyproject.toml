@@ -1,6 +1,7 @@
 [tool.black]
 line-length = 100
 preview = true
+enable-unstable-feature = ["string_processing"]
 
 [tool.pylint.'MAIN']
 source-roots = '.'
@@ -35,14 +36,22 @@ exclude = [
     'app\/dev_volumes',
 ]
 mypy_path = '.'
-check_untyped_defs = true
 python_version = '3.12'
+check_untyped_defs = true
 disallow_untyped_defs = true
 disallow_any_generics = true
 implicit_reexport = false
 namespace_packages = true
 explicit_package_bases = true
+local_partial_types = true
+warn_redundant_casts = true
+warn_unused_ignores = true
 plugins = ['pydantic.mypy']
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
 
 [tool.pytest.ini_options]
 minversion = '6.0'
@@ -57,10 +66,7 @@ filterwarnings = [
     "ignore::DeprecationWarning:pydantic_core.*:",
     "ignore::DeprecationWarning:azure.*:",
 ]
-markers = [
-    "noauth: fail authentication on e2e tests",
-    "invalidaddress: fail address validation on e2e tests",
-]
+asyncio_mode = "auto"
 
 [tool.coverage.run]
 omit = [
