@@ -43,11 +43,6 @@ class PurchasesService:
         self.users_service = users_service
         self.purchases_repo = purchases_repo
 
-    # TODO:
-    # - tests
-    # - routes and exception handlers for routes
-    # - update state from notification
-
     async def get_purchase(self, store_id: Id, purchase_id: Id, user_id: Id) -> Purchase:
         purchase = await self.purchases_repo.get_by_id((store_id, purchase_id))
         if purchase is None:
