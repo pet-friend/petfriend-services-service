@@ -310,18 +310,18 @@ class TestPurchasesService:
             },
         )
 
-        reference: str
+        service_reference: str
         unit_price = self.product.price * (100 - self.product.percent_off) / 100
         fee = unit_price * quantities[self.product.id] * settings.FEE_PERCENTAGE / 100
 
         def check_request_body(data: dict[str, Any]) -> None:
-            nonlocal reference
-            data = data["payment_data"]
-            reference = data["external_reference"]
+            nonlocal service_reference
+            service_reference = data["service_reference"]
+            pref_data = data["preference_data"]
 
             assert data["type"] == PurchaseTypes.STORE_PURCHASE
-            assert len(data["items"]) == 1
-            assert data["items"][0] == {
+            assert len(pref_data["items"]) == 1
+            assert pref_data["items"][0] == {
                 "title": self.product.name,
                 "description": self.product.description,
                 "currency_id": "ARS",
@@ -329,14 +329,14 @@ class TestPurchasesService:
                 "unit_price": float(unit_price),
                 "picture_url": image_url,
             }
-            assert data["marketplace_fee"] == float(fee)
-            assert data["shipments"] == {
+            assert pref_data["marketplace_fee"] == float(fee)
+            assert pref_data["shipments"] == {
                 "cost": float(self.store.shipping_cost),
                 "mode": "not_specified",
             }
-            assert data["metadata"] == {
+            assert pref_data["metadata"] == {
                 "store_id": str(self.store.id),
-                "purchase_id": reference,
+                "purchase_id": service_reference,
                 "type": PurchaseTypes.STORE_PURCHASE,
             }
 
@@ -362,7 +362,7 @@ class TestPurchasesService:
         )
         assert purchase.status == PurchaseStatus.CREATED
         assert purchase.payment_url == result_url
-        assert str(purchase.id) == reference
+        assert str(purchase.id) == service_reference
         assert purchase.store == self.store
         assert purchase.buyer_id == user_id
         assert len(purchase.items) == 1

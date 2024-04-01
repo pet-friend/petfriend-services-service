@@ -195,15 +195,15 @@ class PurchasesService:
         )
 
         return items, {
-            "payment_data": {
-                "external_reference": order_id,
+            "service_reference": order_id,
+            "type": PurchaseTypes.STORE_PURCHASE,
+            "preference_data": {
                 "items": items_data,
                 "marketplace_fee": total_cost * settings.FEE_PERCENTAGE / 100,
                 "shipments": {
                     "cost": store.shipping_cost,
                     "mode": "not_specified",
                 },
-                "type": PurchaseTypes.STORE_PURCHASE,
                 "metadata": {
                     "store_id": store.id,
                     "purchase_id": order_id,

@@ -1,12 +1,15 @@
 from decimal import Decimal
 from enum import StrEnum
-from typing import Literal, Sequence, TypedDict
+from typing import Literal, Sequence, TypedDict, TypeVar, Generic
 
 from .util import Id
 
 
+M = TypeVar("M")
+
+
 class PurchaseTypes(StrEnum):
-    STORE_PURCHASE = "S"
+    STORE_PURCHASE = "P"
 
 
 class PreferenceItem(TypedDict):
@@ -23,11 +26,15 @@ class PreferenceShipment(TypedDict):
     mode: Literal["not_specified"]
 
 
-class PreferenceBase(TypedDict):
-    external_reference: Id
+class PreferenceData(TypedDict, Generic[M]):
     items: Sequence[PreferenceItem]
     marketplace_fee: Decimal
     shipments: PreferenceShipment
+    metadata: M
+
+
+class BasePaymentData(TypedDict):
+    service_reference: Id
 
 
 # Store purchases
@@ -39,15 +46,12 @@ class StorePurchaseMetadata(TypedDict):
     type: Literal[PurchaseTypes.STORE_PURCHASE]
 
 
-class StorePurchasePreference(PreferenceBase):
+class StorePurchasePaymentData(BasePaymentData):
+    preference_data: PreferenceData[StorePurchaseMetadata]
     type: Literal[PurchaseTypes.STORE_PURCHASE]
-    metadata: StorePurchaseMetadata
 
 
 # ---
 
-Preference = StorePurchasePreference  # | ... | ...
 
-
-class PaymentData(TypedDict):
-    payment_data: Preference
+PaymentData = StorePurchasePaymentData  # | ... | ...
