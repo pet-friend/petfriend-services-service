@@ -1,6 +1,6 @@
 from decimal import Decimal
 import logging
-from typing import Sequence
+from typing import Iterable, Sequence
 from asyncio import gather
 
 from fastapi import Depends, status
@@ -17,8 +17,16 @@ from app.exceptions.purchases import (
 from app.exceptions.users import Forbidden
 from app.models.addresses import Address
 from app.models.preferences import PaymentData, PreferenceItem, PurchaseTypes
-from app.models.stores.purchases import Purchase, PurchaseItem, PurchaseStatus, PurchaseStatusUpdate
-from app.models.stores import Store, Product, ProductRead
+from app.models.stores import (
+    Store,
+    Product,
+    ProductRead,
+    Purchase,
+    PurchaseRead,
+    PurchaseItem,
+    PurchaseStatus,
+    PurchaseStatusUpdate,
+)
 from app.models.util import Coordinates, Id, distance_squared
 from app.repositories.stores import PurchasesRepository
 from app.config import settings
@@ -50,6 +58,9 @@ class PurchasesService:
         if user_id not in (purchase.buyer_id, purchase.store.owner_id):
             raise Forbidden
         return purchase
+
+    def get_purchases_read(self, purchases: Iterable[Purchase]) -> list[PurchaseRead]:
+        return [PurchaseRead(**p.model_dump(), items=p.items) for p in purchases]
 
     async def get_store_purchases(
         self, store_id: Id, user_id: Id, limit: int, skip: int

@@ -1,6 +1,13 @@
 from .stores import Store, StoreRead, StoreCreate, StorePublic
 from .products import Product, ProductRead, ProductCreate, Category, ProductCategories
-from .purchases import Purchase, PurchaseRead, PurchaseStatus, PurchaseUpdate, PurchaseItem
+from .purchases import (
+    Purchase,
+    PurchaseRead,
+    PurchaseStatus,
+    PurchaseUpdate,
+    PurchaseItem,
+    PurchaseStatusUpdate,
+)
 
 __all__ = [
     "Store",
@@ -17,4 +24,5 @@ __all__ = [
     "PurchaseStatus",
     "PurchaseUpdate",
     "PurchaseItem",
+    "PurchaseStatusUpdate",
 ]
