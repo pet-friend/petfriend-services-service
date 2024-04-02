@@ -8,9 +8,9 @@ from app.exceptions.users import Forbidden
 from app.models.stores import StoreCreate, Store, StoreRead
 from app.models.util import File, Id
 from app.repositories.stores import StoresRepository
-from app.services.users import UsersService
-from app.services.addresses import AddressesService
-from .files import FilesService, stores_images_service
+from ..users import UsersService
+from ..addresses import AddressesService
+from ..files import FilesService, stores_images_service
 
 
 class StoresService:

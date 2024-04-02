@@ -18,21 +18,14 @@ from app.exceptions.purchases import (
 
 from app.models.addresses import Address
 from app.models.preferences import PurchaseTypes
-from app.models.products import Product, ProductRead
+from app.models.stores import Store, Purchase, PurchaseItem, PurchaseStatus, Product, ProductRead
 from app.models.util import Coordinates, Id
-from app.services.purchases import PurchasesService
-from app.services.products import ProductsService
+from app.repositories.stores import PurchasesRepository
+from app.services.stores import ProductsService, PurchasesService
 from app.services.stores import StoresService
 from app.services.users import UsersService
-
-from app.models.purchases import Purchase, PurchaseItem, PurchaseStatus
-from app.models.stores import Store
-
-from app.repositories.purchases import PurchasesRepository
-
 from app.config import settings
 
-from tests.factories.address_factories import AddressCreateFactory
 from tests.factories.product_factories import ProductCreateFactory
 from tests.factories.store_factories import StoreCreateFactory
 from tests.util import CustomMatcher
@@ -41,11 +34,14 @@ from tests.util import CustomMatcher
 class TestPurchasesService:
     def setup_method(self) -> None:
         self.owner_id = uuid4()
+
+        store_create = StoreCreateFactory.build()
         self.store = Store(
-            id=uuid4(),
             owner_id=self.owner_id,
-            **StoreCreateFactory.build(address=None).model_dump(),
+            address=Address(latitude=0, longitude=0, **store_create.address.model_dump()),
+            **store_create.model_dump(exclude={"address"}),
         )
+
         self.product = Product(
             id=uuid4(),
             store_id=self.store.id,
@@ -53,11 +49,6 @@ class TestPurchasesService:
             **ProductCreateFactory.build().model_dump(),
         )
         self.store.products = [self.product]
-        self.store.address = Address(
-            latitude=0,
-            longitude=0,
-            **AddressCreateFactory.build(country_code="AR", type="other").model_dump(),
-        )
 
         self.stores_service = AsyncMock(spec=StoresService)
         self.products_service = AsyncMock(spec=ProductsService)
@@ -213,22 +204,6 @@ class TestPurchasesService:
         with pytest.raises(CantPurchaseFromOwnStore):
             await self.service.purchase(
                 self.store.id, {uuid4(): 1}, self.store.owner_id, uuid4(), "token"
-            )
-
-        self.stores_service.get_store_by_id.assert_called_once_with(self.store.id)
-
-    async def test_purchase_store_has_no_address_raises(self) -> None:
-        # Given
-        self.stores_service.get_store_by_id.return_value = self.store
-        self.products_service.get_products_read.return_value = [
-            ProductRead(categories=[], **self.product.model_dump())
-        ]
-        self.store.address = None
-
-        # When, Then
-        with pytest.raises(StoreNotReady):
-            await self.service.purchase(
-                self.store.id, {self.product.id: 1}, uuid4(), uuid4(), "token"
             )
 
         self.stores_service.get_store_by_id.assert_called_once_with(self.store.id)

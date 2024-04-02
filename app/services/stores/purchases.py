@@ -15,16 +15,16 @@ from app.exceptions.purchases import (
     StoreNotReady,
 )
 from app.exceptions.users import Forbidden
+from app.models.addresses import Address
 from app.models.preferences import PaymentData, PreferenceItem, PurchaseTypes
-from app.models.purchases import Purchase, PurchaseItem, PurchaseStatus, PurchaseStatusUpdate
-from app.models.products import Product, ProductRead
-from app.models.stores import Store
+from app.models.stores.purchases import Purchase, PurchaseItem, PurchaseStatus, PurchaseStatusUpdate
+from app.models.stores import Store, Product, ProductRead
 from app.models.util import Coordinates, Id, distance_squared
-from app.repositories.purchases import PurchasesRepository
-from app.services.products import ProductsService
+from app.repositories.stores import PurchasesRepository
 from app.config import settings
-from app.services.stores import StoresService
-from app.services.users import UsersService
+from ..users import UsersService
+from .stores import StoresService
+from .products import ProductsService
 
 REQUEST_TIMEOUT = Timeout(5, read=45)
 FORBIDDEN_STATUS_CHANGES = [PurchaseStatus.COMPLETED, PurchaseStatus.CANCELLED]
@@ -149,16 +149,14 @@ class PurchasesService:
     async def __check_purchase_conditions(
         self, store: Store, user_id: Id, delivery_address_id: Id, token: str
     ) -> None:
-        if store.address is None:
-            raise StoreNotReady
-
         user_coords = await self.users_service.get_user_address_coordinates(
             user_id, delivery_address_id, token
         )
 
+        store_address: Address = store.address
         if (
             distance_squared(
-                Coordinates(latitude=store.address.latitude, longitude=store.address.longitude),
+                Coordinates(latitude=store_address.latitude, longitude=store_address.longitude),
                 user_coords,
             )
             > store.delivery_range_km**2

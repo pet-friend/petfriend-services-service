@@ -6,11 +6,11 @@ from sqlalchemy import ColumnExpressionArgument
 from sqlmodel import select, func, and_
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models.products import Category, Product, ProductCategories
+from app.models.stores import Category, Product, ProductCategories
 from app.models.util import Id
-from ..db import get_db
-from .base_repository import BaseRepository
-from .util import store_distance_filter
+from app.db import get_db
+from ..base_repository import BaseRepository
+from ..util import store_distance_filter
 
 
 class ProductsRepository(BaseRepository[Product, tuple[Id | str, Id | str]]):

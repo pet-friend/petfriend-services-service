@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from httpx import AsyncClient
 
-from app.models.products import ProductRead
+from app.models.stores import ProductRead
 from tests.factories.product_factories import ProductCreateFactory
 from tests.factories.store_factories import StoreCreateFactory
 from tests.tests_setup import BaseAPITestCase
@@ -17,7 +17,7 @@ with open("tests/assets/test_image_2.jpg", "rb") as f:
 
 class TestProductsRoute(BaseAPITestCase):
     def setup_method(self) -> None:
-        self.store_create_json_data = StoreCreateFactory.build(address=None).model_dump(mode="json")
+        self.store_create_json_data = StoreCreateFactory.build().model_dump(mode="json")
         self.product_create_json_data = ProductCreateFactory.build().model_dump(mode="json")
 
     async def test_post_should_get_image_url(self) -> None:

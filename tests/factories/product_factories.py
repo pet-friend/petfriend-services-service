@@ -1,6 +1,6 @@
 from polyfactory.factories.pydantic_factory import ModelFactory
 
-from app.models.products import Category, ProductCreate
+from app.models.stores import Category, ProductCreate
 
 
 class ProductCreateFactory(ModelFactory[ProductCreate]):

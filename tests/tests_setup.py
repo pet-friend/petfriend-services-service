@@ -1,5 +1,5 @@
 from typing import AsyncGenerator, Generator
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
@@ -39,7 +39,7 @@ class BaseAPITestCase(BaseDbTestCase):
         await self.client.aclose()
 
     @pytest.fixture(autouse=True)
-    def mock_auth(self) -> Generator[None, None, None]:
+    def mock_auth(self) -> Generator[AsyncMock, None, None]:
         """
         Mocks the server authentication.
         """
@@ -56,28 +56,27 @@ class BaseAPITestCase(BaseDbTestCase):
             mock.side_effect = check_token
             self.headers = {"Authorization": f"Bearer {user_token}"}
             self.user_id = user_id
-            yield
+            yield mock
 
     @pytest.fixture
-    def mock_auth_error(self, mock_auth: None) -> Generator[None, None, None]:
+    def mock_auth_error(self, mock_auth: AsyncMock) -> Generator[AsyncMock, None, None]:
         """
         Mocks a server authentication error.
         """
-        # Added mock_auth as a dependency in the function signature to make sure it is called before
-        # this one and we override the mock and headers
-        with patch("app.services.users.UsersService.validate_user") as mock:
-            mock.side_effect = InvalidToken
-            self.headers = {}
-            yield
+        mock_auth.side_effect = InvalidToken
+        yield mock_auth
 
-    @pytest.fixture
-    def mock_google_maps(self) -> Generator[None, None, None]:
+    @pytest.fixture(autouse=True)
+    def mock_get_cordinates(self) -> Generator[AsyncMock, None, None]:
         with patch("app.services.addresses.AddressesService.get_address_coordinates") as mock:
             mock.return_value = Coordinates(latitude=0, longitude=0)
-            yield
+            yield mock
 
     @pytest.fixture
-    def mock_google_maps_error(self) -> Generator[None, None, None]:
-        with patch("app.services.addresses.AddressesService.get_address_coordinates") as mock:
-            mock.side_effect = NonExistentAddress
-            yield
+    def mock_get_cordinates_error(
+        self,
+        mock_get_cordinates: AsyncMock,
+    ) -> Generator[AsyncMock, None, None]:
+        mock_get_cordinates.return_value = None
+        mock_get_cordinates.side_effect = NonExistentAddress
+        yield mock_get_cordinates

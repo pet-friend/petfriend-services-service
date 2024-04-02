@@ -6,9 +6,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.stores import Store
 from app.models.util import Id
-from ..db import get_db
-from .base_repository import BaseRepository
-from .util import store_distance_filter
+from app.db import get_db
+from ..base_repository import BaseRepository
+from ..util import store_distance_filter
 
 
 class StoresRepository(BaseRepository[Store, Id | str]):

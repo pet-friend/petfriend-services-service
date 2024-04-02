@@ -10,14 +10,7 @@ from .models.util import HealthCheck
 from .validators.validator_schema import ValidatorSchema
 from .routes.responses.auth import UNAUTHORIZED
 from .routes.util import get_exception_docs
-from .routes.stores import router as stores_router
-from .routes.stores_image import router as stores_image_router
-from .routes.products import router as products_router
-from .routes.products_image import router as products_image_router
-from .routes.purchases import (
-    router as purchases_router,
-    router_payments as purchases_router_payments,
-)
+from .routes.stores import router as stores_router, router_payments as stores_router_payments
 from .db import get_db
 
 api_router = APIRouter(
@@ -31,15 +24,11 @@ auth_router = APIRouter(
     responses=get_exception_docs(UNAUTHORIZED), dependencies=[Depends(authenticate)]
 )
 auth_router.include_router(stores_router)
-auth_router.include_router(stores_image_router)
-auth_router.include_router(products_router)
-auth_router.include_router(products_image_router)
-auth_router.include_router(purchases_router)
 
 payments_router = APIRouter(
     responses=get_exception_docs(UNAUTHORIZED), dependencies=[Depends(validate_payments_key)]
 )
-payments_router.include_router(purchases_router_payments)
+payments_router.include_router(stores_router_payments)
 
 api_router.include_router(auth_router)
 api_router.include_router(payments_router)

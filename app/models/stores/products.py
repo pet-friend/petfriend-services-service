@@ -6,7 +6,7 @@ from pydantic import field_validator, model_validator
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
-from .util import Id, UUIDModel, TimestampModel, OptionalImageUrlModel
+from ..util import Id, UUIDModel, TimestampModel, OptionalImageUrlModel
 from .stores import Store
 
 MAX_CATEGORIES_PER_PRODUCT = 3

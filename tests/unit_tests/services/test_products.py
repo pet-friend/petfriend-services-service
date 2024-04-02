@@ -5,12 +5,11 @@ import pytest
 from app.exceptions.stores import StoreNotFound
 from app.exceptions.users import Forbidden
 
-from app.models.products import Category, Product, ProductCreate
-from app.models.stores import Store
-from app.services.products import ProductsService
-from app.services.stores import StoresService
+from app.models.addresses import Address
+from app.models.stores import Store, Category, Product, ProductCreate
+from app.services.stores import ProductsService, StoresService
 from app.services.files import FilesService
-from app.repositories.products import ProductsRepository
+from app.repositories.stores import ProductsRepository
 from app.exceptions.repository import RecordNotFound
 from app.exceptions.products import ProductNotFound, ProductAlreadyExists, ProductOutOfStock
 from tests.factories.product_factories import ProductCreateFactory
@@ -20,11 +19,12 @@ from tests.factories.store_factories import StoreCreateFactory
 class TestProductsService(IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.product_create = ProductCreateFactory.build()
+        store_create = StoreCreateFactory.build()
         self.owner_id = uuid4()
         self.store = Store(
-            id=uuid4(),
             owner_id=self.owner_id,
-            **StoreCreateFactory.build(address=None).model_dump(),
+            address=Address(latitude=0, longitude=0, **store_create.address.model_dump()),
+            **store_create.model_dump(exclude={"address"}),
         )
         self.stores_service = AsyncMock(spec=StoresService)
 

@@ -1,8 +1,10 @@
-from typing import Callable, Any
+from typing import Any, Callable, Generic, TypeVar
+
+T = TypeVar("T")
 
 
-class CustomMatcher:
-    def __init__(self, matcher: Callable[[Any], bool | None]):
+class CustomMatcher(Generic[T]):
+    def __init__(self, matcher: Callable[[T], bool | None]):
         self.matcher = matcher
 
     def __eq__(self, other: Any) -> bool:

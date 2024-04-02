@@ -6,9 +6,9 @@ from pydantic import BaseModel
 from sqlalchemy import ForeignKeyConstraint, PrimaryKeyConstraint
 from sqlmodel import Relationship, Field, SQLModel
 
-from app.models.util import Id, TimestampModel, UUIDModel
-from app.models.stores import Store
-from app.models.products import Product
+from ..util import Id, TimestampModel, UUIDModel
+from .stores import Store
+from .products import Product
 
 
 class PurchaseItemBase(UUIDModel):

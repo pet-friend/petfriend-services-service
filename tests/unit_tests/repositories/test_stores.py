@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, Mock
 
 from sqlalchemy import ScalarResult
 
+from app.models.addresses import Address
 from app.models.stores import Store
 from app.repositories.stores import StoresRepository
 from tests.factories.store_factories import StoreCreateFactory
@@ -12,14 +13,14 @@ from tests.factories.store_factories import StoreCreateFactory
 
 class TestStoresRepository:
     def setup_method(self) -> None:
-        self.store_create = StoreCreateFactory.build(address=None)
+        self.store_create = StoreCreateFactory.build()
         self.store = Store(
             owner_id=uuid4(),
             created_at=datetime.datetime(2023, 1, 1),
             updated_at=datetime.datetime(2023, 1, 1),
-            **self.store_create.__dict__
+            address=Address(latitude=0, longitude=0, **self.store_create.address.model_dump()),
+            **self.store_create.model_dump(exclude={"address"})
         )
-
         self.async_session = AsyncMock()
         self.stores_repository = StoresRepository(self.async_session)
 

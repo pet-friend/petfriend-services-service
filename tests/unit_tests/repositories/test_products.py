@@ -5,9 +5,9 @@ from sqlmodel import select
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from app.models.products import Product
-from app.models.stores import Store
-from app.repositories.products import ProductsRepository
+from app.models.addresses import Address
+from app.models.stores import Store, Product
+from app.repositories.stores import ProductsRepository
 from app.exceptions.repository import RecordNotFound
 from tests.factories.product_factories import ProductCreateFactory
 from tests.factories.store_factories import StoreCreateFactory
@@ -19,8 +19,12 @@ class TestProductsRepository(BaseDbTestCase):
 
     @pytest.fixture(autouse=True)
     def setup(self, setup_db: None) -> None:
-        self.store_create = StoreCreateFactory.build(address=None)
-        self.store = Store(owner_id=uuid4(), **self.store_create.__dict__)
+        self.store_create = StoreCreateFactory.build()
+        self.store = Store(
+            owner_id=uuid4(),
+            address=Address(latitude=0, longitude=0, **self.store_create.address.model_dump()),
+            **self.store_create.model_dump(exclude={"address"})
+        )
         self.product_create = ProductCreateFactory.build()
         self.product = Product(
             id=uuid4(), store_id=self.store.id, **self.product_create.model_dump()

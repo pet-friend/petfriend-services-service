@@ -5,15 +5,15 @@ from fastapi import status as http_status
 from pydantic import BeforeValidator
 
 from app.auth import get_caller_id, get_caller_token
-from app.serializers.products import ProductsList
-from app.services.products import ProductsService
-from app.models.products import Category, Product, ProductCreate, ProductRead
+from app.serializers.stores import ProductsList
+from app.services.stores import ProductsService
+from app.models.stores import Category, Product, ProductCreate, ProductRead
 from app.models.util import Id
-from .responses.addresses import ADDRESS_NOT_FOUND_ERROR
-from .responses.stores import STORE_NOT_FOUND_ERROR
-from .responses.products import PRODUCT_EXISTS_ERROR, PRODUCT_NOT_FOUND_ERROR
-from .responses.auth import FORBIDDEN
-from .util import get_exception_docs, process_list
+from ..responses.addresses import ADDRESS_NOT_FOUND_ERROR
+from ..responses.stores import STORE_NOT_FOUND_ERROR
+from ..responses.products import PRODUCT_EXISTS_ERROR, PRODUCT_NOT_FOUND_ERROR
+from ..responses.auth import FORBIDDEN
+from ..util import get_exception_docs, process_list
 
 router = APIRouter(tags=["Products"], prefix="/stores")
 

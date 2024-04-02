@@ -7,13 +7,13 @@ from fastapi import Depends
 from app.exceptions.users import Forbidden
 
 from app.models.util import File, Id
-from app.models.products import Category, ProductCategories, ProductCreate, Product, ProductRead
-from app.repositories.products import ProductsRepository
+from app.models.stores import Category, ProductCategories, ProductCreate, Product, ProductRead
+from app.repositories.stores import ProductsRepository
 from app.exceptions.repository import RecordNotFound
 from app.exceptions.products import ProductAlreadyExists, ProductNotFound, ProductOutOfStock
-from app.services.files import FilesService, products_images_service
-from app.services.stores import StoresService
-from app.services.users import UsersService
+from ..files import FilesService, products_images_service
+from ..users import UsersService
+from .stores import StoresService
 
 
 class ProductsService:

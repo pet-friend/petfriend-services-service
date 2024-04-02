@@ -20,7 +20,7 @@ STORE_NOT_READY = (
     StoreNotReady,
     HTTPException(
         status_code=status.HTTP_409_CONFLICT,
-        detail="The store owner has not linked his payment account or an address to the store",
+        detail="The store owner has not linked his payment account",
     ),
 )
 

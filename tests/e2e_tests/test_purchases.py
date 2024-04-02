@@ -2,26 +2,19 @@ from unittest.mock import patch
 from uuid import UUID, uuid4
 
 from httpx import URL
-import pytest
 from pytest_httpx import HTTPXMock
 from app.config import settings
 
-from app.models.purchases import PurchaseStatus
-from app.models.stores import Store
+from app.models.stores import Store, PurchaseStatus
 from app.models.util import Coordinates, Id
-from tests.factories.address_factories import AddressCreateFactory
 from tests.factories.product_factories import ProductCreateFactory
 from tests.factories.store_factories import StoreCreateFactory
 from tests.tests_setup import BaseAPITestCase
 
 
-@pytest.mark.usefixtures("mock_google_maps")
 class TestStoresProductsRoute(BaseAPITestCase):
     def setup_method(self) -> None:
-        self.store_create_json_data = StoreCreateFactory.build(address=None).model_dump(mode="json")
-        self.store_create_json_data["address"] = AddressCreateFactory.build(
-            country_code="AR", type="other"
-        ).model_dump(mode="json")
+        self.store_create_json_data = StoreCreateFactory.build().model_dump(mode="json")
         self.product_create_json_data = ProductCreateFactory.build().model_dump(mode="json")
 
     async def change_store_owner(self, store_id: str | Id, new_owner: str | Id | None = None) -> Id:

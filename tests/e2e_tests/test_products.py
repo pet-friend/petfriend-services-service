@@ -3,8 +3,7 @@ from uuid import uuid4
 
 from sqlmodel import select
 
-from app.models.products import Product
-from app.models.stores import Store
+from app.models.stores import Store, Product
 from tests.factories.store_factories import StoreCreateFactory
 from tests.factories.product_factories import ProductCreateFactory
 
@@ -13,7 +12,7 @@ from tests.tests_setup import BaseAPITestCase
 
 class TestStoresProductsRoute(BaseAPITestCase):
     def setup_method(self) -> None:
-        self.store_create_json_data = StoreCreateFactory.build(address=None).model_dump(mode="json")
+        self.store_create_json_data = StoreCreateFactory.build().model_dump(mode="json")
         self.product_create_json_data = ProductCreateFactory.build().model_dump(mode="json")
 
     async def test_create_product_with_all_fields(self) -> None:

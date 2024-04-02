@@ -3,19 +3,19 @@ from fastapi import APIRouter, Depends, Query, status
 from pydantic import PositiveInt
 
 from app.auth import get_caller_id, get_caller_token
-from app.models.purchases import Purchase, PurchaseRead, PurchaseUpdate
+from app.models.stores import Purchase, PurchaseRead, PurchaseUpdate
 from app.models.util import Id
 from app.routes.util import get_exception_docs
-from app.serializers.purchases import PurchaseList
-from app.services.purchases import PurchasesService
+from app.serializers.stores import PurchaseList
+from app.services.stores import PurchasesService
 from app.config import settings
-from .responses.purchases import (
+from ..responses.purchases import (
     PURCHASE_NOT_FOUND_ERROR,
     FORBIDDEN_PURCHASE,
     STORE_NOT_READY,
     NOT_FOUND_ERROR,
 )
-from .responses.auth import FORBIDDEN
+from ..responses.auth import FORBIDDEN
 
 router = APIRouter(prefix="", tags=["Purchases"])
 router_payments = APIRouter(prefix="", tags=["Purchases"])

@@ -54,7 +54,9 @@ class AddressCreate(AddressBase):
 
 
 # Use a link table to allow for other services to have a relationship with the address
-# table, and to cascade delete the address when the store is deleted
+# table, and to cascade delete the address when the store/service is deleted
+
+
 class StoreAddressLink(SQLModel, table=True):
     __tablename__ = "store_address_link"
 
@@ -62,3 +64,12 @@ class StoreAddressLink(SQLModel, table=True):
     address_id: Id = Field(foreign_key="addresses.id")
 
     __table_args__ = (UniqueConstraint("address_id", name="store_address_link_address_id_uq"),)
+
+
+class ServiceAddressLink(SQLModel, table=True):
+    __tablename__ = "service_address_link"
+
+    service_id: Id = Field(primary_key=True, foreign_key="services.id")
+    address_id: Id = Field(foreign_key="addresses.id")
+
+    __table_args__ = (UniqueConstraint("address_id", name="service_address_link_address_id_uq"),)
