@@ -1,9 +1,9 @@
 from typing import Any, Type
 
 from fastapi import HTTPException, UploadFile
+import filetype  # type: ignore
 
-from app.routes.responses.image import INVALID_IMAGE_ERROR
-
+from .responses.image import INVALID_IMAGE_ERROR
 from ..validators.error_schema import ErrorSchema
 
 
@@ -25,7 +25,8 @@ def get_image(image: UploadFile) -> UploadFile:
     """
     Validates that the uploaded file is an image, and raises an exception otherwise.
     """
-    if not (image.content_type and image.content_type.startswith("image/")):
+    content_type: str | None = filetype.guess_mime(image.file)
+    if not (content_type and content_type.startswith("image/")):
         raise INVALID_IMAGE_ERROR
     return image
 

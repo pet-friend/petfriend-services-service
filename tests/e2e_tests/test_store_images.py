@@ -90,6 +90,40 @@ class TestStoresRoute(BaseAPITestCase):
         store = StoreRead.model_validate_json(r_store_get.text)
         assert store.image_url is not None
 
+    async def test_can_post_without_file_extension_and_content_type(self) -> None:
+        r_store = await self.client.post("/stores", json=self.store_create_json_data)
+        assert r_store.status_code == 201
+        store_id = json.loads(r_store.text)["id"]
+
+        r_post = await self.client.post(f"/stores/{store_id}/image", files={"image": IMAGE[1]})
+        assert r_post.status_code == 201
+
+    async def test_cant_post_random_bytes(self) -> None:
+        r_store = await self.client.post("/stores", json=self.store_create_json_data)
+        assert r_store.status_code == 201
+        store_id = json.loads(r_store.text)["id"]
+
+        r_post = await self.client.post(
+            f"/stores/{store_id}/image", files={"image": bytes(range(100))}
+        )
+        assert r_post.status_code == 400
+
+    async def test_can_put_posted_image(self) -> None:
+        r_store = await self.client.post("/stores", json=self.store_create_json_data)
+        assert r_store.status_code == 201
+        store_id = json.loads(r_store.text)["id"]
+
+        r_post = await self.client.post(f"/stores/{store_id}/image", files={"image": IMAGE})
+        assert r_post.status_code == 201
+        url = r_post.json()["image_url"]
+
+        async with AsyncClient() as client:
+            r_image = await client.get(url)
+        assert r_image.status_code == 200
+
+        r_put = await self.client.put(f"/stores/{store_id}/image", files={"image": r_image.content})
+        assert r_put.status_code == 200
+
     async def test_store_starts_without_image(self) -> None:
         r_store = await self.client.post("/stores", json=self.store_create_json_data)
         assert r_store.status_code == 201

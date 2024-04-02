@@ -2,6 +2,7 @@
 *.pyc
 .coverage
 venv
+.venv
 test.db
 .env
 .vscode
