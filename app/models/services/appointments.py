@@ -12,6 +12,7 @@ class AppointmentBase(SQLModel):
 
 class AppointmentRead(AppointmentBase, UUIDModel):
     service_id: Id = Field(foreign_key="services.id")
+    customer_id: Id
     end_time: time
 
 
