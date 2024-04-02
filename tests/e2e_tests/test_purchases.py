@@ -192,6 +192,46 @@ class TestStoresProductsRoute(BaseAPITestCase):
         assert len(data["items"]) == 1
         assert data["items"][0]["product_id"] == product["id"]
 
+    async def test_purchase_one_item_and_get_my_purchases(self, httpx_mock: HTTPXMock) -> None:
+        r_store = await self.client.post("/stores", json=self.store_create_json_data)
+        assert r_store.status_code == 201
+        store = r_store.json()
+        r_product = await self.client.post(
+            f"/stores/{store['id']}/products", json=self.product_create_json_data
+        )
+        assert r_product.status_code == 201
+        product = r_product.json()
+
+        store_owner = await self.change_store_owner(store["id"])
+
+        quantities = {product["id"]: 1}
+
+        url = URL(
+            settings.PAYMENTS_SERVICE_URL + "/payment",
+            params={
+                "user_to_be_payed_id": str(store_owner),
+            },
+        )
+        preference_url = "http://payment.com"
+        httpx_mock.add_response(url=url, json=preference_url)
+        address_id = str(uuid4())
+
+        with patch("app.services.users.UsersService.get_user_address_coordinates") as mock:
+            mock.return_value = Coordinates(latitude=0, longitude=0)
+            r = await self.client.post(
+                f"/stores/{store['id']}/purchases",
+                json=quantities,
+                params={"delivery_address_id": address_id},
+            )
+        assert r.status_code == 200
+        purchase_id = r.json()["id"]
+
+        r_get = await self.client.get("/stores/purchases/me")
+        assert r_get.status_code == 200
+        data = r_get.json()
+        assert len(data["purchases"]) == 1
+        assert data["purchases"][0]["id"] == purchase_id
+
     async def test_purchase_one_item_reduces_stock(self, httpx_mock: HTTPXMock) -> None:
         r_store = await self.client.post("/stores", json=self.store_create_json_data)
         assert r_store.status_code == 201
