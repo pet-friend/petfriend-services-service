@@ -1,0 +1,2 @@
+class ServiceNotFound(Exception):
+    pass
