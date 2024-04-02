@@ -19,16 +19,20 @@ class UUIDModel(SQLModel):
     id: Id = Field(default_factory=uuid_pkg.uuid4, primary_key=True)
 
 
+def now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 class TimestampModel(SQLModel):
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=now,
         nullable=False,
         sa_type=cast(Type[Any], DateTime(timezone=True)),
         sa_column_kwargs={"server_default": func.now()},
     )
 
     updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=now,
         nullable=False,
         sa_type=cast(Type[Any], DateTime(timezone=True)),
         sa_column_kwargs={

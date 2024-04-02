@@ -1,3 +1,4 @@
+from typing import Sequence
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -10,8 +11,11 @@ class ServiceBase(SQLModel):
     name: str
     description: str | None = None
     appointment_days_in_advance: int = Field(ge=0)
-    # If None, the service is provided at the service's address
-    home_service_range_km: float | None = None
+    # How close the service provider needs to be to the uer
+    # in order to be available for the user
+    customer_range_km: float
+    # If True, the service is provided at the service's address
+    is_home_service: bool = False
 
 
 # Public database fields
@@ -21,7 +25,7 @@ class ServicePublic(UUIDModel, ServiceBase):
 
 # What the user gets from the API (Public + image + slots)
 class ServiceRead(ServicePublic, OptionalImageUrlModel):
-    appointment_slots: list[AppointmentSlotsBase]
+    appointment_slots: Sequence[AppointmentSlotsBase]
     address: AddressRead
 
 
