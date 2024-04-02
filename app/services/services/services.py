@@ -5,7 +5,7 @@ from fastapi import Depends
 
 from app.exceptions.services import ServiceNotFound
 from app.exceptions.users import Forbidden
-from app.models.services import ServiceCreate, Service, ServiceRead
+from app.models.services import ServiceCreate, Service, ServiceRead, AppointmentSlots
 from app.models.util import Id
 from app.repositories.services import ServicesRepository
 from ..users import UsersService
@@ -28,7 +28,12 @@ class ServicesService:
     async def create_service(self, data: ServiceCreate, owner_id: Id) -> Service:
         address = await AddressesService.get_address(data.address)
         service = Service(
-            **data.model_dump(exclude={"address"}), owner_id=owner_id, address=address
+            **data.model_dump(exclude={"address", "appointment_slots"}),
+            owner_id=owner_id,
+            address=address,
+            appointment_slots=[
+                AppointmentSlots(**slot.model_dump()) for slot in data.appointment_slots
+            ],
         )
         return await self.services_repo.save(service)
 

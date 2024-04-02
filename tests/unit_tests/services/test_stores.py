@@ -60,8 +60,7 @@ class TestStoresService:
                 >= self.store_create.model_dump(exclude={"address"}).items()
             )
             assert (
-                store.address.model_dump().items()
-                >= self.store_create.address.model_dump(exclude={"address"}).items()
+                store.address.model_dump().items() >= self.store_create.address.model_dump().items()
             )
 
         self.repository.save.assert_called_once_with(CustomMatcher(check_save))
