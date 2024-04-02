@@ -33,6 +33,7 @@ class Service(ServicePublic, TimestampModel, table=True):
         sa_relationship_kwargs={"lazy": "selectin", "cascade": "all, delete-orphan"}
     )
 
+    # pylint:disable=duplicate-code
     address: Address = Relationship(
         sa_relationship_kwargs={
             "lazy": "selectin",

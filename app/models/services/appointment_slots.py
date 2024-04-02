@@ -30,7 +30,7 @@ class AppointmentSlotsBase(SQLModel):
 
     @field_validator("appointment_duration", mode="after")
     @classmethod
-    def validate_appointment_duration(cls, value: timedelta, info: ValidationInfo) -> timedelta:
+    def validate_appointment_duration(cls, value: timedelta) -> timedelta:
         """
         Validates that the appointment duration is at least MIN_APPOINTMENT_DURATION
         """
