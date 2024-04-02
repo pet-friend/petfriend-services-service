@@ -1,10 +1,10 @@
 from math import pi, radians, cos
 import uuid as uuid_pkg
-from datetime import datetime
-from typing import Any, BinaryIO, Protocol
+from datetime import datetime, timezone
+from typing import Any, BinaryIO, Protocol, cast, Type
 
 from pydantic import BaseModel
-from sqlalchemy import text
+from sqlalchemy import DateTime, func
 from sqlmodel import Field, SQLModel
 
 
@@ -21,17 +21,19 @@ class UUIDModel(SQLModel):
 
 class TimestampModel(SQLModel):
     created_at: datetime = Field(
-        default_factory=datetime.now,
+        default_factory=lambda: datetime.now(timezone.utc),
         nullable=False,
-        sa_column_kwargs={"server_default": text("current_timestamp")},
+        sa_type=cast(Type[Any], DateTime(timezone=True)),
+        sa_column_kwargs={"server_default": func.now()},
     )
 
     updated_at: datetime = Field(
-        default_factory=datetime.now,
+        default_factory=lambda: datetime.now(timezone.utc),
         nullable=False,
+        sa_type=cast(Type[Any], DateTime(timezone=True)),
         sa_column_kwargs={
-            "server_default": text("current_timestamp"),
-            "onupdate": text("current_timestamp"),
+            "server_default": func.now(),
+            "onupdate": func.now(),
         },
     )
 
