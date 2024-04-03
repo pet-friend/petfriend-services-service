@@ -54,6 +54,7 @@ class BaseAPITestCase(BaseDbTestCase):
                 raise InvalidToken
 
             mock.side_effect = check_token
+            self.token = user_token
             self.headers = {"Authorization": f"Bearer {user_token}"}
             self.user_id = user_id
             yield mock
