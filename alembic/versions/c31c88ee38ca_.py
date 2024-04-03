@@ -47,3 +47,6 @@ def downgrade():
     op.drop_table('purchase_items')
     op.drop_table('purchases')
     # ### end Alembic commands ###
+    
+    # drop purchasestatus enum
+    sa.Enum(name='purchasestatus').drop(op.get_bind())

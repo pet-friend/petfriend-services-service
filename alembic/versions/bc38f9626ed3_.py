@@ -67,3 +67,6 @@ def downgrade():
     op.drop_table('appointment_slots')
     op.drop_table('services')
     # ### end Alembic commands ###
+
+    # drop dayofweek enum
+    sa.Enum(name='dayofweek').drop(op.get_bind())
