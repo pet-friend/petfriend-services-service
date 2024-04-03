@@ -1,6 +1,6 @@
 # pylint: disable=W0212 # access protected member
 import logging
-from typing import Any, Iterable, Sequence
+from typing import Any, Sequence
 from asyncio import gather
 
 from fastapi import Depends
@@ -104,7 +104,7 @@ class ProductsService:
         )
         return products, amount
 
-    async def get_products_read(self, products: Iterable[Product]) -> Sequence[ProductRead]:
+    async def get_products_read(self, *products: Product) -> Sequence[ProductRead]:
         token = self.files_service.get_token()
         return await gather(*(self.__readable(product, token) for product in products))
 

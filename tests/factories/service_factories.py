@@ -12,7 +12,8 @@ class ServiceCreateFactory(ModelFactory[ServiceCreate]):
 
     @classmethod
     def appointment_slots(cls) -> list[AppointmentSlotsBase]:
-        days = cls.__random__.sample(list(DayOfWeek), k=cls.__random__.randint(1, 7))
+        all_days: list[DayOfWeek] = list(DayOfWeek)
+        days = cls.__random__.sample(all_days, k=cls.__random__.randint(1, 7))
         slots = []
         for day in days:
             day_slots = cls.__random__.randint(1, 3)

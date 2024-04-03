@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
+from typing import Self, Annotated
 from datetime import datetime, date, time, timedelta
-from typing import Annotated
 
 from sqlmodel import Field, SQLModel
 from pydantic import AfterValidator, ValidationInfo, field_validator
@@ -11,15 +11,19 @@ from ..util import UUIDModel, Id
 MIN_APPOINTMENT_DURATION = timedelta(minutes=5)
 
 
-# Used 0 to 6 to match the standard library date.weekday() method
-class DayOfWeek(Enum):
-    MONDAY = 0
-    TUESDAY = 1
-    WEDNESDAY = 2
-    THURSDAY = 3
-    FRIDAY = 4
-    SATURDAY = 5
-    SUNDAY = 6
+class DayOfWeek(StrEnum):
+    # Starts on Monday to match the date.weekday() method
+    MONDAY = "monday"
+    TUESDAY = "tuesday"
+    WEDNESDAY = "wednesday"
+    THURSDAY = "thursday"
+    FRIDAY = "friday"
+    SATURDAY = "saturday"
+    SUNDAY = "sunday"
+
+    @classmethod
+    def from_weekday(cls, weekday: int) -> Self:
+        return list(cls)[weekday]
 
 
 class AppointmentSlotsBase(SQLModel):

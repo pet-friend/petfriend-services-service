@@ -1,4 +1,4 @@
-from .stores import Store, StoreRead, StoreCreate, StorePublic
+from .stores import Store, StoreRead, StoreCreate
 from .products import Product, ProductRead, ProductCreate, Category, ProductCategories
 from .purchases import (
     Purchase,
@@ -13,7 +13,6 @@ __all__ = [
     "Store",
     "StoreRead",
     "StoreCreate",
-    "StorePublic",
     "Product",
     "ProductRead",
     "ProductCreate",

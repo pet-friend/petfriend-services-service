@@ -1,10 +1,11 @@
 from asyncio import gather
-from typing import Sequence, Any
+from typing import Sequence, Any, TypedDict
 
 from fastapi import Depends
 
 from app.exceptions.services import ServiceNotFound
 from app.exceptions.users import Forbidden
+from app.models.addresses import Address
 from app.models.services import ServiceCreate, Service, ServiceRead, AppointmentSlots
 from app.models.util import Id
 from app.repositories.services import ServicesRepository
@@ -26,14 +27,10 @@ class ServicesService:
         self.users_service = users_service
 
     async def create_service(self, data: ServiceCreate, owner_id: Id) -> Service:
-        address = await AddressesService.get_address(data.address)
         service = Service(
             **data.model_dump(exclude={"address", "appointment_slots"}),
             owner_id=owner_id,
-            address=address,
-            appointment_slots=[
-                AppointmentSlots(**slot.model_dump()) for slot in data.appointment_slots
-            ],
+            **(await self.__get_nested_models_from_create(data)),
         )
         return await self.services_repo.save(service)
 
@@ -66,7 +63,7 @@ class ServicesService:
             raise ServiceNotFound
         return service
 
-    async def get_services_read(self, services: Sequence[Service]) -> Sequence[ServiceRead]:
+    async def get_services_read(self, *services: Service) -> Sequence[ServiceRead]:
         # token = self.files_service.get_token()
         # return await gather(*(self.__readable(service, token) for service in services))
         return await gather(*(self.__readable(service) for service in services))
@@ -76,9 +73,12 @@ class ServicesService:
         if service.owner_id != user_id:
             raise Forbidden
 
-        address = await AddressesService.get_address(data.address)
         return await self.services_repo.update(
-            service_id, {**data.model_dump(), "address": address}
+            service_id,
+            {
+                **data.model_dump(exclude={"address", "appointment_slots"}),
+                **(await self.__get_nested_models_from_create(data)),
+            },
         )
 
     async def delete_service(self, service_id: Id, user_id: Id) -> None:
@@ -125,3 +125,17 @@ class ServicesService:
             appointment_slots=service.appointment_slots,
             # image_url=image
         )
+
+    async def __get_nested_models_from_create(
+        self, service_create: ServiceCreate
+    ) -> "ServiceNestedModels":
+        address = await AddressesService.get_address(service_create.address)
+        appointment_slots = [
+            AppointmentSlots(**slot.model_dump()) for slot in service_create.appointment_slots
+        ]
+        return {"address": address, "appointment_slots": appointment_slots}
+
+
+class ServiceNestedModels(TypedDict):
+    address: Address
+    appointment_slots: list[AppointmentSlots]

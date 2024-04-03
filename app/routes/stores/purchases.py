@@ -48,7 +48,7 @@ async def get_my_purchases(
     purchases_service: PurchasesService = Depends(),
 ) -> PurchaseList:
     purchases, count = await purchases_service.get_user_purchases(user_id, limit, offset)
-    return PurchaseList(purchases=purchases_service.get_purchases_read(purchases), amount=count)
+    return PurchaseList(purchases=purchases_service.get_purchases_read(*purchases), amount=count)
 
 
 @router.get("/stores/{store_id}/purchases", responses=get_exception_docs(FORBIDDEN))
@@ -60,7 +60,7 @@ async def get_store_purchases(
     purchases_service: PurchasesService = Depends(),
 ) -> PurchaseList:
     purchases, count = await purchases_service.get_store_purchases(store_id, user_id, limit, offset)
-    return PurchaseList(purchases=purchases_service.get_purchases_read(purchases), amount=count)
+    return PurchaseList(purchases=purchases_service.get_purchases_read(*purchases), amount=count)
 
 
 @router.get(

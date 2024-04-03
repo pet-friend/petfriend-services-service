@@ -59,7 +59,7 @@ class StoresService:
             raise StoreNotFound
         return store
 
-    async def get_stores_read(self, stores: Sequence[Store]) -> Sequence[StoreRead]:
+    async def get_stores_read(self, *stores: Store) -> Sequence[StoreRead]:
         token = self.files_service.get_token()
         return await gather(*(self.__readable(store, token) for store in stores))
 

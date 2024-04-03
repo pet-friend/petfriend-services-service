@@ -21,7 +21,7 @@ router = APIRouter(tags=["Products"], prefix="/stores")
 @router.post(
     "/{store_id}/products",
     status_code=http_status.HTTP_201_CREATED,
-    responses=get_exception_docs(PRODUCT_EXISTS_ERROR, FORBIDDEN),
+    responses=get_exception_docs(STORE_NOT_FOUND_ERROR, PRODUCT_EXISTS_ERROR, FORBIDDEN),
     response_model=ProductRead,
 )
 async def create_product(
@@ -48,7 +48,7 @@ async def get_nearby_products(
         user_token, limit, offset, user_id, user_address_id, categories, name=name
     )
     return ProductsList(
-        products=await store_service.get_products_read(products), amount=products_amount
+        products=await store_service.get_products_read(*products), amount=products_amount
     )
 
 
@@ -58,7 +58,7 @@ async def get_store_products(
     products_service: ProductsService = Depends(ProductsService),
 ) -> Sequence[ProductRead]:
     products = await products_service.get_store_products(store_id)
-    return await products_service.get_products_read(products)
+    return await products_service.get_products_read(*products)
 
 
 @router.get(
@@ -70,7 +70,7 @@ async def get_product(
     products_service: ProductsService = Depends(ProductsService),
 ) -> ProductRead:
     product = await products_service.get_product(store_id, product_id)
-    return (await products_service.get_products_read((product,)))[0]
+    return (await products_service.get_products_read(product))[0]
 
 
 @router.put(
@@ -85,7 +85,7 @@ async def update_store_product(
     user_id: Id = Depends(get_caller_id),
 ) -> ProductRead:
     product = await products_service.update_product(store_id, product_id, data, user_id)
-    return (await products_service.get_products_read((product,)))[0]
+    return (await products_service.get_products_read(product))[0]
 
 
 @router.delete(

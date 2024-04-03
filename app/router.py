@@ -11,6 +11,7 @@ from .validators.validator_schema import ValidatorSchema
 from .routes.responses.auth import UNAUTHORIZED
 from .routes.util import get_exception_docs
 from .routes.stores import router as stores_router, router_payments as stores_router_payments
+from .routes.services import router as services_router
 from .db import get_db
 
 api_router = APIRouter(
@@ -24,6 +25,7 @@ auth_router = APIRouter(
     responses=get_exception_docs(UNAUTHORIZED), dependencies=[Depends(authenticate)]
 )
 auth_router.include_router(stores_router)
+auth_router.include_router(services_router)
 
 payments_router = APIRouter(
     responses=get_exception_docs(UNAUTHORIZED), dependencies=[Depends(validate_payments_key)]

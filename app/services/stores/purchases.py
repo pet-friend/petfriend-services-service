@@ -1,6 +1,6 @@
 from decimal import Decimal
 import logging
-from typing import Iterable, Sequence
+from typing import Sequence
 from asyncio import gather
 
 from fastapi import Depends, status
@@ -59,7 +59,7 @@ class PurchasesService:
             raise Forbidden
         return purchase
 
-    def get_purchases_read(self, purchases: Iterable[Purchase]) -> list[PurchaseRead]:
+    def get_purchases_read(self, *purchases: Purchase) -> list[PurchaseRead]:
         return [PurchaseRead(**p.model_dump(), items=p.items) for p in purchases]
 
     async def get_store_purchases(
@@ -123,6 +123,7 @@ class PurchasesService:
             r = await client.post(url, json=jsonable_encoder(payload))
             if r.status_code == status.HTTP_404_NOT_FOUND:
                 raise StoreNotReady
+            logging.debug(f"Payment service response: {r.status_code} {r.text}")
             r.raise_for_status()
             preference_url: str = r.json()
             purchase.payment_url = preference_url
@@ -181,7 +182,7 @@ class PurchasesService:
         if len(products_map) != len(products_quantities):
             raise ProductNotFound
 
-        products_read = await self.products_service.get_products_read(products_map.values())
+        products_read = await self.products_service.get_products_read(*products_map.values())
         store: Store = products[0].store
 
         total_cost = Decimal(0)

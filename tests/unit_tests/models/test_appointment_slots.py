@@ -16,7 +16,7 @@ class TestAppointmentSlotsModel:
     async def test_appoinnment_slots_with_valid_fields(self) -> None:
         # Given
         create = {
-            "day_of_week": 0,
+            "day_of_week": "monday",
             "start_time": "08:00",
             "appointment_duration": "00:05",
             "end_time": "09:00",
@@ -34,7 +34,7 @@ class TestAppointmentSlotsModel:
     async def test_appoinnment_slots_end_before_start(self) -> None:
         # Given
         create = {
-            "day_of_week": 0,
+            "day_of_week": "monday",
             "start_time": "08:00",
             "appointment_duration": "00:30",
             "end_time": "07:30",
@@ -47,7 +47,7 @@ class TestAppointmentSlotsModel:
     async def test_appoinnment_slots_end_time_too_short(self) -> None:
         # Given
         create = {
-            "day_of_week": 0,
+            "day_of_week": "monday",
             "start_time": "08:00",
             "appointment_duration": "00:30",
             "end_time": "08:10",
@@ -60,7 +60,7 @@ class TestAppointmentSlotsModel:
     async def test_appoinnment_slots_too_short(self) -> None:
         # Given
         create = {
-            "day_of_week": 0,
+            "day_of_week": "monday",
             "start_time": "08:00",
             "appointment_duration": "00:01",
             "end_time": "09:00",
@@ -74,19 +74,19 @@ class TestAppointmentSlotsModel:
         # Given
         slots = [
             {
-                "day_of_week": 0,
+                "day_of_week": "monday",
                 "start_time": "08:00",
                 "appointment_duration": "00:30",
                 "end_time": "13:00",
             },
             {
-                "day_of_week": 0,
+                "day_of_week": "monday",
                 "start_time": "13:00",
                 "appointment_duration": "00:15",
                 "end_time": "14:00",
             },
             {
-                "day_of_week": 1,
+                "day_of_week": "tuesday",
                 "start_time": "08:00",
                 "appointment_duration": "00:10",
                 "end_time": "09:00",
@@ -103,25 +103,25 @@ class TestAppointmentSlotsModel:
         # Given
         slots = [
             {
-                "day_of_week": 0,
+                "day_of_week": "monday",
                 "start_time": "08:00",
                 "appointment_duration": "00:30",
                 "end_time": "13:00",  # Ends at 13:00
             },
             {
-                "day_of_week": 0,
+                "day_of_week": "monday",
                 "start_time": "16:00",
                 "appointment_duration": "00:15",
                 "end_time": "17:00",
             },
             {
-                "day_of_week": 0,
+                "day_of_week": "monday",
                 "start_time": "12:00",  # Starts at 12:00
                 "appointment_duration": "00:15",
                 "end_time": "14:00",
             },
             {
-                "day_of_week": 1,
+                "day_of_week": "tuesday",
                 "start_time": "08:00",
                 "appointment_duration": "00:10",
                 "end_time": "09:00",

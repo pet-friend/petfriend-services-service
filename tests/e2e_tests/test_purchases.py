@@ -112,7 +112,9 @@ class TestStoresProductsRoute(BaseAPITestCase):
         )
         assert r.status_code == 404
 
-    async def test_purchase_store_has_no_address(self, httpx_mock: HTTPXMock) -> None:
+    async def test_purchase_store_has_not_linked_payment_account(
+        self, httpx_mock: HTTPXMock
+    ) -> None:
         r_store = await self.client.post("/stores", json=self.store_create_json_data)
         assert r_store.status_code == 201
         store = r_store.json()

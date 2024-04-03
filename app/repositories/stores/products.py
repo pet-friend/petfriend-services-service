@@ -13,6 +13,7 @@ from ..base_repository import BaseRepository
 from ..util import store_distance_filter
 
 
+# TODO: Change NearbyRepository so that we can use it with products too
 class ProductsRepository(BaseRepository[Product, tuple[Id | str, Id | str]]):
     def __init__(self, session: AsyncSession = Depends(get_db)):
         super().__init__(Product, session)

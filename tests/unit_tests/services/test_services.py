@@ -1,4 +1,4 @@
-from typing import Generator
+from typing import Any, Generator
 from uuid import uuid4
 from unittest.mock import AsyncMock, patch
 
@@ -139,9 +139,28 @@ class TestServicesService:
 
         # Then
         assert fetched_record == self.service_model
-        expected_update = self.service_create.model_dump(exclude={"address"})
-        expected_update["address"] = mock_get_address.return_value
-        self.repository.update.assert_called_once_with(self.service_model.id, expected_update)
+
+        def check_update(update: dict[str, Any]) -> None:
+            assert (
+                update.items()
+                >= self.service_create.model_dump(exclude={"address", "appointment_slots"}).items()
+            )
+            assert update["address"] == mock_get_address.return_value
+            assert len(update["appointment_slots"]) == len(self.service_create.appointment_slots)
+            assert all(
+                any(
+                    s.start_time == s_create.start_time
+                    and s.end_time == s_create.end_time
+                    and s.appointment_duration == s_create.appointment_duration
+                    and s.day_of_week == s_create.day_of_week
+                    for s in update["appointment_slots"]
+                )
+                for s_create in self.service_create.appointment_slots
+            )
+
+        self.repository.update.assert_called_once_with(
+            self.service_model.id, CustomMatcher(check_update)
+        )
         mock_get_address.assert_called_once_with(self.service_create.address)
 
     async def test_cant_update_service_if_not_owner(self) -> None:

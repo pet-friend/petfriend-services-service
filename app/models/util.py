@@ -1,3 +1,4 @@
+# pylint: disable=E1102 # bugged with func.now()
 from math import pi, radians, cos
 import uuid as uuid_pkg
 from datetime import datetime, timezone
