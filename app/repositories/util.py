@@ -6,7 +6,7 @@ from sqlalchemy import Exists, Function
 
 from app.models.util import KM_PER_DEG_LAT
 
-from ..models.stores import Store
+from ..models.stores import Store, Product
 from ..models.services import Service
 from ..models.addresses import Address
 
@@ -29,6 +29,10 @@ def distance_filter(
 
 def store_distance_filter(lat: float, long: float) -> Exists:
     return distance_filter(Store, lat, long, func.pow(Store.delivery_range_km, 2))
+
+
+def product_distance_filter(lat: float, long: float) -> Exists:
+    return Product.store.has(store_distance_filter(lat, long))  # type: ignore
 
 
 def service_distance_filter(lat: float, long: float) -> Exists:

@@ -8,7 +8,7 @@ from ..nearby_repository import NearbyRepository
 from ..util import store_distance_filter
 
 
-class StoresRepository(NearbyRepository[Store, Id | str]):
+class StoresRepository(NearbyRepository[Store, Id | str, []]):
     def __init__(self, session: AsyncSession = Depends(get_db)) -> None:
         super().__init__(Store, session, store_distance_filter)
 

@@ -97,10 +97,10 @@ class ProductsService:
             user_id, user_address_id, user_token
         )
         products = await self.products_repo.get_nearby(
-            c.latitude, c.longitude, skip=offset, limit=limit, categories=categories, **filters
+            c.latitude, c.longitude, categories, skip=offset, limit=limit, **filters
         )
         amount = await self.products_repo.count_nearby(
-            c.latitude, c.longitude, categories=categories, **filters
+            c.latitude, c.longitude, categories, **filters
         )
         return products, amount
 
