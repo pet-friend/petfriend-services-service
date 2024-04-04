@@ -6,24 +6,29 @@ from fastapi import Depends
 from app.exceptions.services import ServiceNotFound
 from app.exceptions.users import Forbidden
 from app.models.addresses import Address
-from app.models.services import ServiceCreate, Service, ServiceRead, AppointmentSlots
-from app.models.util import Id
+from app.models.services import (
+    ServiceCreate,
+    Service,
+    ServiceRead,
+    AppointmentSlots,
+)
+from app.models.util import File, Id
 from app.repositories.services import ServicesRepository
 from ..users import UsersService
 from ..addresses import AddressesService
 
-# from ..files import FilesService, services_images_service
+from ..files import FilesService, services_images_service
 
 
 class ServicesService:
     def __init__(
         self,
         services_repo: ServicesRepository = Depends(ServicesRepository),
-        # files_service: FilesService = Depends(services_images_service),
+        files_service: FilesService = Depends(services_images_service),
         users_service: UsersService = Depends(UsersService),
     ):
         self.services_repo = services_repo
-        # self.files_service = files_service
+        self.files_service = files_service
         self.users_service = users_service
 
     async def create_service(self, data: ServiceCreate, owner_id: Id) -> Service:
@@ -64,9 +69,8 @@ class ServicesService:
         return service
 
     async def get_services_read(self, *services: Service) -> Sequence[ServiceRead]:
-        # token = self.files_service.get_token()
-        # return await gather(*(self.__readable(service, token) for service in services))
-        return await gather(*(self.__readable(service) for service in services))
+        token = self.files_service.get_token()
+        return await gather(*(self.__readable(service, token) for service in services))
 
     async def update_service(self, service_id: Id, data: ServiceCreate, user_id: Id) -> Service:
         service = await self.get_service_by_id(service_id)
@@ -86,56 +90,54 @@ class ServicesService:
         if service.owner_id != user_id:
             raise Forbidden
 
-        # try:
-        #     await self.files_service.delete_file(service_id)  # delete image if exists
-        # except FileNotFoundError:
-        #     pass
+        try:
+            await self.files_service.delete_file(service_id)  # delete image if exists
+        except FileNotFoundError:
+            pass
         await self.services_repo.delete(service_id)
 
-    # async def create_service_image(self, service_id: Id, image: File, user_id: Id) -> str:
-    #     service = await self.get_service_by_id(service_id)
-    #     if service.owner_id != user_id:
-    #         raise Forbidden
+    async def create_service_image(self, service_id: Id, image: File, user_id: Id) -> str:
+        service = await self.get_service_by_id(service_id)
+        if service.owner_id != user_id:
+            raise Forbidden
 
-    #     return await self.files_service.create_file(service_id, image)
+        return await self.files_service.create_file(service_id, image)
 
-    # async def set_service_image(self, service_id: Id, image: File, user_id: Id) -> str:
-    #     service = await self.get_service_by_id(service_id)
-    #     if service.owner_id != user_id:
-    #         raise Forbidden
+    async def set_service_image(self, service_id: Id, image: File, user_id: Id) -> str:
+        service = await self.get_service_by_id(service_id)
+        if service.owner_id != user_id:
+            raise Forbidden
 
-    #     return await self.files_service.set_file(service_id, image)
+        return await self.files_service.set_file(service_id, image)
 
-    # async def delete_service_image(self, service_id: Id, user_id: Id) -> None:
-    #     service = await self.get_service_by_id(service_id)
-    #     if service.owner_id != user_id:
-    #         raise Forbidden
+    async def delete_service_image(self, service_id: Id, user_id: Id) -> None:
+        service = await self.get_service_by_id(service_id)
+        if service.owner_id != user_id:
+            raise Forbidden
 
-    #     await self.files_service.delete_file(service_id)
+        await self.files_service.delete_file(service_id)
 
-    async def __readable(
-        self,
-        service: Service,
-        # token: str
-    ) -> ServiceRead:
-        # image = await self.files_service.get_file_url(service.id, token)
+    async def __readable(self, service: Service, token: str) -> ServiceRead:
+        image = await self.files_service.get_file_url(service.id, token)
         return ServiceRead(
             **service.model_dump(),
             address=service.address,
             appointment_slots=service.appointment_slots,
-            # image_url=image
+            image_url=image,
         )
 
     async def __get_nested_models_from_create(
         self, service_create: ServiceCreate
     ) -> "ServiceNestedModels":
-        address = await AddressesService.get_address(service_create.address)
-        appointment_slots = [
-            AppointmentSlots(**slot.model_dump()) for slot in service_create.appointment_slots
-        ]
-        return {"address": address, "appointment_slots": appointment_slots}
+        return {
+            "address": await AddressesService.get_address(service_create.address),
+            "appointment_slots": [
+                AppointmentSlots(**slot.model_dump()) for slot in service_create.appointment_slots
+            ],
+        }
 
 
+# Attributes that we need to translate when going from ServiceCreate to Service
 class ServiceNestedModels(TypedDict):
     address: Address
     appointment_slots: list[AppointmentSlots]

@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Callable
 
 from azure.storage.blob.aio import ContainerClient, BlobClient
 from azure.storage.blob import generate_container_sas
@@ -20,7 +20,7 @@ class FilesService:
     async def create_file(self, file_id: Id | str, file: File) -> str:
         return await self.__set_blob(file_id, file, overwrite=False)
 
-    async def set_file(self, file_id: Id | str, file: File, _overwrite: bool = False) -> str:
+    async def set_file(self, file_id: Id | str, file: File) -> str:
         return await self.__set_blob(file_id, file, overwrite=True)
 
     async def delete_file(self, file_id: Id | str) -> None:
@@ -65,16 +65,19 @@ class FilesService:
             token = self.get_token()
         return f"{blob.url}?{token}"
 
+    @staticmethod
+    def generator(
+        container_name: str,
+    ) -> Callable[[], AsyncGenerator["FilesService", None]]:
+        async def get_service() -> AsyncGenerator[FilesService, None]:
+            async with ContainerClient.from_connection_string(
+                settings.STORAGE_CONNECTION_STRING, container_name
+            ) as container:
+                yield FilesService(container)
 
-async def products_images_service() -> AsyncGenerator[FilesService, None]:
-    async with ContainerClient.from_connection_string(
-        settings.STORAGE_CONNECTION_STRING, settings.PRODUCTS_IMAGES_CONTAINER
-    ) as container:
-        yield FilesService(container)
+        return get_service
 
 
-async def stores_images_service() -> AsyncGenerator[FilesService, None]:
-    async with ContainerClient.from_connection_string(
-        settings.STORAGE_CONNECTION_STRING, settings.STORES_IMAGES_CONTAINER
-    ) as container:
-        yield FilesService(container)
+products_images_service = FilesService.generator(settings.PRODUCTS_IMAGES_CONTAINER)
+stores_images_service = FilesService.generator(settings.STORES_IMAGES_CONTAINER)
+services_images_service = FilesService.generator(settings.SERVICES_IMAGES_CONTAINER)

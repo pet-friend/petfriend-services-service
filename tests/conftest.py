@@ -7,13 +7,16 @@ from azure.storage.blob import BlobServiceClient
 
 os.environ["ENVIRONMENT"] = "TESTING"
 
+IMAGES_CONTAINERS = ["stores", "products", "services"]
+
 azurite = AzuriteContainer(ports_to_expose=[AzuriteContainer._BLOB_SERVICE_PORT])
 azurite.with_command("azurite-blob --blobHost 0.0.0.0 --inMemoryPersistence")
 azurite.start()
 connection_string = azurite.get_connection_string()
 os.environ["STORAGE_CONNECTION_STRING"] = connection_string
-os.environ["STORES_IMAGES_CONTAINER"] = "stores"
-os.environ["PRODUCTS_IMAGES_CONTAINER"] = "products"
+os.environ.update(
+    {f"{container.upper()}_IMAGES_CONTAINER": container for container in IMAGES_CONTAINERS}
+)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -25,11 +28,10 @@ def blob_global_setup() -> Generator[None, None, None]:
 @pytest.fixture(scope="function", autouse=True)
 def blob_setup() -> Generator[None, None, None]:
     client = BlobServiceClient.from_connection_string(connection_string)
-    stores_client = client.create_container("stores")
-    products_client = client.create_container("products")
+    containers = [client.create_container(container) for container in IMAGES_CONTAINERS]
     yield
-    stores_client.delete_container()
-    products_client.delete_container()
+    for container in containers:
+        container.delete_container()
 
 
 @pytest.fixture
