@@ -25,7 +25,7 @@ class ProductsRepository(
     def __get_extra_filters(
         self, categories: list[Category] | None, **filters: Any
     ) -> ColumnExpressionArgument[bool] | bool:
-        conditions = self._filters(**filters)
+        conditions = self._common_filters(**filters)
         if categories:
             conditions = and_(
                 conditions,

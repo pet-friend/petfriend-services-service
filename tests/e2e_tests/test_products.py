@@ -3,11 +3,13 @@ from uuid import uuid4
 
 from sqlmodel import select
 
+from app.models.addresses import Address
 from app.models.stores import Store, Product
+from app.models.util import Coordinates
 from tests.factories.store_factories import StoreCreateFactory
 from tests.factories.product_factories import ProductCreateFactory
 
-from tests.tests_setup import BaseAPITestCase
+from tests.tests_setup import BaseAPITestCase, GetUserCoordinatesMock
 
 
 class TestStoresProductsRoute(BaseAPITestCase):
@@ -204,3 +206,99 @@ class TestStoresProductsRoute(BaseAPITestCase):
 
         response2 = await self.client.delete(f"/stores/{store_id}/products/{product_id}")
         assert response2.status_code == 403
+
+    async def test_get_nearby_products(
+        self, mock_get_user_coordinates: GetUserCoordinatesMock
+    ) -> None:
+        store_base = self.store_create_json_data
+        store_base.pop("delivery_range_km")
+        store_base["owner_id"] = self.user_id
+        addr_base: Any = store_base.pop("address")
+
+        product_base = self.product_create_json_data
+        product_base.pop("name")
+
+        # Tienda 1: a menos de 500m del obelisco, radio de 1km -> debería aparecer
+        address_1 = Address(**addr_base, latitude=-34.60381182712754, longitude=-58.38586757264521)
+        product_1 = Product(**product_base, name="Producto 1")
+        store_base["name"] = "Tienda 1"
+        store_1 = Store(**store_base, address=address_1, delivery_range_km=1, products=[product_1])
+
+        # Tienda 2: a ~3.8km del obelisco, radio de 3km -> no debería aparecer
+        address_2 = Address(**addr_base, latitude=-34.58802836958609, longitude=-58.41891467656516)
+        product_2 = Product(**product_base, name="Producto 2")
+        store_base["name"] = "Tienda 2"
+        store_2 = Store(**store_base, address=address_2, delivery_range_km=3, products=[product_2])
+
+        # Tienda 3: a ~3.4km del obelisco, radio de 4km -> debería aparecer
+        address_3 = Address(**addr_base, latitude=-34.61434525255158, longitude=-58.4172589555573)
+        product_3 = Product(**product_base, name="Producto 3")
+        store_base["name"] = "Tienda 3"
+        store_3 = Store(**store_base, address=address_3, delivery_range_km=4, products=[product_3])
+
+        self.db.add(store_1)
+        self.db.add(store_2)
+        self.db.add(store_3)
+        await self.db.flush()
+
+        address_id = uuid4()
+        mock_get_user_coordinates(
+            address_id,
+            # obelisco
+            return_value=Coordinates(latitude=-34.60360640938748, longitude=-58.38153821730145),
+        )
+
+        response = await self.client.get(
+            "/stores/nearby/products", params={"user_address_id": str(address_id)}
+        )
+        assert response.status_code == 200
+        products = response.json()["products"]
+        assert {s["name"] for s in products} == {product_1.name, product_3.name}
+
+    async def test_get_nearby_products_name_filter(
+        self, mock_get_user_coordinates: GetUserCoordinatesMock
+    ) -> None:
+        store_base = self.store_create_json_data
+        store_base.pop("delivery_range_km")
+        store_base["owner_id"] = self.user_id
+        addr_base: Any = store_base.pop("address")
+
+        product_base = self.product_create_json_data
+        product_base.pop("name")
+
+        # Tienda 1: a menos de 500m del obelisco, radio de 1km -> filtrada por nombre
+        address_1 = Address(**addr_base, latitude=-34.60381182712754, longitude=-58.38586757264521)
+        product_1 = Product(**product_base, name="Producto AAA")
+        store_base["name"] = "Tienda 1"
+        store_1 = Store(**store_base, address=address_1, delivery_range_km=1, products=[product_1])
+
+        # Tienda 2: a ~3.8km del obelisco, radio de 3km -> no debería aparecer
+        address_2 = Address(**addr_base, latitude=-34.58802836958609, longitude=-58.41891467656516)
+        product_2 = Product(**product_base, name="Producto BBB")
+        store_base["name"] = "Tienda 2"
+        store_2 = Store(**store_base, address=address_2, delivery_range_km=3, products=[product_2])
+
+        # Tienda 3: a ~3.4km del obelisco, radio de 4km -> debería aparecer
+        address_3 = Address(**addr_base, latitude=-34.61434525255158, longitude=-58.4172589555573)
+        product_3 = Product(**product_base, name="Producto BBB")
+        store_base["name"] = "Tienda 3"
+        store_3 = Store(**store_base, address=address_3, delivery_range_km=4, products=[product_3])
+
+        self.db.add(store_1)
+        self.db.add(store_2)
+        self.db.add(store_3)
+        await self.db.flush()
+
+        address_id = uuid4()
+        mock_get_user_coordinates(
+            address_id,
+            # obelisco
+            return_value=Coordinates(latitude=-34.60360640938748, longitude=-58.38153821730145),
+        )
+
+        response = await self.client.get(
+            "/stores/nearby/products", params={"user_address_id": str(address_id), "name": "BBB"}
+        )
+        assert response.status_code == 200
+        products = response.json()["products"]
+        assert {s["name"] for s in products} == {product_3.name}

@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from fastapi import status as http_status
 
-from app.models.services import ServicePublic
-from app.models.services import ServiceCreate, ServiceRead
+from app.models.services import ServicePublic, ServiceCreate, ServiceRead, ServiceCategory
 from app.models.util import Id
 from app.serializers.services import ServiceList
 from app.services.services import ServicesService
@@ -33,12 +32,15 @@ async def create_service(
 @router.get("")
 async def get_services(
     owner_id: Id | None = None,
+    name: str | None = Query(None),
+    category: ServiceCategory | None = Query(None),
     limit: int = Query(10, ge=1),
     offset: int = Query(0, ge=0),
     services_service: ServicesService = Depends(ServicesService),
 ) -> ServiceList:
-    services = await services_service.get_services(limit, offset, owner_id=owner_id)
-    services_amount = await services_service.count_services(owner_id=owner_id)
+    query = dict(name=name, category=category, owner_id=owner_id)
+    services = await services_service.get_services(limit, offset, **query)
+    services_amount = await services_service.count_services(**query)
     return ServiceList(
         services=await services_service.get_services_read(*services), amount=services_amount
     )
@@ -46,13 +48,16 @@ async def get_services(
 
 @router.get("/me")
 async def get_my_services(
+    name: str | None = Query(None),
+    category: ServiceCategory | None = Query(None),
     limit: int = Query(10, ge=1),
     offset: int = Query(0, ge=0),
     services_service: ServicesService = Depends(ServicesService),
     owner_id: Id = Depends(get_caller_id),
 ) -> ServiceList:
-    services = await services_service.get_services(limit, offset, owner_id=owner_id)
-    services_amount = await services_service.count_services(owner_id=owner_id)
+    query = dict(name=name, category=category, owner_id=owner_id)
+    services = await services_service.get_services(limit, offset, **query)
+    services_amount = await services_service.count_services(**query)
     return ServiceList(
         services=await services_service.get_services_read(*services), amount=services_amount
     )
@@ -61,6 +66,8 @@ async def get_my_services(
 @router.get("/nearby", responses=get_exception_docs(ADDRESS_NOT_FOUND_ERROR))
 async def get_nearby_services(
     user_address_id: Id,
+    name: str | None = Query(None),
+    category: ServiceCategory | None = Query(None),
     user_token: str = Depends(get_caller_token),
     limit: int = Query(10, ge=1),
     offset: int = Query(0, ge=0),
@@ -68,7 +75,7 @@ async def get_nearby_services(
     user_id: Id = Depends(get_caller_id),
 ) -> ServiceList:
     services, services_amount = await services_service.get_nearby_services(
-        user_token, limit, offset, user_id, user_address_id
+        user_token, limit, offset, user_id, user_address_id, name=name, category=category
     )
     return ServiceList(
         services=await services_service.get_services_read(*services), amount=services_amount

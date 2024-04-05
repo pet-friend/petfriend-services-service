@@ -44,7 +44,13 @@ class ServicesService:
         return services
 
     async def get_nearby_services(
-        self, user_token: str, limit: int, skip: int, user_id: Id, user_address_id: Id
+        self,
+        user_token: str,
+        limit: int,
+        skip: int,
+        user_id: Id,
+        user_address_id: Id,
+        **filters: Any
     ) -> tuple[Sequence[Service], int]:
         """
         Returns a tuple of services and the total amount of services nearby
@@ -53,9 +59,9 @@ class ServicesService:
             user_id, user_address_id, user_token
         )
         services = await self.services_repo.get_nearby(
-            c.latitude, c.longitude, skip=skip, limit=limit
+            c.latitude, c.longitude, skip=skip, limit=limit, **filters
         )
-        amount = await self.services_repo.count_nearby(c.latitude, c.longitude)
+        amount = await self.services_repo.count_nearby(c.latitude, c.longitude, **filters)
         return services, amount
 
     async def count_services(self, **filters: Any) -> int:

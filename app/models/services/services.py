@@ -1,10 +1,20 @@
 from typing import Sequence
-from sqlmodel import Field, Relationship, SQLModel
+from enum import StrEnum
 
+from sqlmodel import Field, Relationship, SQLModel
 
 from .appointment_slots import AppointmentSlotsBase, AppointmentSlots, AppointmentSlotsList
 from ..addresses import Address, AddressRead, AddressCreate, ServiceAddressLink
 from ..util import Id, TimestampModel, OptionalImageUrlModel, UUIDModel
+
+
+class ServiceCategory(StrEnum):
+    GROOMING = "grooming"  # estética e higiene
+    TRAINING = "training"  # entrenamiento/adiestramiento
+    WALKING = "walking"  # paseo
+    HEALTH = "health"  # veterinaria/salud
+    CARE = "care"  # guarderias y cuidadores
+    OTHER = "other"  # otro
 
 
 class ServiceBase(SQLModel):
@@ -16,6 +26,7 @@ class ServiceBase(SQLModel):
     customer_range_km: float
     # If True, the service is provided at the service's address
     is_home_service: bool = False
+    category: ServiceCategory
 
 
 # Public database fields

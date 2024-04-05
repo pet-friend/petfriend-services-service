@@ -17,7 +17,7 @@ class BaseRepository(Generic[T, PK], ABC):
         self.db = session
         self.cls = repositor_class
 
-    def _filters(self, **filters: Any) -> ColumnExpressionArgument[bool] | bool:
+    def _common_filters(self, **filters: Any) -> ColumnExpressionArgument[bool] | bool:
         where_clauses = []
         for c, v in filters.items():
             if v is None:
@@ -36,7 +36,7 @@ class BaseRepository(Generic[T, PK], ABC):
 
     def _list_select(self, **filters: Any) -> SelectOfScalar[T]:
         query = select(self.cls)
-        return query.where(self._filters(**filters))
+        return query.where(self._common_filters(**filters))
 
     async def get_all(self, skip: int = 0, limit: int | None = None, **filters: Any) -> Sequence[T]:
         query = self._list_select(**filters).offset(skip).limit(limit)
@@ -76,5 +76,5 @@ class BaseRepository(Generic[T, PK], ABC):
     def _count_select(self, **filters: Any) -> SelectOfScalar[int]:
         # pylint bug: https://github.com/pylint-dev/pylint/issues/8138
         query = select(func.count()).select_from(self.cls)  # pylint: disable=not-callable
-        query = query.where(self._filters(**filters))
+        query = query.where(self._common_filters(**filters))
         return query

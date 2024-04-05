@@ -1,8 +1,9 @@
-from typing import AsyncGenerator, Generator
+from typing import AsyncGenerator, Generator, Protocol
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
+from pytest_httpx import HTTPXMock
 from sqlmodel import SQLModel, text
 from sqlmodel.ext.asyncio.session import AsyncSession
 from httpx import ASGITransport, AsyncClient
@@ -12,6 +13,7 @@ from app.exceptions.users import InvalidToken
 from app.models.util import Coordinates, Id
 from app.db import engine
 from app.main import app
+from app.config import settings
 
 
 class BaseDbTestCase:
@@ -81,3 +83,29 @@ class BaseAPITestCase(BaseDbTestCase):
         mock_get_cordinates.return_value = None
         mock_get_cordinates.side_effect = NonExistentAddress
         yield mock_get_cordinates
+
+    @pytest.fixture
+    def mock_get_user_coordinates(self, httpx_mock: HTTPXMock) -> "GetUserCoordinatesMock":
+        def inner(
+            address_id: Id,
+            fail: bool = False,
+            return_value: Coordinates = Coordinates(latitude=0, longitude=0),
+        ) -> None:
+            httpx_mock.add_response(
+                method="GET",
+                url=f"{settings.USERS_SERVICE_URL}/users/{self.user_id}/addresses/{address_id}",
+                match_headers={"Authorization": f"Bearer {self.token}"},
+                json=(return_value.model_dump() if not fail else None),
+                status_code=200 if not fail else 404,
+            )
+
+        return inner
+
+
+class GetUserCoordinatesMock(Protocol):
+    def __call__(
+        self,
+        address_id: Id,
+        fail: bool = False,
+        return_value: Coordinates = Coordinates(latitude=0, longitude=0),
+    ) -> None: ...

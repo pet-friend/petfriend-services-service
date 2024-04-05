@@ -26,7 +26,7 @@ class NearbyRepository(BaseRepository[T, PK], Generic[T, PK, P]):
     ) -> None:
         super().__init__(repository_class, session)
         self.distance_filter = distance_filter
-        self.extra_filter_getter = extra_filter_getter
+        self.extra_filter_getter = extra_filter_getter or self._common_filters
 
     async def get_nearby(
         self,

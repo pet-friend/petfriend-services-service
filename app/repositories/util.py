@@ -23,12 +23,12 @@ def distance_filter(
     return model.address.has(  # type: ignore
         func.pow(KM_PER_DEG_LAT * (Address.latitude - lat), 2)
         + func.pow(km_per_deg_long * (Address.longitude - long), 2)
-        < less_than
+        < func.pow(less_than, 2)
     )
 
 
 def store_distance_filter(lat: float, long: float) -> Exists:
-    return distance_filter(Store, lat, long, func.pow(Store.delivery_range_km, 2))
+    return distance_filter(Store, lat, long, Store.delivery_range_km)
 
 
 def product_distance_filter(lat: float, long: float) -> Exists:

@@ -1,4 +1,4 @@
-from .services import Service, ServiceRead, ServiceCreate, ServicePublic
+from .services import Service, ServiceRead, ServiceCreate, ServicePublic, ServiceCategory
 from .appointment_slots import (
     AppointmentSlots,
     AppointmentSlotsBase,
@@ -12,6 +12,7 @@ __all__ = [
     "ServiceRead",
     "ServiceCreate",
     "ServicePublic",
+    "ServiceCategory",
     "AppointmentSlots",
     "AppointmentSlotsBase",
     "AppointmentSlotsList",

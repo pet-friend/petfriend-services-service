@@ -33,30 +33,35 @@ async def create_store(
 @router.get("")
 async def get_stores(
     owner_id: Id | None = None,
+    name: str | None = Query(None),
     limit: int = Query(10, ge=1),
     offset: int = Query(0, ge=0),
     store_service: StoresService = Depends(StoresService),
 ) -> StoreList:
-    stores = await store_service.get_stores(limit, offset, owner_id=owner_id)
-    stores_amount = await store_service.count_stores(owner_id=owner_id)
+    query = dict(name=name, owner_id=owner_id)
+    stores = await store_service.get_stores(limit, offset, **query)
+    stores_amount = await store_service.count_stores(**query)
     return StoreList(stores=await store_service.get_stores_read(*stores), amount=stores_amount)
 
 
 @router.get("/me")
 async def get_my_stores(
+    name: str | None = Query(None),
     limit: int = Query(10, ge=1),
     offset: int = Query(0, ge=0),
     store_service: StoresService = Depends(StoresService),
     owner_id: Id = Depends(get_caller_id),
 ) -> StoreList:
-    stores = await store_service.get_stores(limit, offset, owner_id=owner_id)
-    stores_amount = await store_service.count_stores(owner_id=owner_id)
+    query = dict(name=name, owner_id=owner_id)
+    stores = await store_service.get_stores(limit, offset, **query)
+    stores_amount = await store_service.count_stores(**query)
     return StoreList(stores=await store_service.get_stores_read(*stores), amount=stores_amount)
 
 
 @router.get("/nearby", responses=get_exception_docs(ADDRESS_NOT_FOUND_ERROR))
 async def get_nearby_stores(
     user_address_id: Id,
+    name: str | None = Query(None),
     user_token: str = Depends(get_caller_token),
     limit: int = Query(10, ge=1),
     offset: int = Query(0, ge=0),
@@ -64,7 +69,7 @@ async def get_nearby_stores(
     user_id: Id = Depends(get_caller_id),
 ) -> StoreList:
     stores, stores_amount = await store_service.get_nearby_stores(
-        user_token, limit, offset, user_id, user_address_id
+        user_token, limit, offset, user_id, user_address_id, name=name
     )
     return StoreList(stores=await store_service.get_stores_read(*stores), amount=stores_amount)
 

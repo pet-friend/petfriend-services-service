@@ -70,6 +70,7 @@ class FilesService:
         container_name: str,
     ) -> Callable[[], AsyncGenerator["FilesService", None]]:
         async def get_service() -> AsyncGenerator[FilesService, None]:
+            print("connection string: ", settings.STORAGE_CONNECTION_STRING)
             async with ContainerClient.from_connection_string(
                 settings.STORAGE_CONNECTION_STRING, container_name
             ) as container:

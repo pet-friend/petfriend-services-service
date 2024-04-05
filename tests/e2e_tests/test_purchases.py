@@ -1,20 +1,14 @@
-from typing import Protocol
 from uuid import UUID, uuid4
 
 from httpx import URL
-import pytest
 from pytest_httpx import HTTPXMock
 from app.config import settings
 
 from app.models.stores import Store, PurchaseStatus
-from app.models.util import Coordinates, Id
+from app.models.util import Id
 from tests.factories.product_factories import ProductCreateFactory
 from tests.factories.store_factories import StoreCreateFactory
-from tests.tests_setup import BaseAPITestCase
-
-
-class GetUserCoordinatesMock(Protocol):
-    def __call__(self, address_id: Id, fail: bool = False) -> None: ...
+from tests.tests_setup import BaseAPITestCase, GetUserCoordinatesMock
 
 
 class TestStoresProductsRoute(BaseAPITestCase):
@@ -23,19 +17,6 @@ class TestStoresProductsRoute(BaseAPITestCase):
         self.product_create_json_data = ProductCreateFactory.build(available=None).model_dump(
             mode="json"
         )
-
-    @pytest.fixture
-    def mock_get_user_coordinates(self, httpx_mock: HTTPXMock) -> GetUserCoordinatesMock:
-        def inner(address_id: Id, fail: bool = False) -> None:
-            httpx_mock.add_response(
-                method="GET",
-                url=f"{settings.USERS_SERVICE_URL}/users/{self.user_id}/addresses/{address_id}",
-                match_headers={"Authorization": f"Bearer {self.token}"},
-                json=(Coordinates(latitude=0, longitude=0).model_dump() if not fail else None),
-                status_code=200 if not fail else 404,
-            )
-
-        return inner
 
     async def change_store_owner(self, store_id: str | Id, new_owner: str | Id | None = None) -> Id:
         store = await self.db.get(Store, store_id)

@@ -1,8 +1,11 @@
 import json
+from typing import Any
 from uuid import uuid4
 
+from app.models.addresses import Address
 from app.models.stores import Store
-from tests.tests_setup import BaseAPITestCase
+from app.models.util import Coordinates
+from tests.tests_setup import BaseAPITestCase, GetUserCoordinatesMock
 from tests.fixtures.stores import valid_store, valid_store2, invalid_store
 
 
@@ -42,6 +45,44 @@ class TestStoresRoute(BaseAPITestCase):
 
         response_text = json.loads(response2.text)
         await _verify_paginated_response(self.db, response_text, 1, 1)
+
+    async def test_get_stores_name_filter(self) -> None:
+        create_1 = valid_store.copy()
+        create_1["name"] = "happy store"
+        response = await self.client.post("/stores", json=create_1)
+        assert response.status_code == 201
+        expected_id = response.json()["id"]
+
+        create_2 = valid_store.copy()
+        create_2["name"] = "sad store"
+        response_2 = await self.client.post("/stores", json=create_2)
+        assert response_2.status_code == 201
+
+        response_get = await self.client.get("/stores", params={"name": "happy"})
+        assert response_get.status_code == 200
+
+        data = response_get.json()
+        assert len(data["stores"]) == 1
+        assert data["stores"][0]["id"] == expected_id
+
+    async def test_get_my_stores_name_filter(self) -> None:
+        create_1 = valid_store.copy()
+        create_1["name"] = "happy store"
+        response = await self.client.post("/stores", json=create_1)
+        assert response.status_code == 201
+        expected_id = response.json()["id"]
+
+        create_2 = valid_store.copy()
+        create_2["name"] = "sad store"
+        response_2 = await self.client.post("/stores", json=create_2)
+        assert response_2.status_code == 201
+
+        response_get = await self.client.get("/stores/me", params={"name": "happy"})
+        assert response_get.status_code == 200
+
+        data = response_get.json()
+        assert len(data["stores"]) == 1
+        assert data["stores"][0]["id"] == expected_id
 
     async def test_get_stores_with_pagination(self) -> None:
         response = await self.client.post("/stores", json=valid_store)
@@ -136,6 +177,80 @@ class TestStoresRoute(BaseAPITestCase):
 
         response2 = await self.client.delete(f"/stores/{store_id}")
         assert response2.status_code == 403
+
+    async def test_get_nearby_stores(
+        self, mock_get_user_coordinates: GetUserCoordinatesMock
+    ) -> None:
+        store_base: dict[str, Any] = {"owner_id": uuid4(), "shipping_cost": 0, "description": ":D"}
+        addr_base: Any = valid_store["address"]
+
+        # Tienda 1: a menos de 500m del obelisco, radio de 1km -> debería aparecer
+        address_1 = Address(**addr_base, latitude=-34.60381182712754, longitude=-58.38586757264521)
+        store_1 = Store(**store_base, address=address_1, name="Tienda 1", delivery_range_km=1)
+
+        # Tienda 2: a ~3.8km del obelisco, radio de 3km -> no debería aparecer
+        address_2 = Address(**addr_base, latitude=-34.58802836958609, longitude=-58.41891467656516)
+        store_2 = Store(**store_base, address=address_2, name="Tienda 2", delivery_range_km=3)
+
+        # Tienda 3: a ~3.4km del obelisco, radio de 4km -> debería aparecer
+        address_3 = Address(**addr_base, latitude=-34.61434525255158, longitude=-58.4172589555573)
+        store_3 = Store(**store_base, address=address_3, name="Tienda 3", delivery_range_km=4)
+
+        self.db.add(store_1)
+        self.db.add(store_2)
+        self.db.add(store_3)
+        await self.db.flush()
+
+        address_id = uuid4()
+        mock_get_user_coordinates(
+            address_id,
+            # obelisco
+            return_value=Coordinates(latitude=-34.60360640938748, longitude=-58.38153821730145),
+        )
+
+        response = await self.client.get(
+            "/stores/nearby", params={"user_address_id": str(address_id)}
+        )
+        assert response.status_code == 200
+        stores = response.json()["stores"]
+        assert {s["name"] for s in stores} == {store_1.name, store_3.name}
+
+    async def test_get_nearby_stores_name_filter(
+        self, mock_get_user_coordinates: GetUserCoordinatesMock
+    ) -> None:
+        store_base: dict[str, Any] = {"owner_id": uuid4(), "shipping_cost": 0, "description": ":D"}
+        addr_base: Any = valid_store["address"]
+
+        # Tienda 1: a menos de 500m del obelisco, radio de 1km -> filtrada por nombre
+        address_1 = Address(**addr_base, latitude=-34.60381182712754, longitude=-58.38586757264521)
+        store_1 = Store(**store_base, address=address_1, name="Tienda AAA", delivery_range_km=1)
+
+        # Tienda 2: a ~3.8km del obelisco, radio de 3km -> no debería aparecer
+        address_2 = Address(**addr_base, latitude=-34.58802836958609, longitude=-58.41891467656516)
+        store_2 = Store(**store_base, address=address_2, name="Tienda BBB", delivery_range_km=3)
+
+        # Tienda 3: a ~3.4km del obelisco, radio de 4km -> debería aparecer
+        address_3 = Address(**addr_base, latitude=-34.61434525255158, longitude=-58.4172589555573)
+        store_3 = Store(**store_base, address=address_3, name="Tienda BBB 2", delivery_range_km=4)
+
+        self.db.add(store_1)
+        self.db.add(store_2)
+        self.db.add(store_3)
+        await self.db.flush()
+
+        address_id = uuid4()
+        mock_get_user_coordinates(
+            address_id,
+            # obelisco
+            return_value=Coordinates(latitude=-34.60360640938748, longitude=-58.38153821730145),
+        )
+
+        response = await self.client.get(
+            "/stores/nearby", params={"user_address_id": str(address_id), "name": "BBB"}
+        )
+        assert response.status_code == 200
+        stores = response.json()["stores"]
+        assert {s["name"] for s in stores} == {store_3.name}
 
 
 # Aux
