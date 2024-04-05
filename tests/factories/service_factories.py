@@ -22,7 +22,8 @@ class ServiceCreateFactory(ModelFactory[ServiceCreate]):
                 duration_mins = cls.__random__.randint(5, 90)
                 slots.append(
                     AppointmentSlotsBase(
-                        day_of_week=day,
+                        start_day=day,
+                        end_day=day,
                         start_time=time(hour=start_hour),
                         end_time=time(hour=start_hour + 2),
                         appointment_duration=timedelta(minutes=duration_mins),

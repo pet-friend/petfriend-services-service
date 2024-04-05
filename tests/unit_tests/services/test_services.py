@@ -72,7 +72,8 @@ class TestServicesService:
                     s.start_time == s_create.start_time
                     and s.end_time == s_create.end_time
                     and s.appointment_duration == s_create.appointment_duration
-                    and s.day_of_week == s_create.day_of_week
+                    and s.start_day == s_create.start_day
+                    and s.end_day == s_create.end_day
                     for s in service.appointment_slots
                 )
                 for s_create in self.service_create.appointment_slots
@@ -152,7 +153,8 @@ class TestServicesService:
                     s.start_time == s_create.start_time
                     and s.end_time == s_create.end_time
                     and s.appointment_duration == s_create.appointment_duration
-                    and s.day_of_week == s_create.day_of_week
+                    and s.start_day == s_create.start_day
+                    and s.end_day == s_create.end_day
                     for s in update["appointment_slots"]
                 )
                 for s_create in self.service_create.appointment_slots

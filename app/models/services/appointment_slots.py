@@ -1,9 +1,9 @@
 from enum import StrEnum
 from typing import Self, Annotated
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, time, timedelta
 
 from sqlmodel import Field, SQLModel
-from pydantic import AfterValidator, ValidationInfo, field_validator
+from pydantic import AfterValidator, field_validator, model_validator
 
 from ..util import UUIDModel, Id
 
@@ -25,11 +25,16 @@ class DayOfWeek(StrEnum):
     def from_weekday(cls, weekday: int) -> Self:
         return list(cls)[weekday]
 
+    def to_weekday(self) -> int:
+        return list(DayOfWeek).index(self)
 
+
+# TODO: timezone?
 class AppointmentSlotsBase(SQLModel):
-    day_of_week: DayOfWeek
+    start_day: DayOfWeek
     start_time: time
     appointment_duration: timedelta
+    end_day: DayOfWeek
     end_time: time
 
     @field_validator("appointment_duration", mode="after")
@@ -45,25 +50,46 @@ class AppointmentSlotsBase(SQLModel):
 
         return value
 
-    @field_validator("end_time", mode="after")
-    @classmethod
-    def validate_end_time(cls, value: time, info: ValidationInfo) -> time:
+    @model_validator(mode="after")
+    def validate_slot_fits(self) -> Self:
         """
         Validates that the end time is after the start time and
         that at least one appointment fits in the time slot
         """
-        if "appointment_duration" not in info.data:
-            # validate_appointment_duration failed
-            return value
-
-        today = date.today()
-        start_time: datetime = datetime.combine(today, info.data["start_time"])
-        end_time: datetime = datetime.combine(today, value)
-        duration: timedelta = info.data["appointment_duration"]
-        if end_time < start_time + duration:
+        start_time, end_time = self.get_current_timestamps()
+        if end_time < start_time + self.appointment_duration:
             raise ValueError("At least one appointment should fit in the time slot")
+        return self
 
-        return value
+    def get_current_timestamps(self, now: datetime | None = None) -> tuple[datetime, datetime]:
+        """
+        Returns the start timestamp and end timestamp for the current or next
+        occurrence of the slot.
+        There are three possible cases:
+        - The slot already finished this week: next week timestamps are returned
+        - The slot is currently happening: current timestamps are returned
+        - The slot is in the future: next occurrence timestamps are returned
+        """
+        now = now or datetime.now()
+        today = now.date()
+
+        day_0 = today - timedelta(days=today.weekday())
+        start_date = day_0 + timedelta(days=self.start_day.to_weekday())
+        end_date = day_0 + timedelta(days=self.end_day.to_weekday())
+        if end_date < start_date:
+            # e.g. start_day = friday, end_day = tuesday
+            # push friday to the previous week
+            start_date -= timedelta(weeks=1)
+
+        start_time = datetime.combine(start_date, self.start_time)
+        end_time = datetime.combine(end_date, self.end_time)
+
+        if end_time < now:
+            # e.g. end_time was on tuesday but it's already wednesday
+            start_time += timedelta(weeks=1)
+            end_time += timedelta(weeks=1)
+
+        return start_time, end_time
 
 
 class AppointmentSlots(UUIDModel, AppointmentSlotsBase, table=True):
@@ -75,18 +101,26 @@ def validate_appointment_slots_list(
     values: list[AppointmentSlotsBase],
 ) -> list[AppointmentSlotsBase]:
     """
-    Checks that appointment slots in the same day dont overlap
+    Checks that appointment slots don't overlap
     """
-    slots_per_day: dict[DayOfWeek, list[AppointmentSlotsBase]] = {}
-    for slot in values:
-        slots_per_day.setdefault(slot.day_of_week, []).append(slot)
+    if len(values) <= 1:
+        return values
 
-    # make sure slots dont overlap
-    for day, slots in slots_per_day.items():
-        slots.sort(key=lambda s: s.start_time)
-        for i in range(1, len(slots)):
-            if slots[i - 1].end_time > slots[i].start_time:
-                raise ValueError(f"Appointment slots in {day} overlap")
+    now = datetime.now()
+    slots = [(s, *s.get_current_timestamps(now)) for s in values]
+    sorted_slots = sorted(slots, key=lambda s: s[1])
+
+    # make sure to check the last slot with the first slot
+    end_prev = sorted_slots[-1][2] - timedelta(weeks=1)
+    for i, (slot, start_current, end_current) in enumerate(sorted_slots):
+        if end_prev > start_current:
+            prev_slot = sorted_slots[i - 1][0]
+            raise ValueError(
+                "Appointment slots cannot overlap (slot ends on"
+                f" {prev_slot.end_day.capitalize()} at {prev_slot.end_time} and another slot"
+                f" starts on {slot.start_day.capitalize()} at {slot.start_time})"
+            )
+        end_prev = end_current
 
     return values
 

@@ -19,7 +19,7 @@ for container in IMAGES_CONTAINERS:
 
 @pytest.fixture(scope="session", autouse=True)
 def blob_global_setup() -> Generator[str, None, None]:
-    azurite = AzuriteContainer()
+    azurite = AzuriteContainer(ports_to_expose=[AzuriteContainer._BLOB_SERVICE_PORT])
     # Make sure it uses in memory persistence:
     azurite.with_command("azurite-blob --blobHost 0.0.0.0 --inMemoryPersistence")
     azurite.start()
@@ -28,7 +28,6 @@ def blob_global_setup() -> Generator[str, None, None]:
     # Import settings after setting the env vars above and add the connection string
     settings: "TestingSettings" = importlib.import_module("app.config").settings
     settings.STORAGE_CONNECTION_STRING = connection_string
-
     try:
         yield connection_string
     finally:
