@@ -66,3 +66,8 @@ resource "azurerm_storage_container" "stores_images_container" {
   name                 = local.stores_images_container
   storage_account_name = module.microservice.storage_account.name
 }
+
+resource "azurerm_storage_container" "stores_images_container" {
+  name                 = local.services_images_container
+  storage_account_name = module.microservice.storage_account.name
+}

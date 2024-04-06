@@ -69,7 +69,8 @@ services:
     command: >
       /bin/sh -c 
         "az storage container create --name ${PRODUCTS_IMAGES_CONTAINER} && 
-        az storage container create --name ${STORES_IMAGES_CONTAINER}"
+         az storage container create --name ${STORES_IMAGES_CONTAINER}   &&
+         az storage container create --name ${SERVICES_IMAGES_CONTAINER}"
     depends_on:
       azurite:
         condition: service_healthy
