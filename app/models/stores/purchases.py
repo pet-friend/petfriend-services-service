@@ -1,11 +1,10 @@
 from decimal import Decimal
-from enum import StrEnum
-from typing import Literal, Sequence
+from typing import Sequence
 
-from pydantic import BaseModel
 from sqlalchemy import ForeignKeyConstraint, PrimaryKeyConstraint
 from sqlmodel import Relationship, Field, SQLModel
 
+from ..payments import PaymentStatus
 from ..util import Id, TimestampModel, UUIDModel
 from .stores import Store
 from .products import Product
@@ -36,25 +35,9 @@ class PurchaseItem(PurchaseItemBase, table=True):
     )
 
 
-class PurchaseStatus(StrEnum):
-    CREATED = "created"
-    IN_PROGRESS = "in_progress"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
-
-
-PurchaseStatusUpdate = Literal[
-    PurchaseStatus.IN_PROGRESS, PurchaseStatus.COMPLETED, PurchaseStatus.CANCELLED
-]
-
-
-class PurchaseUpdate(BaseModel):
-    status: PurchaseStatusUpdate
-
-
 class PurchaseBase(SQLModel):
     store_id: Id = Field(primary_key=True, foreign_key="stores.id")
-    status: PurchaseStatus
+    status: PaymentStatus
     payment_url: str | None = None
     buyer_id: Id
     delivery_address_id: Id

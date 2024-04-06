@@ -3,9 +3,10 @@ from unittest.mock import AsyncMock
 from unittest import IsolatedAsyncioTestCase
 from uuid import uuid4
 
+import pytest
+
 from app.exceptions.products import ProductNotFound
 from app.exceptions.users import Forbidden
-
 from app.models.addresses import Address
 from app.models.stores import Product
 from app.models.stores import Store
@@ -15,9 +16,10 @@ from app.repositories.stores import ProductsRepository
 from app.services.stores import StoresService
 from tests.factories.product_factories import ProductCreateFactory
 from tests.factories.store_factories import StoreCreateFactory
-from .util import File
+from ..util import File
 
 
+@pytest.mark.usefixtures("blob_setup")
 class TestProductsService(IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.owner_id = uuid4()

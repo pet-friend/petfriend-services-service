@@ -30,6 +30,7 @@ class BaseDbTestCase:
         await self.db.close()
 
 
+@pytest.mark.usefixtures("blob_setup")
 class BaseAPITestCase(BaseDbTestCase):
     client: AsyncClient
 

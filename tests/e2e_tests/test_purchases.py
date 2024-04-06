@@ -4,7 +4,8 @@ from httpx import URL
 from pytest_httpx import HTTPXMock
 from app.config import settings
 
-from app.models.stores import Store, PurchaseStatus
+from app.models.stores import Store
+from app.models.payments import PaymentStatus
 from app.models.util import Id
 from tests.factories.product_factories import ProductCreateFactory
 from tests.factories.store_factories import StoreCreateFactory
@@ -365,7 +366,10 @@ class TestPurchasesRoute(BaseAPITestCase):
         assert r.status_code == 200
         purchase_id = r.json()["id"]
 
-        r = await self.client.put(f"/stores/{store['id']}/purchases/{purchase_id}")
+        r = await self.client.patch(
+            f"/stores/{store['id']}/purchases/{purchase_id}",
+            json={"status": PaymentStatus.IN_PROGRESS},
+        )
         assert r.status_code == 401
 
     async def test_can_update_purchase_to_in_progress(
@@ -398,19 +402,19 @@ class TestPurchasesRoute(BaseAPITestCase):
         )
         assert r.status_code == 200
         p = r.json()
-        assert p["status"] == PurchaseStatus.CREATED
+        assert p["status"] == PaymentStatus.CREATED
 
-        r_put = await self.client.put(
+        r_patch = await self.client.patch(
             f"/stores/{store['id']}/purchases/{p['id']}",
             headers={"api-key": settings.PAYMENTS_API_KEY},
-            json={"status": PurchaseStatus.IN_PROGRESS},
+            json={"status": PaymentStatus.IN_PROGRESS},
         )
-        assert r_put.status_code == 202
+        assert r_patch.status_code == 202
 
         r_get = await self.client.get(f"/stores/{store['id']}/purchases/{p['id']}")
         assert r_get.status_code == 200
         data = r_get.json()
-        assert data["status"] == PurchaseStatus.IN_PROGRESS
+        assert data["status"] == PaymentStatus.IN_PROGRESS
         assert data.get("payment_url", None) is None
 
     async def test_can_update_purchase_to_completed(
@@ -443,19 +447,19 @@ class TestPurchasesRoute(BaseAPITestCase):
         )
         assert r.status_code == 200
         p = r.json()
-        assert p["status"] == PurchaseStatus.CREATED
+        assert p["status"] == PaymentStatus.CREATED
 
-        r_put = await self.client.put(
+        r_patch = await self.client.patch(
             f"/stores/{store['id']}/purchases/{p['id']}",
             headers={"api-key": settings.PAYMENTS_API_KEY},
-            json={"status": PurchaseStatus.COMPLETED},
+            json={"status": PaymentStatus.COMPLETED},
         )
-        assert r_put.status_code == 202
+        assert r_patch.status_code == 202
 
         r_get = await self.client.get(f"/stores/{store['id']}/purchases/{p['id']}")
         assert r_get.status_code == 200
         data = r_get.json()
-        assert data["status"] == PurchaseStatus.COMPLETED
+        assert data["status"] == PaymentStatus.COMPLETED
         assert data.get("payment_url", None) is None
 
     async def test_can_update_purchase_to_cancelled_and_restores_stock(
@@ -488,19 +492,19 @@ class TestPurchasesRoute(BaseAPITestCase):
         )
         assert r.status_code == 200
         p = r.json()
-        assert p["status"] == PurchaseStatus.CREATED
+        assert p["status"] == PaymentStatus.CREATED
 
-        r_put = await self.client.put(
+        r_patch = await self.client.patch(
             f"/stores/{store['id']}/purchases/{p['id']}",
             headers={"api-key": settings.PAYMENTS_API_KEY},
-            json={"status": PurchaseStatus.CANCELLED},
+            json={"status": PaymentStatus.CANCELLED},
         )
-        assert r_put.status_code == 202
+        assert r_patch.status_code == 202
 
         r_get = await self.client.get(f"/stores/{store['id']}/purchases/{p['id']}")
         assert r_get.status_code == 200
         data = r_get.json()
-        assert data["status"] == PurchaseStatus.CANCELLED
+        assert data["status"] == PaymentStatus.CANCELLED
         assert data.get("payment_url", None) is None
 
         r_product_get = await self.client.get(f"/stores/{store['id']}/products/{product['id']}")

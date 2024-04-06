@@ -3,7 +3,8 @@ from fastapi import APIRouter, Depends, Query, status
 from pydantic import PositiveInt
 
 from app.auth import get_caller_id, get_caller_token
-from app.models.stores import Purchase, PurchaseRead, PurchaseUpdate
+from app.models.stores import Purchase, PurchaseRead
+from app.models.payments import PaymentUpdate
 from app.models.util import Id
 from app.routes.util import get_exception_docs
 from app.serializers.stores import PurchaseList
@@ -77,12 +78,12 @@ async def get_store_purchase(
     return await purchases_service.get_purchase(store_id, purchase_id, user_id)
 
 
-@router_payments.put(
+@router_payments.patch(
     "/stores/{store_id}/purchases/{purchase_id}",
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def update_purchase_status(
-    update: PurchaseUpdate,
+    update: PaymentUpdate,
     store_id: Id,
     purchase_id: Id,
     purchases_service: PurchasesService = Depends(),

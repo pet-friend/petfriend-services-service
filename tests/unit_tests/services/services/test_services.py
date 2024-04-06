@@ -31,9 +31,8 @@ class TestServicesService:
             **self.service_create.model_dump(exclude={"address", "appointment_slots"})
         )
 
-        self.async_session = AsyncMock()
         self.repository = AsyncMock(spec=ServicesRepository)
-        self.service = ServicesService(self.repository, AsyncMock())
+        self.service = ServicesService(self.repository, AsyncMock(), AsyncMock())
 
     @pytest.fixture
     def mock_get_address(self) -> Generator[AsyncMock, None, None]:

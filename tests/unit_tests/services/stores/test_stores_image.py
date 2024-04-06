@@ -4,18 +4,19 @@ from unittest import IsolatedAsyncioTestCase
 from uuid import uuid4
 
 import pytest
+
 from app.exceptions.stores import StoreNotFound
 from app.exceptions.users import Forbidden
-
 from app.models.addresses import Address
 from app.models.stores import Store
 from app.services.files import FilesService
 from app.services.stores import StoresService
 from app.repositories.stores import StoresRepository
 from tests.factories.store_factories import StoreCreateFactory
-from .util import File
+from ..util import File
 
 
+@pytest.mark.usefixtures("blob_setup")
 class TestStoresService(IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.store_create = StoreCreateFactory.build()

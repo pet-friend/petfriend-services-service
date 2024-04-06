@@ -18,7 +18,8 @@ from app.exceptions.purchases import (
 
 from app.models.addresses import Address
 from app.models.preferences import PurchaseTypes
-from app.models.stores import Store, Purchase, PurchaseItem, PurchaseStatus, Product, ProductRead
+from app.models.stores import Store, Purchase, PurchaseItem, Product, ProductRead
+from app.models.payments import PaymentStatus
 from app.models.util import Coordinates, Id
 from app.repositories.stores import PurchasesRepository
 from app.services.stores import ProductsService, PurchasesService
@@ -71,7 +72,7 @@ class TestPurchasesService:
             id=purchase_id,
             items=items,
             buyer_id=uuid4(),
-            status=PurchaseStatus.CREATED,
+            status=PaymentStatus.CREATED,
             payment_url="http://payment.url",
             delivery_address_id=uuid4(),
         )
@@ -99,7 +100,7 @@ class TestPurchasesService:
             id=purchase_id,
             items=items,
             buyer_id=buyer,
-            status=PurchaseStatus.CREATED,
+            status=PaymentStatus.CREATED,
             payment_url="http://payment.url",
             delivery_address_id=uuid4(),
         )
@@ -124,7 +125,7 @@ class TestPurchasesService:
             id=purchase_id,
             items=items,
             buyer_id=uuid4(),
-            status=PurchaseStatus.CREATED,
+            status=PaymentStatus.CREATED,
             payment_url="http://payment.url",
             delivery_address_id=uuid4(),
         )
@@ -168,7 +169,7 @@ class TestPurchasesService:
             id=uuid4(),
             items=items,
             buyer_id=uuid4(),
-            status=PurchaseStatus.CREATED,
+            status=PaymentStatus.CREATED,
             payment_url="http://payment.url",
             delivery_address_id=uuid4(),
         )
@@ -335,7 +336,7 @@ class TestPurchasesService:
         self.products_service.update_stock.assert_called_once_with(
             self.product, -1 * quantities[self.product.id]
         )
-        assert purchase.status == PurchaseStatus.CREATED
+        assert purchase.status == PaymentStatus.CREATED
         assert purchase.payment_url == result_url
         assert str(purchase.id) == service_reference
         assert purchase.store == self.store
@@ -385,7 +386,7 @@ class TestPurchasesService:
             id=purchase_id,
             items=items,
             buyer_id=uuid4(),
-            status=PurchaseStatus.COMPLETED,
+            status=PaymentStatus.COMPLETED,
             payment_url=None,
             delivery_address_id=uuid4(),
         )
@@ -394,7 +395,7 @@ class TestPurchasesService:
         # When, Then
         with pytest.raises(Forbidden):
             await self.service.update_purchase_status(
-                self.store.id, purchase_id, PurchaseStatus.IN_PROGRESS
+                self.store.id, purchase_id, PaymentStatus.IN_PROGRESS
             )
 
         self.repository.get_by_id.assert_called_once_with((self.store.id, purchase_id))
@@ -413,7 +414,7 @@ class TestPurchasesService:
             id=purchase_id,
             items=items,
             buyer_id=uuid4(),
-            status=PurchaseStatus.CANCELLED,
+            status=PaymentStatus.CANCELLED,
             payment_url=None,
             delivery_address_id=uuid4(),
         )
@@ -422,7 +423,7 @@ class TestPurchasesService:
         # When, Then
         with pytest.raises(Forbidden):
             await self.service.update_purchase_status(
-                self.store.id, purchase_id, PurchaseStatus.IN_PROGRESS
+                self.store.id, purchase_id, PaymentStatus.IN_PROGRESS
             )
 
         self.repository.get_by_id.assert_called_once_with((self.store.id, purchase_id))
@@ -441,7 +442,7 @@ class TestPurchasesService:
             id=purchase_id,
             items=items,
             buyer_id=uuid4(),
-            status=PurchaseStatus.CANCELLED,
+            status=PaymentStatus.CANCELLED,
             payment_url=None,
             delivery_address_id=uuid4(),
         )
@@ -449,7 +450,7 @@ class TestPurchasesService:
 
         # When
         await self.service.update_purchase_status(
-            self.store.id, purchase_id, PurchaseStatus.CANCELLED
+            self.store.id, purchase_id, PaymentStatus.CANCELLED
         )
 
         # Then
@@ -469,7 +470,7 @@ class TestPurchasesService:
             id=purchase_id,
             items=items,
             buyer_id=uuid4(),
-            status=PurchaseStatus.COMPLETED,
+            status=PaymentStatus.COMPLETED,
             payment_url=None,
             delivery_address_id=uuid4(),
         )
@@ -477,7 +478,7 @@ class TestPurchasesService:
 
         # When
         await self.service.update_purchase_status(
-            self.store.id, purchase_id, PurchaseStatus.COMPLETED
+            self.store.id, purchase_id, PaymentStatus.COMPLETED
         )
 
         # Then
@@ -497,7 +498,7 @@ class TestPurchasesService:
             id=purchase_id,
             items=items,
             buyer_id=uuid4(),
-            status=PurchaseStatus.CREATED,
+            status=PaymentStatus.CREATED,
             payment_url="http://payment.url",
             delivery_address_id=uuid4(),
         )
@@ -505,12 +506,12 @@ class TestPurchasesService:
 
         # When
         await self.service.update_purchase_status(
-            self.store.id, purchase_id, PurchaseStatus.COMPLETED
+            self.store.id, purchase_id, PaymentStatus.COMPLETED
         )
 
         # Then
         self.repository.get_by_id.assert_called_once_with((self.store.id, purchase_id))
-        purchase.status = PurchaseStatus.COMPLETED
+        purchase.status = PaymentStatus.COMPLETED
         purchase.payment_url = None  # type: ignore
         self.repository.save.assert_called_once_with(purchase)
         self.products_service.update_stock.assert_not_called()
@@ -527,7 +528,7 @@ class TestPurchasesService:
             id=purchase_id,
             items=items,
             buyer_id=uuid4(),
-            status=PurchaseStatus.CREATED,
+            status=PaymentStatus.CREATED,
             payment_url="http://payment.url",
             delivery_address_id=uuid4(),
         )
@@ -535,12 +536,12 @@ class TestPurchasesService:
 
         # When
         await self.service.update_purchase_status(
-            self.store.id, purchase_id, PurchaseStatus.CANCELLED
+            self.store.id, purchase_id, PaymentStatus.CANCELLED
         )
 
         # Then
         self.repository.get_by_id.assert_called_once_with((self.store.id, purchase_id))
-        purchase.status = PurchaseStatus.CANCELLED
+        purchase.status = PaymentStatus.CANCELLED
         purchase.payment_url = None  # type: ignore
         self.repository.save.assert_called_once_with(purchase)
         stock_calls = [call(item.product, item.quantity) for item in items]
@@ -558,7 +559,7 @@ class TestPurchasesService:
             id=purchase_id,
             items=items,
             buyer_id=uuid4(),
-            status=PurchaseStatus.CREATED,
+            status=PaymentStatus.CREATED,
             payment_url="http://payment.url",
             delivery_address_id=uuid4(),
         )
@@ -566,12 +567,12 @@ class TestPurchasesService:
 
         # When
         await self.service.update_purchase_status(
-            self.store.id, purchase_id, PurchaseStatus.IN_PROGRESS
+            self.store.id, purchase_id, PaymentStatus.IN_PROGRESS
         )
 
         # Then
         self.repository.get_by_id.assert_called_once_with((self.store.id, purchase_id))
-        purchase.status = PurchaseStatus.IN_PROGRESS
+        purchase.status = PaymentStatus.IN_PROGRESS
         purchase.payment_url = None  # type: ignore
         self.repository.save.assert_called_once_with(purchase)
         self.products_service.update_stock.assert_not_called()

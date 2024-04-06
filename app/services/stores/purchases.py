@@ -17,16 +17,8 @@ from app.exceptions.purchases import (
 from app.exceptions.users import Forbidden
 from app.models.addresses import Address
 from app.models.preferences import PaymentData, PreferenceItem, PurchaseTypes
-from app.models.stores import (
-    Store,
-    Product,
-    ProductRead,
-    Purchase,
-    PurchaseRead,
-    PurchaseItem,
-    PurchaseStatus,
-    PurchaseStatusUpdate,
-)
+from app.models.stores import Store, Product, ProductRead, Purchase, PurchaseRead, PurchaseItem
+from app.models.payments import PaymentStatus, PaymentStatusUpdate
 from app.models.util import Coordinates, Id, distance_squared
 from app.repositories.stores import PurchasesRepository
 from app.config import settings
@@ -35,7 +27,7 @@ from .stores import StoresService
 from .products import ProductsService
 
 REQUEST_TIMEOUT = Timeout(5, read=45)
-FORBIDDEN_STATUS_CHANGES = [PurchaseStatus.COMPLETED, PurchaseStatus.CANCELLED]
+FORBIDDEN_STATUS_CHANGES = [PaymentStatus.COMPLETED, PaymentStatus.CANCELLED]
 
 
 class PurchasesService:
@@ -98,7 +90,7 @@ class PurchasesService:
 
         purchase = Purchase(
             store=store,
-            status=PurchaseStatus.CREATED,
+            status=PaymentStatus.CREATED,
             buyer_id=user_id,
             delivery_address_id=delivery_address_id,
         )
@@ -132,7 +124,7 @@ class PurchasesService:
         return purchase
 
     async def update_purchase_status(
-        self, store_id: Id, purchase_id: Id, new_status: PurchaseStatusUpdate
+        self, store_id: Id, purchase_id: Id, new_status: PaymentStatusUpdate
     ) -> None:
         purchase = await self.purchases_repo.get_by_id((store_id, purchase_id))
         if purchase is None:
@@ -148,7 +140,7 @@ class PurchasesService:
             )
             raise Forbidden
 
-        if new_status == PurchaseStatus.CANCELLED:
+        if new_status == PaymentStatus.CANCELLED:
             # Restore stock
             for item in purchase.items:
                 await self.products_service.update_stock(item.product, item.quantity)

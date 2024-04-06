@@ -17,7 +17,7 @@ for container in IMAGES_CONTAINERS:
     os.environ[f"{container.upper()}_IMAGES_CONTAINER"] = container
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def blob_global_setup() -> Generator[str, None, None]:
     azurite = AzuriteContainer(ports_to_expose=[AzuriteContainer._BLOB_SERVICE_PORT])
     # Make sure it uses in memory persistence:
@@ -34,7 +34,7 @@ def blob_global_setup() -> Generator[str, None, None]:
         azurite.stop(force=True)
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(scope="function")
 def blob_setup(blob_global_setup: str) -> Generator[None, None, None]:
     client = BlobServiceClient.from_connection_string(blob_global_setup)
     containers = [client.create_container(container) for container in IMAGES_CONTAINERS]
