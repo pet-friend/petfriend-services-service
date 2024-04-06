@@ -5,7 +5,7 @@ from datetime import datetime, time, timezone
 from typing import Annotated, Any, BinaryIO, Protocol
 
 from pydantic import AfterValidator, AwareDatetime, BaseModel
-from sqlalchemy import DateTime, TypeDecorator, func
+from sqlalchemy import DateTime, TypeDecorator, func, Dialect
 from sqlmodel import Field, SQLModel
 
 
@@ -24,16 +24,18 @@ def now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+# pylint: disable=R0901 (too-many-ancestors)
 class TZDateTime(TypeDecorator[datetime]):
     """
     Saes timezone-aware datetimes as timezone-naive UTC datetimes in any database. See:
     https://docs.sqlalchemy.org/en/20/core/custom_types.html#store-timezone-aware-timestamps-as-timezone-naive-utc
     """
 
+    python_type = datetime
     impl = DateTime
     cache_ok = True
 
-    def process_bind_param(self, value: datetime | None, dialect: Any) -> datetime | None:
+    def process_bind_param(self, value: datetime | None, _: Dialect) -> datetime | None:
         if value is None:
             return None
         # https://docs.python.org/3/library/datetime.html#determining-if-an-object-is-aware-or-naive
@@ -42,10 +44,15 @@ class TZDateTime(TypeDecorator[datetime]):
         value = value.astimezone(timezone.utc).replace(tzinfo=None)
         return value
 
-    def process_result_value(self, value: datetime | None, dialect: Any) -> datetime | None:
+    def process_result_value(self, value: datetime | None, _: Dialect) -> datetime | None:
         if value is None:
             return None
         return value.replace(tzinfo=timezone.utc)
+
+    def process_literal_param(self, value: datetime | None, _: Dialect) -> str:
+        if value is None:
+            return str(None)
+        return f"'{value.astimezone(timezone.utc).isoformat()}'"
 
 
 class TimestampModel(SQLModel):
@@ -65,10 +72,10 @@ class TimestampModel(SQLModel):
     )
 
 
-def check_naive_time(time: time) -> time:
-    if time.tzinfo is not None:
+def check_naive_time(value: time) -> time:
+    if value.tzinfo is not None:
         raise ValueError("Time must be time zone naive")
-    return time
+    return value
 
 
 NaiveTime = Annotated[time, AfterValidator(check_naive_time)]

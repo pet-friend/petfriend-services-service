@@ -38,7 +38,7 @@ async def get_stores(
     offset: int = Query(0, ge=0),
     store_service: StoresService = Depends(StoresService),
 ) -> StoreList:
-    query = dict(name=name, owner_id=owner_id)
+    query = {"name": name, "owner_id": owner_id}
     stores = await store_service.get_stores(limit, offset, **query)
     stores_amount = await store_service.count_stores(**query)
     return StoreList(stores=await store_service.get_stores_read(*stores), amount=stores_amount)
@@ -52,7 +52,7 @@ async def get_my_stores(
     store_service: StoresService = Depends(StoresService),
     owner_id: Id = Depends(get_caller_id),
 ) -> StoreList:
-    query = dict(name=name, owner_id=owner_id)
+    query = {"name": name, "owner_id": owner_id}
     stores = await store_service.get_stores(limit, offset, **query)
     stores_amount = await store_service.count_stores(**query)
     return StoreList(stores=await store_service.get_stores_read(*stores), amount=stores_amount)

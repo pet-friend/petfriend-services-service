@@ -34,7 +34,7 @@ class ServiceBase(SQLModel):
     # If True, the service is provided at the service's address
     is_home_service: bool = False
     category: ServiceCategory
-    timezone: Timezone = Field(default=DEFAULT_TIMEZONE, sa_type=String)  # type: ignore
+    timezone: Timezone = Field(default=DEFAULT_TIMEZONE, sa_type=String)
 
 
 # Public database fields

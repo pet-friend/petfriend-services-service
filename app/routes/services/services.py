@@ -38,7 +38,7 @@ async def get_services(
     offset: int = Query(0, ge=0),
     services_service: ServicesService = Depends(ServicesService),
 ) -> ServiceList:
-    query = dict(name=name, category=category, owner_id=owner_id)
+    query = {"name": name, "owner_id": owner_id, "category": category}
     services = await services_service.get_services(limit, offset, **query)
     services_amount = await services_service.count_services(**query)
     return ServiceList(
@@ -55,7 +55,7 @@ async def get_my_services(
     services_service: ServicesService = Depends(ServicesService),
     owner_id: Id = Depends(get_caller_id),
 ) -> ServiceList:
-    query = dict(name=name, category=category, owner_id=owner_id)
+    query = {"name": name, "owner_id": owner_id, "category": category}
     services = await services_service.get_services(limit, offset, **query)
     services_amount = await services_service.count_services(**query)
     return ServiceList(
