@@ -6,7 +6,7 @@ from pydantic import field_validator, model_validator
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
-from .util import Id, UUIDModel, TimestampModel, OptionalImageUrlModel
+from ..util import Id, UUIDModel, TimestampModel, OptionalImageUrlModel
 from .stores import Store
 
 MAX_CATEGORIES_PER_PRODUCT = 3
@@ -41,9 +41,9 @@ class ProductBase(SQLModel):
     name: str
     description: str | None = None
     enabled: bool = True
-    price: Decimal = Field(max_digits=14, decimal_places=2, ge=0)
+    price: Decimal = Field(max_digits=14, decimal_places=2, gt=0)
     percent_off: Decimal = Field(max_digits=5, decimal_places=2, ge=0, le=100, default=0)
-    available: int | None = None
+    available: int | None = Field(None, ge=0)
 
 
 # What the Product gets from the API (Base + id)

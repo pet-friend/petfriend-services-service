@@ -1,19 +1,19 @@
 # pylint: disable=W0212 # access protected member
 import logging
-from typing import Any, Iterable, Sequence
+from typing import Any, Sequence
 from asyncio import gather
 
 from fastapi import Depends
 from app.exceptions.users import Forbidden
 
 from app.models.util import File, Id
-from app.models.products import Category, ProductCategories, ProductCreate, Product, ProductRead
-from app.repositories.products import ProductsRepository
+from app.models.stores import Category, ProductCategories, ProductCreate, Product, ProductRead
+from app.repositories.stores import ProductsRepository
 from app.exceptions.repository import RecordNotFound
 from app.exceptions.products import ProductAlreadyExists, ProductNotFound, ProductOutOfStock
-from app.services.files import FilesService, products_images_service
-from app.services.stores import StoresService
-from app.services.users import UsersService
+from ..files import FilesService, products_images_service
+from ..users import UsersService
+from .stores import StoresService
 
 
 class ProductsService:
@@ -97,14 +97,14 @@ class ProductsService:
             user_id, user_address_id, user_token
         )
         products = await self.products_repo.get_nearby(
-            c.latitude, c.longitude, skip=offset, limit=limit, categories=categories, **filters
+            c.latitude, c.longitude, categories, skip=offset, limit=limit, **filters
         )
         amount = await self.products_repo.count_nearby(
-            c.latitude, c.longitude, categories=categories, **filters
+            c.latitude, c.longitude, categories, **filters
         )
         return products, amount
 
-    async def get_products_read(self, products: Iterable[Product]) -> Sequence[ProductRead]:
+    async def get_products_read(self, *products: Product) -> Sequence[ProductRead]:
         token = self.files_service.get_token()
         return await gather(*(self.__readable(product, token) for product in products))
 

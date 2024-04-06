@@ -1,6 +1,6 @@
 from decimal import Decimal
 import logging
-from typing import Iterable, Sequence
+from typing import Sequence
 from asyncio import gather
 
 from fastapi import Depends, status
@@ -15,22 +15,24 @@ from app.exceptions.purchases import (
     StoreNotReady,
 )
 from app.exceptions.users import Forbidden
+from app.models.addresses import Address
 from app.models.preferences import PaymentData, PreferenceItem, PurchaseTypes
-from app.models.purchases import (
+from app.models.stores import (
+    Store,
+    Product,
+    ProductRead,
     Purchase,
-    PurchaseItem,
     PurchaseRead,
+    PurchaseItem,
     PurchaseStatus,
     PurchaseStatusUpdate,
 )
-from app.models.products import Product, ProductRead
-from app.models.stores import Store
 from app.models.util import Coordinates, Id, distance_squared
-from app.repositories.purchases import PurchasesRepository
-from app.services.products import ProductsService
+from app.repositories.stores import PurchasesRepository
 from app.config import settings
-from app.services.stores import StoresService
-from app.services.users import UsersService
+from ..users import UsersService
+from .stores import StoresService
+from .products import ProductsService
 
 REQUEST_TIMEOUT = Timeout(5, read=45)
 FORBIDDEN_STATUS_CHANGES = [PurchaseStatus.COMPLETED, PurchaseStatus.CANCELLED]
@@ -57,7 +59,7 @@ class PurchasesService:
             raise Forbidden
         return purchase
 
-    def get_purchases_read(self, purchases: Iterable[Purchase]) -> list[PurchaseRead]:
+    def get_purchases_read(self, *purchases: Purchase) -> list[PurchaseRead]:
         return [PurchaseRead(**p.model_dump(), items=p.items) for p in purchases]
 
     async def get_store_purchases(
@@ -121,6 +123,7 @@ class PurchasesService:
             r = await client.post(url, json=jsonable_encoder(payload))
             if r.status_code == status.HTTP_404_NOT_FOUND:
                 raise StoreNotReady
+            logging.debug(f"Payment service response: {r.status_code} {r.text}")
             r.raise_for_status()
             preference_url: str = r.json()
             purchase.payment_url = preference_url
@@ -158,16 +161,14 @@ class PurchasesService:
     async def __check_purchase_conditions(
         self, store: Store, user_id: Id, delivery_address_id: Id, token: str
     ) -> None:
-        if store.address is None:
-            raise StoreNotReady
-
         user_coords = await self.users_service.get_user_address_coordinates(
             user_id, delivery_address_id, token
         )
 
+        store_address: Address = store.address
         if (
             distance_squared(
-                Coordinates(latitude=store.address.latitude, longitude=store.address.longitude),
+                Coordinates(latitude=store_address.latitude, longitude=store_address.longitude),
                 user_coords,
             )
             > store.delivery_range_km**2
@@ -181,7 +182,7 @@ class PurchasesService:
         if len(products_map) != len(products_quantities):
             raise ProductNotFound
 
-        products_read = await self.products_service.get_products_read(products_map.values())
+        products_read = await self.products_service.get_products_read(*products_map.values())
         store: Store = products[0].store
 
         total_cost = Decimal(0)

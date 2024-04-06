@@ -4,14 +4,14 @@ from typing import TYPE_CHECKING
 from sqlmodel import Field, Relationship, SQLModel
 from pydantic import field_validator
 
-from app.models.addresses import AddressRead, AddressCreate, Address, StoreAddressLink
-from app.models.constants.stores import (
+from ..addresses import AddressRead, AddressCreate, Address, StoreAddressLink
+from ..constants.stores import (
     MIN_DELIVERY_RANGE,
     MAX_DELIVERY_RANGE,
     INVALID_DELIVERY_RANGE_MSG,
     INVALID_SHIPPING_COST_MSG,
 )
-from .util import Id, TimestampModel, OptionalImageUrlModel, UUIDModel
+from ..util import Id, TimestampModel, OptionalImageUrlModel, UUIDModel
 
 if TYPE_CHECKING:
     from .products import Product
@@ -41,17 +41,21 @@ class StorePublic(UUIDModel, StoreBase):
     owner_id: Id
 
 
-# What the user gets from the API (Public + image)
+# What the user gets from the API (Public + image + address)
 class StoreRead(StorePublic, OptionalImageUrlModel):
-    address: AddressRead | None
+    address: AddressRead
 
 
 # Actual data in database table (Base + id + timestamps)
 class Store(StorePublic, TimestampModel, table=True):
     __tablename__ = "stores"
 
-    address: Address | None = Relationship(
-        sa_relationship_kwargs={"lazy": "selectin", "cascade": "all, delete", "uselist": False},
+    address: Address = Relationship(
+        sa_relationship_kwargs={
+            "lazy": "selectin",
+            "cascade": "all, delete-orphan",
+            "single_parent": True,
+        },
         link_model=StoreAddressLink,
     )
     products: list["Product"] = Relationship(
@@ -62,4 +66,4 @@ class Store(StorePublic, TimestampModel, table=True):
 
 # Required attributes for creating a new record
 class StoreCreate(StoreBase):
-    address: AddressCreate | None = None
+    address: AddressCreate

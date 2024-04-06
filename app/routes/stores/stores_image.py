@@ -2,16 +2,16 @@ from fastapi import APIRouter, UploadFile, status, Depends
 
 from app.auth import get_caller_id
 
-from ..models.util import Id, ImageUrlModel
-from ..services.stores import StoresService
-from .responses.image import (
+from app.models.util import Id, ImageUrlModel
+from app.services.stores import StoresService
+from ..responses.image import (
     IMAGE_EXISTS_ERROR,
     INVALID_IMAGE_ERROR,
     NOT_FOUND_ERROR,
 )
-from .responses.stores import STORE_NOT_FOUND_ERROR
-from .responses.auth import FORBIDDEN
-from .util import get_exception_docs, get_image
+from ..responses.stores import STORE_NOT_FOUND_ERROR
+from ..responses.auth import FORBIDDEN
+from ..util import get_exception_docs, get_image
 
 router = APIRouter(prefix="/stores/{store_id}/image", tags=["Store images"])
 

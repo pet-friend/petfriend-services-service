@@ -8,9 +8,9 @@ from app.exceptions.users import Forbidden
 from app.models.stores import StoreCreate, Store, StoreRead
 from app.models.util import File, Id
 from app.repositories.stores import StoresRepository
-from app.services.users import UsersService
-from app.services.addresses import AddressesService
-from .files import FilesService, stores_images_service
+from ..users import UsersService
+from ..addresses import AddressesService
+from ..files import FilesService, stores_images_service
 
 
 class StoresService:
@@ -37,7 +37,13 @@ class StoresService:
         return stores
 
     async def get_nearby_stores(
-        self, user_token: str, limit: int, skip: int, user_id: Id, user_address_id: Id
+        self,
+        user_token: str,
+        limit: int,
+        skip: int,
+        user_id: Id,
+        user_address_id: Id,
+        **filters: Any
     ) -> tuple[Sequence[Store], int]:
         """
         Returns a tuple of stores and the total amount of stores nearby
@@ -45,8 +51,10 @@ class StoresService:
         c = await self.users_service.get_user_address_coordinates(
             user_id, user_address_id, user_token
         )
-        stores = await self.stores_repo.get_nearby(c.latitude, c.longitude, skip=skip, limit=limit)
-        amount = await self.stores_repo.count_nearby(c.latitude, c.longitude)
+        stores = await self.stores_repo.get_nearby(
+            c.latitude, c.longitude, skip=skip, limit=limit, **filters
+        )
+        amount = await self.stores_repo.count_nearby(c.latitude, c.longitude, **filters)
         return stores, amount
 
     async def count_stores(self, **filters: Any) -> int:
@@ -59,7 +67,7 @@ class StoresService:
             raise StoreNotFound
         return store
 
-    async def get_stores_read(self, stores: Sequence[Store]) -> Sequence[StoreRead]:
+    async def get_stores_read(self, *stores: Store) -> Sequence[StoreRead]:
         token = self.files_service.get_token()
         return await gather(*(self.__readable(store, token) for store in stores))
 

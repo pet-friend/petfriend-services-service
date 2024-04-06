@@ -26,6 +26,7 @@ locals {
 
   products_images_container = "products"
   stores_images_container   = "stores"
+  services_images_container = "services"
 }
 
 module "microservice" {
@@ -46,6 +47,7 @@ module "microservice" {
   environment_variables = {
     PRODUCTS_IMAGES_CONTAINER = local.products_images_container
     STORES_IMAGES_CONTAINER   = local.stores_images_container
+    SERVICES_IMAGES_CONTAINER = local.services_images_container
     USERS_SERVICE_URL         = var.users_service_url
     PAYMENTS_SERVICE_URL      = var.payments_service_url
     GOOGLE_MAPS_API_KEY       = var.google_maps_api_key
@@ -62,5 +64,10 @@ resource "azurerm_storage_container" "products_images_container" {
 
 resource "azurerm_storage_container" "stores_images_container" {
   name                 = local.stores_images_container
+  storage_account_name = module.microservice.storage_account.name
+}
+
+resource "azurerm_storage_container" "stores_images_container" {
+  name                 = local.services_images_container
   storage_account_name = module.microservice.storage_account.name
 }

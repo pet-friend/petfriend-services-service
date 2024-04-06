@@ -55,7 +55,7 @@ warn_required_dynamic_aliases = true
 
 [tool.pytest.ini_options]
 minversion = '6.0'
-addopts = '-ra -q'
+addopts = '-ra -q -n auto --dist worksteal'
 testpaths = ['tests']
 pythonpath = ['.']
 # ignore deprecation warnings inside dependencies:

@@ -38,8 +38,6 @@ class AddressesService:
         return Coordinates(latitude=coords["lat"], longitude=coords["lng"])
 
     @staticmethod
-    async def get_address(address: AddressCreate | None) -> Address | None:
-        if address is None:
-            return None
+    async def get_address(address: AddressCreate) -> Address:
         coords = await AddressesService.get_address_coordinates(address)
         return Address(**address.model_dump(), **coords.model_dump())

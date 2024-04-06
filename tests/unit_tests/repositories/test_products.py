@@ -5,9 +5,9 @@ from sqlmodel import select
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from app.models.products import Product
-from app.models.stores import Store
-from app.repositories.products import ProductsRepository
+from app.models.addresses import Address
+from app.models.stores import Store, Product
+from app.repositories.stores import ProductsRepository
 from app.exceptions.repository import RecordNotFound
 from tests.factories.product_factories import ProductCreateFactory
 from tests.factories.store_factories import StoreCreateFactory
@@ -19,8 +19,12 @@ class TestProductsRepository(BaseDbTestCase):
 
     @pytest.fixture(autouse=True)
     def setup(self, setup_db: None) -> None:
-        self.store_create = StoreCreateFactory.build(address=None)
-        self.store = Store(owner_id=uuid4(), **self.store_create.__dict__)
+        self.store_create = StoreCreateFactory.build()
+        self.store = Store(
+            owner_id=uuid4(),
+            address=Address(latitude=0, longitude=0, **self.store_create.address.model_dump()),
+            **self.store_create.model_dump(exclude={"address"}),
+        )
         self.product_create = ProductCreateFactory.build()
         self.product = Product(
             id=uuid4(), store_id=self.store.id, **self.product_create.model_dump()
@@ -48,24 +52,24 @@ class TestProductsRepository(BaseDbTestCase):
         self.db.add(self.store)
         await self.db.flush()
 
-        product_2 = self.product.model_copy()
-        product_2.description = ":D"
         created = await self.product_repository.save(self.product)
+        created_copy = created.model_copy()
+        created_copy.description = ":D"
 
         # When
         updated = await self.product_repository.update(
-            (created.store_id, created.id), product_2.model_dump()
+            (created.store_id, created.id), created_copy.model_dump()
         )
-
         all_records = await self.product_repository.get_all()
 
         # Then
-        assert created.id == updated.id  # should update the original object
+        assert created.id == updated.id
 
-        assert updated.updated_at != product_2.updated_at  # should update the updated_at field
-        product_2.updated_at = updated.updated_at
+        assert created_copy.created_at == updated.created_at
+        assert created_copy.updated_at != updated.updated_at
 
-        assert updated.model_dump() == product_2.model_dump()
+        created_copy.updated_at = updated.updated_at
+        assert created_copy.model_dump() == updated.model_dump()
         assert all_records == [updated]
 
     async def test_delete_should_update_db(self) -> None:

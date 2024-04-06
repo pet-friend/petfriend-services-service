@@ -1,28 +1,22 @@
-from unittest.mock import patch
 from uuid import UUID, uuid4
 
 from httpx import URL
-import pytest
 from pytest_httpx import HTTPXMock
 from app.config import settings
 
-from app.models.purchases import PurchaseStatus
-from app.models.stores import Store
-from app.models.util import Coordinates, Id
-from tests.factories.address_factories import AddressCreateFactory
+from app.models.stores import Store, PurchaseStatus
+from app.models.util import Id
 from tests.factories.product_factories import ProductCreateFactory
 from tests.factories.store_factories import StoreCreateFactory
-from tests.tests_setup import BaseAPITestCase
+from tests.tests_setup import BaseAPITestCase, GetUserCoordinatesMock
 
 
-@pytest.mark.usefixtures("mock_google_maps")
-class TestStoresProductsRoute(BaseAPITestCase):
+class TestPurchasesRoute(BaseAPITestCase):
     def setup_method(self) -> None:
-        self.store_create_json_data = StoreCreateFactory.build(address=None).model_dump(mode="json")
-        self.store_create_json_data["address"] = AddressCreateFactory.build(
-            country_code="AR", type="other"
-        ).model_dump(mode="json")
-        self.product_create_json_data = ProductCreateFactory.build().model_dump(mode="json")
+        self.store_create_json_data = StoreCreateFactory.build().model_dump(mode="json")
+        self.product_create_json_data = ProductCreateFactory.build(available=None).model_dump(
+            mode="json"
+        )
 
     async def change_store_owner(self, store_id: str | Id, new_owner: str | Id | None = None) -> Id:
         store = await self.db.get(Store, store_id)
@@ -119,7 +113,9 @@ class TestStoresProductsRoute(BaseAPITestCase):
         )
         assert r.status_code == 404
 
-    async def test_purchase_store_has_no_address(self, httpx_mock: HTTPXMock) -> None:
+    async def test_purchase_store_has_not_linked_payment_account(
+        self, httpx_mock: HTTPXMock, mock_get_user_coordinates: GetUserCoordinatesMock
+    ) -> None:
         r_store = await self.client.post("/stores", json=self.store_create_json_data)
         assert r_store.status_code == 201
         store = r_store.json()
@@ -141,16 +137,43 @@ class TestStoresProductsRoute(BaseAPITestCase):
         )
         httpx_mock.add_response(url=url, status_code=404)
 
-        with patch("app.services.users.UsersService.get_user_address_coordinates") as mock:
-            mock.return_value = Coordinates(latitude=0, longitude=0)
-            r = await self.client.post(
-                f"/stores/{store['id']}/purchases",
-                json=quantities,
-                params={"delivery_address_id": str(uuid4())},
-            )
+        address_id = uuid4()
+        mock_get_user_coordinates(address_id)
+        r = await self.client.post(
+            f"/stores/{store['id']}/purchases",
+            json=quantities,
+            params={"delivery_address_id": str(address_id)},
+        )
         assert r.status_code == 409
 
-    async def test_purchase_one_item(self, httpx_mock: HTTPXMock) -> None:
+    async def test_purchase_one_item_invalid_address(
+        self, httpx_mock: HTTPXMock, mock_get_user_coordinates: GetUserCoordinatesMock
+    ) -> None:
+        r_store = await self.client.post("/stores", json=self.store_create_json_data)
+        assert r_store.status_code == 201
+        store = r_store.json()
+        r_product = await self.client.post(
+            f"/stores/{store['id']}/products", json=self.product_create_json_data
+        )
+        assert r_product.status_code == 201
+        product = r_product.json()
+
+        await self.change_store_owner(store["id"])
+
+        quantities = {product["id"]: 1}
+
+        address_id = uuid4()
+        mock_get_user_coordinates(address_id, True)
+        r = await self.client.post(
+            f"/stores/{store['id']}/purchases",
+            json=quantities,
+            params={"delivery_address_id": str(address_id)},
+        )
+        assert r.status_code == 404
+
+    async def test_purchase_one_item(
+        self, httpx_mock: HTTPXMock, mock_get_user_coordinates: GetUserCoordinatesMock
+    ) -> None:
         r_store = await self.client.post("/stores", json=self.store_create_json_data)
         assert r_store.status_code == 201
         store = r_store.json()
@@ -172,15 +195,14 @@ class TestStoresProductsRoute(BaseAPITestCase):
         )
         preference_url = "http://payment.com"
         httpx_mock.add_response(url=url, json=preference_url)
-        address_id = str(uuid4())
+        address_id = uuid4()
+        mock_get_user_coordinates(address_id)
 
-        with patch("app.services.users.UsersService.get_user_address_coordinates") as mock:
-            mock.return_value = Coordinates(latitude=0, longitude=0)
-            r = await self.client.post(
-                f"/stores/{store['id']}/purchases",
-                json=quantities,
-                params={"delivery_address_id": address_id},
-            )
+        r = await self.client.post(
+            f"/stores/{store['id']}/purchases",
+            json=quantities,
+            params={"delivery_address_id": str(address_id)},
+        )
         assert r.status_code == 200
         data = r.json()
 
@@ -188,11 +210,13 @@ class TestStoresProductsRoute(BaseAPITestCase):
         assert data["status"] == "created"
         assert data["store_id"] == store["id"]
         assert data["buyer_id"] == str(self.user_id)
-        assert data["delivery_address_id"] == address_id
+        assert data["delivery_address_id"] == str(address_id)
         assert len(data["items"]) == 1
         assert data["items"][0]["product_id"] == product["id"]
 
-    async def test_purchase_one_item_and_get_my_purchases(self, httpx_mock: HTTPXMock) -> None:
+    async def test_purchase_one_item_and_get_my_purchases(
+        self, httpx_mock: HTTPXMock, mock_get_user_coordinates: GetUserCoordinatesMock
+    ) -> None:
         r_store = await self.client.post("/stores", json=self.store_create_json_data)
         assert r_store.status_code == 201
         store = r_store.json()
@@ -214,15 +238,14 @@ class TestStoresProductsRoute(BaseAPITestCase):
         )
         preference_url = "http://payment.com"
         httpx_mock.add_response(url=url, json=preference_url)
-        address_id = str(uuid4())
+        address_id = uuid4()
+        mock_get_user_coordinates(address_id)
 
-        with patch("app.services.users.UsersService.get_user_address_coordinates") as mock:
-            mock.return_value = Coordinates(latitude=0, longitude=0)
-            r = await self.client.post(
-                f"/stores/{store['id']}/purchases",
-                json=quantities,
-                params={"delivery_address_id": address_id},
-            )
+        r = await self.client.post(
+            f"/stores/{store['id']}/purchases",
+            json=quantities,
+            params={"delivery_address_id": str(address_id)},
+        )
         assert r.status_code == 200
         purchase_id = r.json()["id"]
 
@@ -232,7 +255,9 @@ class TestStoresProductsRoute(BaseAPITestCase):
         assert len(data["purchases"]) == 1
         assert data["purchases"][0]["id"] == purchase_id
 
-    async def test_purchase_one_item_reduces_stock(self, httpx_mock: HTTPXMock) -> None:
+    async def test_purchase_one_item_reduces_stock(
+        self, httpx_mock: HTTPXMock, mock_get_user_coordinates: GetUserCoordinatesMock
+    ) -> None:
         r_store = await self.client.post("/stores", json=self.store_create_json_data)
         assert r_store.status_code == 201
         store = r_store.json()
@@ -255,13 +280,13 @@ class TestStoresProductsRoute(BaseAPITestCase):
         )
         httpx_mock.add_response(url=url, json="http://payment.com")
 
-        with patch("app.services.users.UsersService.get_user_address_coordinates") as mock:
-            mock.return_value = Coordinates(latitude=0, longitude=0)
-            r = await self.client.post(
-                f"/stores/{store['id']}/purchases",
-                json=quantities,
-                params={"delivery_address_id": str(uuid4())},
-            )
+        address_id = uuid4()
+        mock_get_user_coordinates(address_id)
+        r = await self.client.post(
+            f"/stores/{store['id']}/purchases",
+            json=quantities,
+            params={"delivery_address_id": str(address_id)},
+        )
         assert r.status_code == 200
 
         r_product_get = await self.client.get(f"/stores/{store['id']}/products/{product['id']}")
@@ -272,7 +297,7 @@ class TestStoresProductsRoute(BaseAPITestCase):
         )
 
     async def test_purchase_one_item_does_not_reduces_stock_if_fails(
-        self, httpx_mock: HTTPXMock
+        self, httpx_mock: HTTPXMock, mock_get_user_coordinates: GetUserCoordinatesMock
     ) -> None:
         r_store = await self.client.post("/stores", json=self.store_create_json_data)
         assert r_store.status_code == 201
@@ -296,20 +321,22 @@ class TestStoresProductsRoute(BaseAPITestCase):
         )
         httpx_mock.add_response(url=url, status_code=404)
 
-        with patch("app.services.users.UsersService.get_user_address_coordinates") as mock:
-            mock.return_value = Coordinates(latitude=0, longitude=0)
-            r = await self.client.post(
-                f"/stores/{store['id']}/purchases",
-                json=quantities,
-                params={"delivery_address_id": str(uuid4())},
-            )
+        address_id = uuid4()
+        mock_get_user_coordinates(address_id)
+        r = await self.client.post(
+            f"/stores/{store['id']}/purchases",
+            json=quantities,
+            params={"delivery_address_id": str(address_id)},
+        )
         assert r.status_code == 409
 
         r_product_get = await self.client.get(f"/stores/{store['id']}/products/{product['id']}")
         assert r_product_get.status_code == 200
         assert r_product_get.json()["available"]
 
-    async def test_cant_update_purchase_without_api_key(self, httpx_mock: HTTPXMock) -> None:
+    async def test_cant_update_purchase_without_api_key(
+        self, httpx_mock: HTTPXMock, mock_get_user_coordinates: GetUserCoordinatesMock
+    ) -> None:
         r_store = await self.client.post("/stores", json=self.store_create_json_data)
         assert r_store.status_code == 201
         store = r_store.json()
@@ -328,20 +355,22 @@ class TestStoresProductsRoute(BaseAPITestCase):
             },
         )
         httpx_mock.add_response(url=url, json="http://payment.com")
-        with patch("app.services.users.UsersService.get_user_address_coordinates") as mock:
-            mock.return_value = Coordinates(latitude=0, longitude=0)
-            r = await self.client.post(
-                f"/stores/{store['id']}/purchases",
-                json=quantities,
-                params={"delivery_address_id": str(uuid4())},
-            )
+        address_id = uuid4()
+        mock_get_user_coordinates(address_id)
+        r = await self.client.post(
+            f"/stores/{store['id']}/purchases",
+            json=quantities,
+            params={"delivery_address_id": str(address_id)},
+        )
         assert r.status_code == 200
         purchase_id = r.json()["id"]
 
         r = await self.client.put(f"/stores/{store['id']}/purchases/{purchase_id}")
         assert r.status_code == 401
 
-    async def test_can_update_purchase_to_in_progress(self, httpx_mock: HTTPXMock) -> None:
+    async def test_can_update_purchase_to_in_progress(
+        self, httpx_mock: HTTPXMock, mock_get_user_coordinates: GetUserCoordinatesMock
+    ) -> None:
         r_store = await self.client.post("/stores", json=self.store_create_json_data)
         assert r_store.status_code == 201
         store = r_store.json()
@@ -360,13 +389,13 @@ class TestStoresProductsRoute(BaseAPITestCase):
             },
         )
         httpx_mock.add_response(url=url, json="http://payment.com")
-        with patch("app.services.users.UsersService.get_user_address_coordinates") as mock:
-            mock.return_value = Coordinates(latitude=0, longitude=0)
-            r = await self.client.post(
-                f"/stores/{store['id']}/purchases",
-                json=quantities,
-                params={"delivery_address_id": str(uuid4())},
-            )
+        address_id = uuid4()
+        mock_get_user_coordinates(address_id)
+        r = await self.client.post(
+            f"/stores/{store['id']}/purchases",
+            json=quantities,
+            params={"delivery_address_id": str(address_id)},
+        )
         assert r.status_code == 200
         p = r.json()
         assert p["status"] == PurchaseStatus.CREATED
@@ -384,7 +413,9 @@ class TestStoresProductsRoute(BaseAPITestCase):
         assert data["status"] == PurchaseStatus.IN_PROGRESS
         assert data.get("payment_url", None) is None
 
-    async def test_can_update_purchase_to_completed(self, httpx_mock: HTTPXMock) -> None:
+    async def test_can_update_purchase_to_completed(
+        self, httpx_mock: HTTPXMock, mock_get_user_coordinates: GetUserCoordinatesMock
+    ) -> None:
         r_store = await self.client.post("/stores", json=self.store_create_json_data)
         assert r_store.status_code == 201
         store = r_store.json()
@@ -403,13 +434,13 @@ class TestStoresProductsRoute(BaseAPITestCase):
             },
         )
         httpx_mock.add_response(url=url, json="http://payment.com")
-        with patch("app.services.users.UsersService.get_user_address_coordinates") as mock:
-            mock.return_value = Coordinates(latitude=0, longitude=0)
-            r = await self.client.post(
-                f"/stores/{store['id']}/purchases",
-                json=quantities,
-                params={"delivery_address_id": str(uuid4())},
-            )
+        address_id = uuid4()
+        mock_get_user_coordinates(address_id)
+        r = await self.client.post(
+            f"/stores/{store['id']}/purchases",
+            json=quantities,
+            params={"delivery_address_id": str(address_id)},
+        )
         assert r.status_code == 200
         p = r.json()
         assert p["status"] == PurchaseStatus.CREATED
@@ -428,7 +459,7 @@ class TestStoresProductsRoute(BaseAPITestCase):
         assert data.get("payment_url", None) is None
 
     async def test_can_update_purchase_to_cancelled_and_restores_stock(
-        self, httpx_mock: HTTPXMock
+        self, httpx_mock: HTTPXMock, mock_get_user_coordinates: GetUserCoordinatesMock
     ) -> None:
         r_store = await self.client.post("/stores", json=self.store_create_json_data)
         assert r_store.status_code == 201
@@ -448,13 +479,13 @@ class TestStoresProductsRoute(BaseAPITestCase):
             },
         )
         httpx_mock.add_response(url=url, json="http://payment.com")
-        with patch("app.services.users.UsersService.get_user_address_coordinates") as mock:
-            mock.return_value = Coordinates(latitude=0, longitude=0)
-            r = await self.client.post(
-                f"/stores/{store['id']}/purchases",
-                json=quantities,
-                params={"delivery_address_id": str(uuid4())},
-            )
+        address_id = uuid4()
+        mock_get_user_coordinates(address_id)
+        r = await self.client.post(
+            f"/stores/{store['id']}/purchases",
+            json=quantities,
+            params={"delivery_address_id": str(address_id)},
+        )
         assert r.status_code == 200
         p = r.json()
         assert p["status"] == PurchaseStatus.CREATED

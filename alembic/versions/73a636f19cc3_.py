@@ -86,3 +86,7 @@ def downgrade():
     op.drop_table('stores')
     op.drop_table('addresses')
     # ### end Alembic commands ###
+
+    # drop category and addresstype enums
+    sa.Enum(name='category').drop(op.get_bind())
+    sa.Enum(name='addresstype').drop(op.get_bind())

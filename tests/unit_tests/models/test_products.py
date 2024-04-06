@@ -1,7 +1,7 @@
 from unittest import IsolatedAsyncioTestCase
 
 from pydantic import ValidationError
-from app.models.products import Category, ProductCreate
+from app.models.stores import Category, ProductCreate
 from tests.factories.product_factories import ProductCreateFactory
 
 

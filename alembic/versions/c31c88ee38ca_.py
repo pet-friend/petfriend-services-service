@@ -24,7 +24,7 @@ def upgrade():
     sa.Column('updated_at', sa.DateTime(), server_default=sa.text('current_timestamp'), nullable=False),
     sa.Column('id', sqlmodel.sql.sqltypes.GUID(), nullable=False),
     sa.Column('store_id', sqlmodel.sql.sqltypes.GUID(), nullable=False),
-    sa.Column('state', sa.Enum('IN_PROGRESS', 'COMPLETED', 'CANCELLED', name='purchasestate'), nullable=False),
+    sa.Column('state', sa.Enum('IN_PROGRESS', 'COMPLETED', 'CANCELLED', name='purchasestatus'), nullable=False),
     sa.ForeignKeyConstraint(['store_id'], ['stores.id'], ),
     sa.PrimaryKeyConstraint('store_id', 'id')
     )
@@ -47,3 +47,6 @@ def downgrade():
     op.drop_table('purchase_items')
     op.drop_table('purchases')
     # ### end Alembic commands ###
+    
+    # drop purchasestatus enum
+    sa.Enum(name='purchasestatus').drop(op.get_bind())

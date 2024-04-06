@@ -1,5 +1,4 @@
 # mypy: disable-error-code="method-assign"
-import datetime
 from unittest.mock import AsyncMock
 from unittest import IsolatedAsyncioTestCase
 from uuid import uuid4
@@ -7,11 +6,12 @@ from uuid import uuid4
 from app.exceptions.products import ProductNotFound
 from app.exceptions.users import Forbidden
 
-from app.models.products import Product
+from app.models.addresses import Address
+from app.models.stores import Product
 from app.models.stores import Store
 from app.services.files import FilesService
-from app.services.products import ProductsService
-from app.repositories.products import ProductsRepository
+from app.services.stores import ProductsService
+from app.repositories.stores import ProductsRepository
 from app.services.stores import StoresService
 from tests.factories.product_factories import ProductCreateFactory
 from tests.factories.store_factories import StoreCreateFactory
@@ -21,10 +21,11 @@ from .util import File
 class TestProductsService(IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.owner_id = uuid4()
+        store_create = StoreCreateFactory().build()
         self.store = Store(
-            id=uuid4(),
             owner_id=self.owner_id,
-            **StoreCreateFactory.build(address=None).model_dump(),
+            address=Address(latitude=0, longitude=0, **store_create.address.model_dump()),
+            **store_create.model_dump(exclude={"address"}),
         )
         self.stores_service = AsyncMock(spec=StoresService)
         self.product_create = ProductCreateFactory.build()
@@ -32,8 +33,6 @@ class TestProductsService(IsolatedAsyncioTestCase):
             id=uuid4(),
             store_id=self.store.id,
             store=self.store,
-            created_at=datetime.datetime(2023, 1, 1),
-            updated_at=datetime.datetime(2023, 1, 1),
             **self.product_create.__dict__,
         )
         self.repository = AsyncMock(spec=ProductsRepository)

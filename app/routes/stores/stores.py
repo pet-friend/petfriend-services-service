@@ -1,15 +1,15 @@
 from fastapi import APIRouter, Depends, Query
 from fastapi import status as http_status
 
-from app.models.stores import StoreCreate, StorePublic, StoreRead
+from app.models.stores import StoreCreate, StoreRead
 from app.models.util import Id
 from app.serializers.stores import StoreList
 from app.services.stores import StoresService
 from app.auth import get_caller_id, get_caller_token
-from .responses.addresses import NON_EXISTENT_ADDRESS_ERROR, ADDRESS_NOT_FOUND_ERROR
-from .responses.stores import STORE_NOT_FOUND_ERROR
-from .responses.auth import FORBIDDEN
-from .util import get_exception_docs
+from ..responses.addresses import NON_EXISTENT_ADDRESS_ERROR, ADDRESS_NOT_FOUND_ERROR
+from ..responses.stores import STORE_NOT_FOUND_ERROR
+from ..responses.auth import FORBIDDEN
+from ..util import get_exception_docs
 
 
 router = APIRouter(prefix="/stores", tags=["Stores"])
@@ -25,37 +25,43 @@ async def create_store(
     data: StoreCreate,
     store_service: StoresService = Depends(StoresService),
     owner_id: Id = Depends(get_caller_id),
-) -> StorePublic:
-    return await store_service.create_store(data, owner_id)
+) -> StoreRead:
+    store = await store_service.create_store(data, owner_id)
+    return (await store_service.get_stores_read(store))[0]
 
 
 @router.get("")
 async def get_stores(
     owner_id: Id | None = None,
+    name: str | None = Query(None),
     limit: int = Query(10, ge=1),
     offset: int = Query(0, ge=0),
     store_service: StoresService = Depends(StoresService),
 ) -> StoreList:
-    stores = await store_service.get_stores(limit, offset, owner_id=owner_id)
-    stores_amount = await store_service.count_stores(owner_id=owner_id)
-    return StoreList(stores=await store_service.get_stores_read(stores), amount=stores_amount)
+    query = {"name": name, "owner_id": owner_id}
+    stores = await store_service.get_stores(limit, offset, **query)
+    stores_amount = await store_service.count_stores(**query)
+    return StoreList(stores=await store_service.get_stores_read(*stores), amount=stores_amount)
 
 
 @router.get("/me")
 async def get_my_stores(
+    name: str | None = Query(None),
     limit: int = Query(10, ge=1),
     offset: int = Query(0, ge=0),
     store_service: StoresService = Depends(StoresService),
     owner_id: Id = Depends(get_caller_id),
 ) -> StoreList:
-    stores = await store_service.get_stores(limit, offset, owner_id=owner_id)
-    stores_amount = await store_service.count_stores(owner_id=owner_id)
-    return StoreList(stores=await store_service.get_stores_read(stores), amount=stores_amount)
+    query = {"name": name, "owner_id": owner_id}
+    stores = await store_service.get_stores(limit, offset, **query)
+    stores_amount = await store_service.count_stores(**query)
+    return StoreList(stores=await store_service.get_stores_read(*stores), amount=stores_amount)
 
 
 @router.get("/nearby", responses=get_exception_docs(ADDRESS_NOT_FOUND_ERROR))
 async def get_nearby_stores(
     user_address_id: Id,
+    name: str | None = Query(None),
     user_token: str = Depends(get_caller_token),
     limit: int = Query(10, ge=1),
     offset: int = Query(0, ge=0),
@@ -63,9 +69,9 @@ async def get_nearby_stores(
     user_id: Id = Depends(get_caller_id),
 ) -> StoreList:
     stores, stores_amount = await store_service.get_nearby_stores(
-        user_token, limit, offset, user_id, user_address_id
+        user_token, limit, offset, user_id, user_address_id, name=name
     )
-    return StoreList(stores=await store_service.get_stores_read(stores), amount=stores_amount)
+    return StoreList(stores=await store_service.get_stores_read(*stores), amount=stores_amount)
 
 
 @router.get("/{store_id}", responses=get_exception_docs(STORE_NOT_FOUND_ERROR))
@@ -73,7 +79,7 @@ async def get_store(
     store_id: str, store_service: StoresService = Depends(StoresService)
 ) -> StoreRead:
     store = await store_service.get_store_by_id(store_id)
-    return (await store_service.get_stores_read([store]))[0]
+    return (await store_service.get_stores_read(store))[0]
 
 
 @router.put("/{store_id}", responses=get_exception_docs(NON_EXISTENT_ADDRESS_ERROR, FORBIDDEN))
@@ -84,7 +90,7 @@ async def update_user_store(
     user_id: Id = Depends(get_caller_id),
 ) -> StoreRead:
     store = await stores_service.update_store(store_id, data, user_id)
-    return (await stores_service.get_stores_read([store]))[0]
+    return (await stores_service.get_stores_read(store))[0]
 
 
 @router.delete(

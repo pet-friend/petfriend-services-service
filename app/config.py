@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     STORAGE_CONNECTION_STRING: str
     PRODUCTS_IMAGES_CONTAINER: str
     STORES_IMAGES_CONTAINER: str
+    SERVICES_IMAGES_CONTAINER: str
 
 
 class ProductionSettings(Settings):
