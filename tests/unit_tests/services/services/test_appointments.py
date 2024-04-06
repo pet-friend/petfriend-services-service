@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 from app.models.payments import PaymentStatus
 from app.models.services import Service, AppointmentSlots, DayOfWeek, AvailableAppointment
 from app.models.addresses import Address
-from app.models.services.appointments import Appointment
+from app.models.services.appointments import Appointment, AppointmentCreate
 from app.repositories.services import AppointmentsRepository
 from app.services.services import AppointmentsService, ServicesService
 from tests.factories.service_factories import ServiceCreateFactory
@@ -55,13 +55,13 @@ class TestServicesService:
 
         # When
         available_appointments = await self.service.get_available_appointments(
-            self.service_model.id, now
+            self.service_model.id, now=now
         )
 
         # Then
         self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
 
-        self.__assert_repo_get_all_by_range(now)
+        self.assert_repo_get_all_by_range(now)
         assert available_appointments == [
             AvailableAppointment(
                 start=datetime.combine(now.date(), time(8, 0), tz),
@@ -97,13 +97,13 @@ class TestServicesService:
 
         # When
         available_appointments = await self.service.get_available_appointments(
-            self.service_model.id, now
+            self.service_model.id, now=now
         )
 
         # Then
         self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
 
-        self.__assert_repo_get_all_by_range(now)
+        self.assert_repo_get_all_by_range(now)
         assert available_appointments == [
             AvailableAppointment(
                 start=datetime.combine(now.date(), time(8, 30), tz),
@@ -140,13 +140,13 @@ class TestServicesService:
 
         # When
         available_appointments = await self.service.get_available_appointments(
-            self.service_model.id, now
+            self.service_model.id, now=now
         )
 
         # Then
         self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
 
-        self.__assert_repo_get_all_by_range(now)
+        self.assert_repo_get_all_by_range(now)
         assert available_appointments == [
             AvailableAppointment(
                 start=datetime.combine(now.date(), time(8, 0), tz),
@@ -188,13 +188,13 @@ class TestServicesService:
 
         # When
         available_appointments = await self.service.get_available_appointments(
-            self.service_model.id, now
+            self.service_model.id, now=now
         )
 
         # Then
         self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
 
-        self.__assert_repo_get_all_by_range(now)
+        self.assert_repo_get_all_by_range(now)
         assert available_appointments == [
             AvailableAppointment(
                 start=datetime.combine(now.date(), time(8, 30), tz),
@@ -234,13 +234,13 @@ class TestServicesService:
 
         # When
         available_appointments = await self.service.get_available_appointments(
-            self.service_model.id, now
+            self.service_model.id, now=now
         )
 
         # Then
         self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
 
-        self.__assert_repo_get_all_by_range(now)
+        self.assert_repo_get_all_by_range(now)
         assert available_appointments == [
             AvailableAppointment(
                 start=datetime.combine(now.date(), time(8, 0), tz),
@@ -276,13 +276,13 @@ class TestServicesService:
 
         # When
         available_appointments = await self.service.get_available_appointments(
-            self.service_model.id, now
+            self.service_model.id, now=now
         )
 
         # Then
         self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
 
-        self.__assert_repo_get_all_by_range(now, 7)
+        self.assert_repo_get_all_by_range(now, 7)
         next_week = now.date() + timedelta(weeks=1)
         assert available_appointments == [
             AvailableAppointment(
@@ -326,13 +326,13 @@ class TestServicesService:
 
         # When
         available_appointments = await self.service.get_available_appointments(
-            self.service_model.id, now
+            self.service_model.id, now=now
         )
 
         # Then
         self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
 
-        self.__assert_repo_get_all_by_range(now, 7)
+        self.assert_repo_get_all_by_range(now, 7)
         next_week = now.date() + timedelta(weeks=1)
         assert available_appointments == [
             AvailableAppointment(
@@ -385,13 +385,13 @@ class TestServicesService:
 
         # When
         available_appointments = await self.service.get_available_appointments(
-            self.service_model.id, now
+            self.service_model.id, now=now
         )
 
         # Then
         self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
 
-        self.__assert_repo_get_all_by_range(now, 1)
+        self.assert_repo_get_all_by_range(now, 1)
         tomorrow_date = now.date() + timedelta(days=1)
         assert available_appointments == [
             AvailableAppointment(
@@ -467,13 +467,13 @@ class TestServicesService:
 
         # When
         available_appointments = await self.service.get_available_appointments(
-            self.service_model.id, now
+            self.service_model.id, now=now
         )
 
         # Then
         self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
 
-        self.__assert_repo_get_all_by_range(now, 1)
+        self.assert_repo_get_all_by_range(now, 1)
         assert available_appointments == [
             AvailableAppointment(
                 start=datetime.combine(now.date(), time(8, 0), tz),
@@ -497,13 +497,221 @@ class TestServicesService:
             ),
         ]
 
-    def __assert_repo_get_all_by_range(self, now: datetime, days_in_advance: int = 0) -> None:
+    async def test_get_available_appointments_with_after(self) -> None:
+        # Given
+        tz = ZoneInfo(self.service_model.timezone)
+        now = datetime.combine(date.today(), time(1, 0), tz)  # It's 1:00AM
+        today = DayOfWeek.from_weekday(now.date().weekday())
+        self.service_model.appointment_days_in_advance = 0
+        self.service_model.appointment_slots = [
+            AppointmentSlots(
+                start_day=today,
+                start_time=time(8, 0),
+                end_time=time(9, 0),
+                end_day=today,
+                appointment_duration=timedelta(minutes=30),
+                max_appointments_per_slot=3,
+            )
+        ]
+        self.repository.get_all_by_range.return_value = []
+        self.services_service.get_service_by_id.return_value = self.service_model
+
+        # When
+        after = datetime.combine(now.date(), time(8, 30), tz)
+        available_appointments = await self.service.get_available_appointments(
+            self.service_model.id, now=now, after=after
+        )
+
+        # Then
+        self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
+        self.assert_repo_get_all_by_range(now, after=after)
+        assert available_appointments == [
+            AvailableAppointment(
+                start=datetime.combine(now.date(), time(8, 30), tz),
+                end=datetime.combine(now.date(), time(9, 0), tz),
+                amount=3,
+            ),
+        ]
+
+    async def test_get_available_appointments_with_before(self) -> None:
+        # Given
+        tz = ZoneInfo(self.service_model.timezone)
+        now = datetime.combine(date.today(), time(1, 0), tz)  # It's 1:00AM
+        today = DayOfWeek.from_weekday(now.date().weekday())
+        self.service_model.appointment_days_in_advance = 0
+        self.service_model.appointment_slots = [
+            AppointmentSlots(
+                start_day=today,
+                start_time=time(8, 0),
+                end_time=time(9, 0),
+                end_day=today,
+                appointment_duration=timedelta(minutes=30),
+                max_appointments_per_slot=3,
+            )
+        ]
+        self.repository.get_all_by_range.return_value = []
+        self.services_service.get_service_by_id.return_value = self.service_model
+
+        # When
+        before = datetime.combine(now.date(), time(8, 30), tz)
+        available_appointments = await self.service.get_available_appointments(
+            self.service_model.id, now=now, before=before
+        )
+
+        # Then
+        self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
+        self.assert_repo_get_all_by_range(now, before=before)
+        assert available_appointments == [
+            AvailableAppointment(
+                start=datetime.combine(now.date(), time(8, 00), tz),
+                end=datetime.combine(now.date(), time(8, 30), tz),
+                amount=3,
+            ),
+        ]
+
+    async def test_get_available_appointments_with_before_partial(self) -> None:
+        # Given
+        tz = ZoneInfo(self.service_model.timezone)
+        now = datetime.combine(date.today(), time(1, 0), tz)  # It's 1:00AM
+        today = DayOfWeek.from_weekday(now.date().weekday())
+        self.service_model.appointment_days_in_advance = 0
+        self.service_model.appointment_slots = [
+            AppointmentSlots(
+                start_day=today,
+                start_time=time(8, 0),
+                end_time=time(9, 0),
+                end_day=today,
+                appointment_duration=timedelta(minutes=30),
+                max_appointments_per_slot=3,
+            )
+        ]
+        self.repository.get_all_by_range.return_value = []
+        self.services_service.get_service_by_id.return_value = self.service_model
+
+        # When
+        before = datetime.combine(now.date(), time(8, 45), tz)
+        available_appointments = await self.service.get_available_appointments(
+            self.service_model.id, now=now, before=before
+        )
+
+        # Then
+        self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
+        self.assert_repo_get_all_by_range(now, before=before)
+        assert available_appointments == [
+            AvailableAppointment(
+                start=datetime.combine(now.date(), time(8, 00), tz),
+                end=datetime.combine(now.date(), time(8, 30), tz),
+                amount=3,
+            ),
+            AvailableAppointment(
+                start=datetime.combine(now.date(), time(8, 30), tz),
+                end=datetime.combine(now.date(), time(9, 0), tz),
+                amount=3,
+            ),
+        ]
+
+    async def test_get_available_appointments_with_after_and_overlap(self) -> None:
+        # Given
+        tz = ZoneInfo(self.service_model.timezone)
+        now = datetime.combine(date.today(), time(1, 0), tz)  # It's 1:00AM
+        today = DayOfWeek.from_weekday(now.date().weekday())
+        self.service_model.appointment_days_in_advance = 0
+        self.service_model.appointment_slots = [
+            AppointmentSlots(
+                start_day=today,
+                start_time=time(8, 0),
+                end_time=time(9, 0),
+                end_day=today,
+                appointment_duration=timedelta(minutes=30),
+                max_appointments_per_slot=3,
+            )
+        ]
+        self.repository.get_all_by_range.return_value = [
+            Appointment(
+                start=datetime.combine(now.date(), time(7, 0), tz),
+                end=datetime.combine(now.date(), time(8, 45), tz),
+                status=PaymentStatus.COMPLETED,
+                customer_id=uuid4(),
+            )
+        ]
+        self.services_service.get_service_by_id.return_value = self.service_model
+
+        # When
+        after = datetime.combine(now.date(), time(8, 40), tz)
+        available_appointments = await self.service.get_available_appointments(
+            self.service_model.id, now=now, after=after
+        )
+
+        # Then
+        self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
+        self.assert_repo_get_all_by_range(now, after=after)
+        assert available_appointments == [
+            AvailableAppointment(
+                start=datetime.combine(now.date(), time(8, 30), tz),
+                end=datetime.combine(now.date(), time(9, 0), tz),
+                amount=2,
+            ),
+        ]
+
+    async def test_create_appointment(self) -> None:
+        # Given
+        tz = ZoneInfo(self.service_model.timezone)
+        now = datetime.combine(date.today(), time(1, 0), tz)  # It's 1:00AM
+        today = DayOfWeek.from_weekday(now.date().weekday())
+        self.service_model.appointment_days_in_advance = 0
+        self.service_model.appointment_slots = [
+            AppointmentSlots(
+                start_day=today,
+                start_time=time(8, 0),
+                end_time=time(9, 0),
+                end_day=today,
+                appointment_duration=timedelta(minutes=30),
+                max_appointments_per_slot=3,
+            )
+        ]
+        # self.repository.create.return_value = appointment
+        self.repository.get_all_by_range.return_value = []
+        self.services_service.get_service_by_id.return_value = self.service_model
+
+        # When
+        start = datetime.combine(now.date(), time(8, 0), tz)
+        customer_id = uuid4()
+        created_appointment = await self.service.create_appointment(
+            AppointmentCreate(start=start),
+            self.service_model.id,
+            customer_id=customer_id,
+            now=now,
+        )
+
+        # Then
+        self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
+        self.assert_repo_get_all_by_range(now, after=start)
+        assert created_appointment.start == start
+        assert created_appointment.end == datetime.combine(now.date(), time(8, 30), tz)
+        assert created_appointment.status == PaymentStatus.CREATED
+        assert created_appointment.service_id == self.service_model.id
+        assert created_appointment.customer_id == customer_id
+
+    def assert_repo_get_all_by_range(
+        self,
+        now: datetime,
+        days_in_advance: int = 0,
+        *,
+        after: datetime | None = None,
+        before: datetime | None = None
+    ) -> None:
         next_day_00 = datetime.combine(now.date(), time(0, 0), now.tzinfo) + timedelta(
             days=days_in_advance + 1
         )
+        before = min(before, next_day_00) if before else next_day_00
+        after_matcher = (
+            max(after, now)
+            if after
+            else CustomMatcher[datetime](lambda t: t - now < timedelta(seconds=2))  # ~now
+        )
         self.repository.get_all_by_range.assert_called_once_with(
-            CustomMatcher[datetime](lambda t: t - now < timedelta(seconds=5)),
-            next_day_00,
+            after_matcher,
+            before,
             service_id=self.service_model.id,
             status=CustomMatcher[list[PaymentStatus]](
                 lambda s: len(set(s)) == 3 and PaymentStatus.CANCELLED not in s

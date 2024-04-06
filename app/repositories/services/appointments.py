@@ -28,7 +28,7 @@ class AppointmentsRepository(BaseRepository[Appointment, Id | str]):
         """
         query = select(Appointment)
         where = self._common_filters(**filters)
-        where = and_(Appointment.start <= range_end, Appointment.end >= range_start, where)
+        where = and_(Appointment.start < range_end, Appointment.end > range_start, where)
         query = query.where(where).offset(skip).limit(limit)
         result = await self.db.exec(query)
         return result.all()
