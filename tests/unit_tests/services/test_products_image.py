@@ -1,5 +1,4 @@
 # mypy: disable-error-code="method-assign"
-import datetime
 from unittest.mock import AsyncMock
 from unittest import IsolatedAsyncioTestCase
 from uuid import uuid4
@@ -34,8 +33,6 @@ class TestProductsService(IsolatedAsyncioTestCase):
             id=uuid4(),
             store_id=self.store.id,
             store=self.store,
-            created_at=datetime.datetime(2023, 1, 1),
-            updated_at=datetime.datetime(2023, 1, 1),
             **self.product_create.__dict__,
         )
         self.repository = AsyncMock(spec=ProductsRepository)

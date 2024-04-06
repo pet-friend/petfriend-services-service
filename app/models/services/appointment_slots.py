@@ -1,11 +1,11 @@
 from enum import StrEnum
 from typing import Self, Annotated
-from datetime import datetime, time, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlmodel import Field, SQLModel
 from pydantic import AfterValidator, field_validator, model_validator
 
-from ..util import UUIDModel, Id
+from ..util import NaiveTime, UUIDModel, Id
 
 
 MIN_APPOINTMENT_DURATION = timedelta(minutes=5)
@@ -29,13 +29,13 @@ class DayOfWeek(StrEnum):
         return list(DayOfWeek).index(self)
 
 
-# TODO: timezone?
 class AppointmentSlotsBase(SQLModel):
     start_day: DayOfWeek
-    start_time: time
+    start_time: NaiveTime
     appointment_duration: timedelta
     end_day: DayOfWeek
-    end_time: time
+    end_time: NaiveTime
+    max_appointments_per_slot: int = Field(1, gt=0)
 
     @field_validator("appointment_duration", mode="after")
     @classmethod
@@ -61,7 +61,9 @@ class AppointmentSlotsBase(SQLModel):
             raise ValueError("At least one appointment should fit in the time slot")
         return self
 
-    def get_current_timestamps(self, now: datetime | None = None) -> tuple[datetime, datetime]:
+    def get_current_timestamps(
+        self, now: datetime | None = None, tz: timezone = timezone.utc
+    ) -> tuple[datetime, datetime]:
         """
         Returns the start timestamp and end timestamp for the current or next
         occurrence of the slot.
@@ -70,7 +72,7 @@ class AppointmentSlotsBase(SQLModel):
         - The slot is currently happening: current timestamps are returned
         - The slot is in the future: next occurrence timestamps are returned
         """
-        now = now or datetime.now()
+        now = now or datetime.now(tz)
         today = now.date()
 
         day_0 = today - timedelta(days=today.weekday())
@@ -81,8 +83,8 @@ class AppointmentSlotsBase(SQLModel):
             # push friday to the previous week
             start_date -= timedelta(weeks=1)
 
-        start_time = datetime.combine(start_date, self.start_time)
-        end_time = datetime.combine(end_date, self.end_time)
+        start_time = datetime.combine(start_date, self.start_time, tz)
+        end_time = datetime.combine(end_date, self.end_time, tz)
 
         if end_time < now:
             # e.g. end_time was on tuesday but it's already wednesday
@@ -106,7 +108,7 @@ def validate_appointment_slots_list(
     if len(values) <= 1:
         return values
 
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     slots = [(s, *s.get_current_timestamps(now)) for s in values]
     sorted_slots = sorted(slots, key=lambda s: s[1])
 

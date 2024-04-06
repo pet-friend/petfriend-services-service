@@ -1,11 +1,11 @@
 # pylint: disable=E1102 # bugged with func.now()
 from math import pi, radians, cos
-import uuid as uuid_pkg
-from datetime import datetime, timezone
-from typing import Any, BinaryIO, Protocol, cast, Type
+from uuid import UUID, uuid4
+from datetime import datetime, time, timezone
+from typing import Annotated, Any, BinaryIO, Protocol
 
-from pydantic import BaseModel
-from sqlalchemy import DateTime, func
+from pydantic import AfterValidator, AwareDatetime, BaseModel
+from sqlalchemy import DateTime, TypeDecorator, func
 from sqlmodel import Field, SQLModel
 
 
@@ -13,34 +13,65 @@ class HealthCheck(BaseModel):
     message: str
 
 
-Id = uuid_pkg.UUID
+Id = UUID
 
 
 class UUIDModel(SQLModel):
-    id: Id = Field(default_factory=uuid_pkg.uuid4, primary_key=True)
+    id: Id = Field(default_factory=uuid4, primary_key=True)
 
 
 def now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+class TZDateTime(TypeDecorator[datetime]):
+    """
+    Saes timezone-aware datetimes as timezone-naive UTC datetimes in any database. See:
+    https://docs.sqlalchemy.org/en/20/core/custom_types.html#store-timezone-aware-timestamps-as-timezone-naive-utc
+    """
+
+    impl = DateTime
+    cache_ok = True
+
+    def process_bind_param(self, value: datetime | None, dialect: Any) -> datetime | None:
+        if value is None:
+            return None
+        # https://docs.python.org/3/library/datetime.html#determining-if-an-object-is-aware-or-naive
+        if not value.tzinfo or value.tzinfo.utcoffset(value) is None:
+            raise TypeError("tzinfo is required")
+        value = value.astimezone(timezone.utc).replace(tzinfo=None)
+        return value
+
+    def process_result_value(self, value: datetime | None, dialect: Any) -> datetime | None:
+        if value is None:
+            return None
+        return value.replace(tzinfo=timezone.utc)
+
+
 class TimestampModel(SQLModel):
-    created_at: datetime = Field(
+    created_at: AwareDatetime = Field(
         default_factory=now,
-        nullable=False,
-        sa_type=cast(Type[Any], DateTime(timezone=True)),
+        sa_type=TZDateTime,
         sa_column_kwargs={"server_default": func.now()},
     )
 
-    updated_at: datetime = Field(
+    updated_at: AwareDatetime = Field(
         default_factory=now,
-        nullable=False,
-        sa_type=cast(Type[Any], DateTime(timezone=True)),
+        sa_type=TZDateTime,
         sa_column_kwargs={
             "server_default": func.now(),
             "onupdate": func.now(),
         },
     )
+
+
+def check_naive_time(time: time) -> time:
+    if time.tzinfo is not None:
+        raise ValueError("Time must be time zone naive")
+    return time
+
+
+NaiveTime = Annotated[time, AfterValidator(check_naive_time)]
 
 
 class ImageUrlModel(SQLModel):

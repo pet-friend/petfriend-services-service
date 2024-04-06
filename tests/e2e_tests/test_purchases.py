@@ -11,7 +11,7 @@ from tests.factories.store_factories import StoreCreateFactory
 from tests.tests_setup import BaseAPITestCase, GetUserCoordinatesMock
 
 
-class TestStoresProductsRoute(BaseAPITestCase):
+class TestPurchasesRoute(BaseAPITestCase):
     def setup_method(self) -> None:
         self.store_create_json_data = StoreCreateFactory.build().model_dump(mode="json")
         self.product_create_json_data = ProductCreateFactory.build(available=None).model_dump(

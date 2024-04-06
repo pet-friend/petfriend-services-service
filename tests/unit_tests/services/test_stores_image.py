@@ -1,5 +1,4 @@
 # mypy: disable-error-code="method-assign"
-import datetime
 from unittest.mock import AsyncMock
 from unittest import IsolatedAsyncioTestCase
 from uuid import uuid4
@@ -24,8 +23,6 @@ class TestStoresService(IsolatedAsyncioTestCase):
 
         self.store = Store(
             owner_id=self.owner_id,
-            created_at=datetime.datetime(2023, 1, 1),
-            updated_at=datetime.datetime(2023, 1, 1),
             address=Address(latitude=0, longitude=0, **self.store_create.address.model_dump()),
             **self.store_create.model_dump(exclude={"address"})
         )

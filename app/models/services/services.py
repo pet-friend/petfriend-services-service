@@ -1,7 +1,9 @@
 from typing import Sequence
 from enum import StrEnum
+import zoneinfo
 
 from sqlmodel import Field, Relationship, SQLModel
+from sqlalchemy import String
 
 from .appointment_slots import AppointmentSlotsBase, AppointmentSlots, AppointmentSlotsList
 from ..addresses import Address, AddressRead, AddressCreate, ServiceAddressLink
@@ -17,6 +19,11 @@ class ServiceCategory(StrEnum):
     OTHER = "other"  # otro
 
 
+Timezone = StrEnum("Timezone", {x: x for x in zoneinfo.available_timezones()})  # type: ignore
+DEFAULT_TIMEZONE = "America/Argentina/Buenos_Aires"
+assert DEFAULT_TIMEZONE in Timezone
+
+
 class ServiceBase(SQLModel):
     name: str
     description: str | None = None
@@ -27,6 +34,7 @@ class ServiceBase(SQLModel):
     # If True, the service is provided at the service's address
     is_home_service: bool = False
     category: ServiceCategory
+    timezone: Timezone = Field(default=DEFAULT_TIMEZONE, sa_type=String)  # type: ignore
 
 
 # Public database fields
@@ -34,7 +42,7 @@ class ServicePublic(UUIDModel, ServiceBase):
     owner_id: Id
 
 
-# What the user gets from the API (Public + image + slots)
+# What the user gets from the API (Public + image + address + slots)
 class ServiceRead(ServicePublic, OptionalImageUrlModel):
     appointment_slots: Sequence[AppointmentSlotsBase]
     address: AddressRead

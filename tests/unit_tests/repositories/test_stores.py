@@ -1,5 +1,4 @@
 # mypy: disable-error-code="method-assign"
-import datetime
 from uuid import uuid4
 from unittest.mock import AsyncMock, Mock
 
@@ -16,8 +15,6 @@ class TestStoresRepository:
         self.store_create = StoreCreateFactory.build()
         self.store = Store(
             owner_id=uuid4(),
-            created_at=datetime.datetime(2023, 1, 1),
-            updated_at=datetime.datetime(2023, 1, 1),
             address=Address(latitude=0, longitude=0, **self.store_create.address.model_dump()),
             **self.store_create.model_dump(exclude={"address"})
         )
