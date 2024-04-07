@@ -1,10 +1,10 @@
 # pylint: disable=E1102 # bugged with func.now()
 from math import pi, radians, cos
 from uuid import UUID, uuid4
-from datetime import datetime, time, timezone
-from typing import Annotated, Any, BinaryIO, Protocol
+from datetime import datetime, timezone
+from typing import Any, BinaryIO, Protocol
 
-from pydantic import AfterValidator, AwareDatetime, BaseModel
+from pydantic import AwareDatetime, BaseModel
 from sqlalchemy import DateTime, TypeDecorator, func, Dialect
 from sqlmodel import Field, SQLModel
 
@@ -70,15 +70,6 @@ class TimestampModel(SQLModel):
             "onupdate": func.now(),
         },
     )
-
-
-def check_naive_time(value: time) -> time:
-    if value.tzinfo is not None:
-        raise ValueError("Time must be time zone naive")
-    return value
-
-
-NaiveTime = Annotated[time, AfterValidator(check_naive_time)]
 
 
 class ImageUrlModel(SQLModel):

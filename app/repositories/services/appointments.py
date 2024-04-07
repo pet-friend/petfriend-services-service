@@ -1,5 +1,5 @@
-from datetime import datetime
 from typing import Sequence, Any
+from datetime import datetime
 
 from fastapi import Depends
 from sqlmodel import and_, select
@@ -25,7 +25,9 @@ class AppointmentsRepository(BaseRepository[Appointment, Id | str]):
     ) -> Sequence[Appointment]:
         """
         Return all of the appointments that take place (totally or partially) in the given range.
+        `range_start` and `range_end` must be timezone-aware datetimes.
         """
+        # TZDateTime handles converting the aware datetimes to UTC
         query = select(Appointment)
         where = self._common_filters(**filters)
         where = and_(Appointment.start < range_end, Appointment.end > range_start, where)

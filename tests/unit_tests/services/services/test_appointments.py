@@ -672,6 +672,7 @@ class TestServicesService:
         # self.repository.create.return_value = appointment
         self.repository.get_all_by_range.return_value = []
         self.services_service.get_service_by_id.return_value = self.service_model
+        self.repository.save.side_effect = lambda x: x
 
         # When
         start = datetime.combine(now.date(), time(8, 0), tz)
@@ -686,7 +687,8 @@ class TestServicesService:
         # Then
         self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
         self.assert_repo_get_all_by_range(now, after=start)
-        assert created_appointment.start == start
+        self.repository.save.assert_called_once_with(created_appointment)
+        assert created_appointment.start == datetime.combine(now.date(), time(8, 0), tz)
         assert created_appointment.end == datetime.combine(now.date(), time(8, 30), tz)
         assert created_appointment.status == PaymentStatus.CREATED
         assert created_appointment.service_id == self.service_model.id

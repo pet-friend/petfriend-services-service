@@ -5,7 +5,8 @@ from datetime import datetime, timedelta, timezone
 from sqlmodel import Field, SQLModel
 from pydantic import AfterValidator, field_validator, model_validator
 
-from ..util import NaiveTime, UUIDModel, Id
+from ..util import UUIDModel, Id
+from .util import NaiveTime
 
 
 MIN_APPOINTMENT_DURATION = timedelta(minutes=5)

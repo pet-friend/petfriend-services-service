@@ -10,3 +10,5 @@ def setup_logs() -> None:
     else:
         level = logging.INFO
     logging.basicConfig(level=level, format=FORMAT, style="{")
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)

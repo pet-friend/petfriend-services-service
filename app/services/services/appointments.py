@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, time, date
 from typing import Generator, Sequence
 from zoneinfo import ZoneInfo
+import logging
 
 from fastapi import Depends
 from intervaltree import IntervalTree  # type: ignore
@@ -37,26 +38,28 @@ class AppointmentsService:
         now: datetime | None = None,
     ) -> Appointment:
         service = await self.services_service.get_service_by_id(service_id)
-        data.start = data.start.astimezone(ZoneInfo(service.timezone))
-        available_appointments = await self.get_available_appointments(
-            service, after=data.start, now=now
-        )
+        start = service.to_tz(data.start)
+        logging.debug(f"Creating appointment for service {service_id} at {start}")
 
+        available_appointments = await self.get_available_appointments(
+            service, after=start, now=now
+        )
         for available_appointment in available_appointments:
-            if available_appointment.start == data.start:
+            if available_appointment.start == start:
                 break
         else:
+            logging.debug(f"No available appointment found for {service_id} at {start}")
             raise InvalidAppointment
 
         appointment = Appointment(
-            start=data.start,
+            start=start,
             end=available_appointment.end,
             status=PaymentStatus.CREATED,
             service_id=service_id,
             customer_id=customer_id,
         )
 
-        return appointment
+        return await self.appointments_repo.save(appointment)
 
     async def get_available_appointments(
         self,
@@ -83,11 +86,10 @@ class AppointmentsService:
         for slot in service.appointment_slots:
             slots_per_day.setdefault(slot.start_day.to_weekday(), []).append(slot)
 
-        tz = ZoneInfo(service.timezone)
-        now = now.astimezone(tz) if now else datetime.now(tz)
-        after = max(now, after.astimezone(tz)) if after else now
+        now = service.to_tz(now) if now else datetime.now(ZoneInfo(service.timezone))
+        after = max(now, service.to_tz(after)) if after else now
         max_start = self.__get_max_allowed_appointment_start(service, now)
-        before = min(max_start, before.astimezone(tz)) if before else max_start
+        before = min(max_start, service.to_tz(before)) if before else max_start
 
         today = now.date()
         appointments = await self.__get_open_appointments_in_range(service.id, after, before)
