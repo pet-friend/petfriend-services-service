@@ -63,6 +63,10 @@ class Store(StorePublic, TimestampModel, table=True):
         back_populates="store",
     )
 
+    @property
+    def range_km(self) -> float:
+        return self.delivery_range_km
+
 
 # Required attributes for creating a new record
 class StoreCreate(StoreBase):

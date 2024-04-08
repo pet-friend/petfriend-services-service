@@ -6,17 +6,22 @@ import logging
 from fastapi import Depends
 from intervaltree import IntervalTree  # type: ignore
 
+from app.config import settings
 from app.exceptions.appointments import InvalidAppointment
+from app.models.preferences import PaymentType, PreferenceItem, ServiceAppointmentPaymentData
 from app.models.services import (
     Appointment,
     AppointmentCreate,
     AvailableAppointment,
     AppointmentSlots,
+    AppointmentSlotsBase,
     Service,
 )
 from app.models.util import Id
 from app.models.payments import PaymentStatus
 from app.repositories.services import AppointmentsRepository
+from ..users import UsersService
+from ..payments import PaymentsService
 from .services import ServicesService
 
 
@@ -25,21 +30,31 @@ class AppointmentsService:
         self,
         appointments_repo: AppointmentsRepository = Depends(),
         services_service: ServicesService = Depends(),
+        users_service: UsersService = Depends(),
+        payments_service: PaymentsService = Depends(),
     ):
         self.appointments_repo = appointments_repo
         self.services_service = services_service
+        self.users_service = users_service
+        self.payments_service = payments_service
 
     async def create_appointment(
         self,
         data: AppointmentCreate,
         service_id: Id,
         customer_id: Id,
+        user_address_id: Id,
+        token: str,
         *,
         now: datetime | None = None,
     ) -> Appointment:
         service = await self.services_service.get_service_by_id(service_id)
         start = service.to_tz(data.start)
         logging.debug(f"Creating appointment for service {service_id} at {start}")
+
+        await self.payments_service.check_payment_conditions(
+            service, customer_id, user_address_id, token
+        )
 
         available_appointments = await self.get_available_appointments(
             service, after=start, now=now
@@ -59,6 +74,12 @@ class AppointmentsService:
             customer_id=customer_id,
         )
 
+        payment_data = await self.__build_order(
+            service, appointment, available_appointment.from_slots
+        )
+        appointment.payment_url = await self.payments_service.create_preference(
+            payment_data, customer_id, token
+        )
         return await self.appointments_repo.save(appointment)
 
     async def get_available_appointments(
@@ -124,18 +145,20 @@ class AppointmentsService:
         `slots_per_day` is a dictionary that maps the weekday to the available slots for that day
         """
         day_slots = slots_per_day.get(date.weekday(), ())
-        for slot in day_slots or ():
-            slots_end = datetime.combine(date, slot.end_time, tzinfo=after.tzinfo)
+        for slots in day_slots or ():
+            slots_end = datetime.combine(date, slots.end_time, tzinfo=after.tzinfo)
 
-            start = datetime.combine(date, slot.start_time, tzinfo=after.tzinfo)
-            end = start + slot.appointment_duration
+            start = datetime.combine(date, slots.start_time, tzinfo=after.tzinfo)
+            end = start + slots.appointment_duration
             while end <= slots_end:
                 if end > after and start < before:
-                    amount = slot.max_appointments_per_slot - len(tree.overlap(start, end))
+                    amount = slots.max_appointments_per_slot - len(tree.overlap(start, end))
                     if amount > 0:
-                        yield AvailableAppointment(start=start, end=end, amount=amount)
+                        yield AvailableAppointment(
+                            start=start, end=end, amount=amount, from_slots=slots
+                        )
                 start = end
-                end += slot.appointment_duration
+                end += slots.appointment_duration
 
     def __get_max_allowed_appointment_start(self, service: Service, now: datetime) -> datetime:
         """
@@ -163,3 +186,36 @@ class AppointmentsService:
             service_id=service_id,
             status=[PaymentStatus.CREATED, PaymentStatus.IN_PROGRESS, PaymentStatus.COMPLETED],
         )
+
+    async def __build_order(
+        self, service: Service, appointment: Appointment, used_slot: AppointmentSlotsBase
+    ) -> ServiceAppointmentPaymentData:
+        item = await self.__build_order_item(service, appointment, used_slot)
+        fee = settings.FEE_PERCENTAGE * item["unit_price"] * item["quantity"] / 100
+        return {
+            "type": PaymentType.SERVICE_APPOINTMENT,
+            "service_reference": appointment.id,
+            "preference_data": {
+                "items": [item],
+                "marketplace_fee": fee,
+                "metadata": {
+                    "appointment_id": appointment.id,
+                    "service_id": service.id,
+                    "type": PaymentType.SERVICE_APPOINTMENT,
+                },
+            },
+        }
+
+    async def __build_order_item(
+        self, service: Service, appointment: Appointment, used_slot: AppointmentSlotsBase
+    ) -> PreferenceItem:
+        tz = ZoneInfo(service.timezone)
+        service_read = (await self.services_service.get_services_read(service))[0]
+        return {
+            "title": service.name,
+            "currency_id": "ARS",
+            "picture_url": service_read.image_url,
+            "description": appointment.start.astimezone(tz).strftime("%Y-%m-%d %H:%M"),
+            "quantity": 1,
+            "unit_price": used_slot.appointment_price,
+        }

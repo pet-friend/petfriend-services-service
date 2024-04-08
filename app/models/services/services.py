@@ -73,6 +73,10 @@ class Service(ServicePublic, TimestampModel, table=True):
             return dt.replace(tzinfo=tz)
         return dt.astimezone(tz)
 
+    @property
+    def range_km(self) -> float:
+        return self.customer_range_km
+
 
 # Required attributes for creating a new record
 class ServiceCreate(ServiceBase):

@@ -1,3 +1,4 @@
+from decimal import Decimal
 from enum import StrEnum
 from typing import Self, Annotated
 from datetime import datetime, timedelta, timezone
@@ -34,6 +35,7 @@ class AppointmentSlotsBase(SQLModel):
     start_day: DayOfWeek
     start_time: NaiveTime
     appointment_duration: timedelta
+    appointment_price: Decimal = Field(max_digits=14, decimal_places=2, gt=0)
     end_day: DayOfWeek
     end_time: NaiveTime
     max_appointments_per_slot: int = Field(1, gt=0)

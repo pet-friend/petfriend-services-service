@@ -1,6 +1,6 @@
 from decimal import Decimal
 from enum import StrEnum
-from typing import Literal, Sequence, TypedDict, TypeVar, Generic
+from typing import Literal, Sequence, TypedDict, TypeVar, Generic, NotRequired
 
 from .util import Id
 
@@ -8,15 +8,16 @@ from .util import Id
 M = TypeVar("M")
 
 
-class PurchaseTypes(StrEnum):
+class PaymentType(StrEnum):
     STORE_PURCHASE = "P"
+    SERVICE_APPOINTMENT = "A"
 
 
 class PreferenceItem(TypedDict):
     title: str
     currency_id: Literal["ARS"]
-    picture_url: str | None
-    description: str
+    picture_url: NotRequired[str | None]
+    description: NotRequired[str]
     quantity: int
     unit_price: Decimal
 
@@ -28,8 +29,8 @@ class PreferenceShipment(TypedDict):
 
 class PreferenceData(TypedDict, Generic[M]):
     items: Sequence[PreferenceItem]
-    marketplace_fee: Decimal
-    shipments: PreferenceShipment
+    marketplace_fee: NotRequired[Decimal]
+    shipments: NotRequired[PreferenceShipment]
     metadata: M
 
 
@@ -43,15 +44,29 @@ class BasePaymentData(TypedDict):
 class StorePurchaseMetadata(TypedDict):
     store_id: Id
     purchase_id: Id
-    type: Literal[PurchaseTypes.STORE_PURCHASE]
+    type: Literal[PaymentType.STORE_PURCHASE]
 
 
 class StorePurchasePaymentData(BasePaymentData):
     preference_data: PreferenceData[StorePurchaseMetadata]
-    type: Literal[PurchaseTypes.STORE_PURCHASE]
+    type: Literal[PaymentType.STORE_PURCHASE]
+
+
+# Service appointments
+
+
+class ServiceAppointmentMetadata(TypedDict):
+    service_id: Id
+    appointment_id: Id
+    type: Literal[PaymentType.SERVICE_APPOINTMENT]
+
+
+class ServiceAppointmentPaymentData(BasePaymentData):
+    preference_data: PreferenceData[ServiceAppointmentMetadata]
+    type: Literal[PaymentType.SERVICE_APPOINTMENT]
 
 
 # ---
 
 
-PaymentData = StorePurchasePaymentData  # | ... | ...
+PaymentData = StorePurchasePaymentData | ServiceAppointmentPaymentData

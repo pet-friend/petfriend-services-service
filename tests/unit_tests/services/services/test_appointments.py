@@ -1,14 +1,21 @@
+from decimal import Decimal
 from uuid import uuid4
 from unittest.mock import AsyncMock
 from datetime import datetime, time, timedelta, date
 from zoneinfo import ZoneInfo
 
+import pytest
+
+from app.exceptions.appointments import InvalidAppointment
 from app.models.payments import PaymentStatus
 from app.models.services import Service, AppointmentSlots, DayOfWeek, AvailableAppointment
 from app.models.addresses import Address
 from app.models.services.appointments import Appointment, AppointmentCreate
+from app.models.services.services import ServiceRead
 from app.repositories.services import AppointmentsRepository
 from app.services.services import AppointmentsService, ServicesService
+from app.services.users import UsersService
+from app.services.payments import PaymentsService
 from tests.factories.service_factories import ServiceCreateFactory
 from tests.util import CustomMatcher
 
@@ -32,7 +39,11 @@ class TestServicesService:
 
         self.repository = AsyncMock(spec=AppointmentsRepository)
         self.services_service = AsyncMock(spec=ServicesService)
-        self.service = AppointmentsService(self.repository, self.services_service)
+        self.users_service = AsyncMock(spec=UsersService)
+        self.payments_service = AsyncMock(spec=PaymentsService)
+        self.service = AppointmentsService(
+            self.repository, self.services_service, self.users_service, self.payments_service
+        )
 
     async def test_get_available_appointments_simple(self) -> None:
         # Given
@@ -46,6 +57,7 @@ class TestServicesService:
                 start_time=time(8, 0),
                 end_time=time(9, 0),
                 end_day=today,
+                appointment_price=Decimal(50),
                 appointment_duration=timedelta(minutes=30),
                 max_appointments_per_slot=3,
             )
@@ -67,11 +79,13 @@ class TestServicesService:
                 start=datetime.combine(now.date(), time(8, 0), tz),
                 end=datetime.combine(now.date(), time(8, 30), tz),
                 amount=3,
+                from_slots=self.service_model.appointment_slots[0],
             ),
             AvailableAppointment(
                 start=datetime.combine(now.date(), time(8, 30), tz),
                 end=datetime.combine(now.date(), time(9, 0), tz),
                 amount=3,
+                from_slots=self.service_model.appointment_slots[0],
             ),
         ]
 
@@ -109,6 +123,7 @@ class TestServicesService:
                 start=datetime.combine(now.date(), time(8, 30), tz),
                 end=datetime.combine(now.date(), time(9, 0), tz),
                 amount=3,
+                from_slots=self.service_model.appointment_slots[0],
             ),
         ]
 
@@ -124,6 +139,7 @@ class TestServicesService:
                 start_time=time(8, 0),
                 end_time=time(9, 0),
                 end_day=today,
+                appointment_price=Decimal(50),
                 appointment_duration=timedelta(minutes=30),
                 max_appointments_per_slot=3,
             )
@@ -152,11 +168,13 @@ class TestServicesService:
                 start=datetime.combine(now.date(), time(8, 0), tz),
                 end=datetime.combine(now.date(), time(8, 30), tz),
                 amount=2,  # Only 2 available
+                from_slots=self.service_model.appointment_slots[0],
             ),
             AvailableAppointment(
                 start=datetime.combine(now.date(), time(8, 30), tz),
                 end=datetime.combine(now.date(), time(9, 0), tz),
                 amount=3,
+                from_slots=self.service_model.appointment_slots[0],
             ),
         ]
 
@@ -172,6 +190,7 @@ class TestServicesService:
                 start_time=time(8, 0),
                 end_time=time(9, 0),
                 end_day=today,
+                appointment_price=Decimal(50),
                 appointment_duration=timedelta(minutes=30),
                 max_appointments_per_slot=1,  # Only 1 appointment per slot
             )
@@ -200,6 +219,7 @@ class TestServicesService:
                 start=datetime.combine(now.date(), time(8, 30), tz),
                 end=datetime.combine(now.date(), time(9, 0), tz),
                 amount=1,
+                from_slots=self.service_model.appointment_slots[0],
             ),
         ]
 
@@ -215,6 +235,7 @@ class TestServicesService:
                 start_time=time(8, 0),
                 end_time=time(9, 0),
                 end_day=today,
+                appointment_price=Decimal(50),
                 appointment_duration=timedelta(minutes=30),
                 max_appointments_per_slot=3,
             )
@@ -246,11 +267,13 @@ class TestServicesService:
                 start=datetime.combine(now.date(), time(8, 0), tz),
                 end=datetime.combine(now.date(), time(8, 30), tz),
                 amount=2,  # Only 2 available
+                from_slots=self.service_model.appointment_slots[0],
             ),
             AvailableAppointment(
                 start=datetime.combine(now.date(), time(8, 30), tz),
                 end=datetime.combine(now.date(), time(9, 0), tz),
                 amount=2,  # Only 2 available
+                from_slots=self.service_model.appointment_slots[0],
             ),
         ]
 
@@ -267,6 +290,7 @@ class TestServicesService:
                 start_time=time(8, 0),
                 end_time=time(8, 30),
                 end_day=today,
+                appointment_price=Decimal(50),
                 appointment_duration=timedelta(minutes=30),
                 max_appointments_per_slot=3,
             )
@@ -289,11 +313,13 @@ class TestServicesService:
                 start=datetime.combine(now.date(), time(8, 0), tz),
                 end=datetime.combine(now.date(), time(8, 30), tz),
                 amount=3,
+                from_slots=self.service_model.appointment_slots[0],
             ),
             AvailableAppointment(
                 start=datetime.combine(next_week, time(8, 0), tz),
                 end=datetime.combine(next_week, time(8, 30), tz),
                 amount=3,
+                from_slots=self.service_model.appointment_slots[0],
             ),
         ]
 
@@ -310,6 +336,7 @@ class TestServicesService:
                 start_time=time(8, 0),
                 end_time=time(8, 30),
                 end_day=today,
+                appointment_price=Decimal(50),
                 appointment_duration=timedelta(minutes=30),
                 max_appointments_per_slot=3,
             )
@@ -339,11 +366,13 @@ class TestServicesService:
                 start=datetime.combine(now.date(), time(8, 0), tz),
                 end=datetime.combine(now.date(), time(8, 30), tz),
                 amount=2,
+                from_slots=self.service_model.appointment_slots[0],
             ),
             AvailableAppointment(
                 start=datetime.combine(next_week, time(8, 0), tz),
                 end=datetime.combine(next_week, time(8, 30), tz),
                 amount=3,
+                from_slots=self.service_model.appointment_slots[0],
             ),
         ]
 
@@ -360,6 +389,7 @@ class TestServicesService:
                 start_time=time(8, 0),
                 end_time=time(9, 0),
                 end_day=today,
+                appointment_price=Decimal(50),
                 appointment_duration=timedelta(minutes=30),
                 max_appointments_per_slot=3,
             ),
@@ -398,26 +428,31 @@ class TestServicesService:
                 start=datetime.combine(now.date(), time(8, 0), tz),
                 end=datetime.combine(now.date(), time(8, 30), tz),
                 amount=3,
+                from_slots=self.service_model.appointment_slots[0],
             ),
             AvailableAppointment(
                 start=datetime.combine(now.date(), time(8, 30), tz),
                 end=datetime.combine(now.date(), time(9, 0), tz),
                 amount=3,
+                from_slots=self.service_model.appointment_slots[0],
             ),
             AvailableAppointment(
                 start=datetime.combine(now.date(), time(13, 0), tz),
                 end=datetime.combine(now.date(), time(13, 45), tz),
                 amount=1,
+                from_slots=self.service_model.appointment_slots[1],
             ),
             AvailableAppointment(
                 start=datetime.combine(tomorrow_date, time(10, 0), tz),
                 end=datetime.combine(tomorrow_date, time(14, 0), tz),
                 amount=2,
+                from_slots=self.service_model.appointment_slots[2],
             ),
             AvailableAppointment(
                 start=datetime.combine(tomorrow_date, time(14, 0), tz),
                 end=datetime.combine(tomorrow_date, time(18, 0), tz),
                 amount=2,
+                from_slots=self.service_model.appointment_slots[2],
             ),
         ]
 
@@ -434,6 +469,7 @@ class TestServicesService:
                 start_time=time(8, 0),
                 end_time=time(9, 0),
                 end_day=today,
+                appointment_price=Decimal(50),
                 appointment_duration=timedelta(minutes=30),
                 max_appointments_per_slot=3,
             ),
@@ -479,21 +515,25 @@ class TestServicesService:
                 start=datetime.combine(now.date(), time(8, 0), tz),
                 end=datetime.combine(now.date(), time(8, 30), tz),
                 amount=3,
+                from_slots=self.service_model.appointment_slots[0],
             ),
             AvailableAppointment(
                 start=datetime.combine(now.date(), time(8, 30), tz),
                 end=datetime.combine(now.date(), time(9, 0), tz),
                 amount=3,
+                from_slots=self.service_model.appointment_slots[0],
             ),
             AvailableAppointment(
                 start=datetime.combine(tomorrow_date, time(10, 0), tz),
                 end=datetime.combine(tomorrow_date, time(14, 0), tz),
                 amount=1,
+                from_slots=self.service_model.appointment_slots[2],
             ),
             AvailableAppointment(
                 start=datetime.combine(tomorrow_date, time(14, 0), tz),
                 end=datetime.combine(tomorrow_date, time(18, 0), tz),
                 amount=2,
+                from_slots=self.service_model.appointment_slots[2],
             ),
         ]
 
@@ -509,6 +549,7 @@ class TestServicesService:
                 start_time=time(8, 0),
                 end_time=time(9, 0),
                 end_day=today,
+                appointment_price=Decimal(50),
                 appointment_duration=timedelta(minutes=30),
                 max_appointments_per_slot=3,
             )
@@ -530,6 +571,7 @@ class TestServicesService:
                 start=datetime.combine(now.date(), time(8, 30), tz),
                 end=datetime.combine(now.date(), time(9, 0), tz),
                 amount=3,
+                from_slots=self.service_model.appointment_slots[0],
             ),
         ]
 
@@ -545,6 +587,7 @@ class TestServicesService:
                 start_time=time(8, 0),
                 end_time=time(9, 0),
                 end_day=today,
+                appointment_price=Decimal(50),
                 appointment_duration=timedelta(minutes=30),
                 max_appointments_per_slot=3,
             )
@@ -566,6 +609,7 @@ class TestServicesService:
                 start=datetime.combine(now.date(), time(8, 00), tz),
                 end=datetime.combine(now.date(), time(8, 30), tz),
                 amount=3,
+                from_slots=self.service_model.appointment_slots[0],
             ),
         ]
 
@@ -581,6 +625,7 @@ class TestServicesService:
                 start_time=time(8, 0),
                 end_time=time(9, 0),
                 end_day=today,
+                appointment_price=Decimal(50),
                 appointment_duration=timedelta(minutes=30),
                 max_appointments_per_slot=3,
             )
@@ -602,11 +647,13 @@ class TestServicesService:
                 start=datetime.combine(now.date(), time(8, 00), tz),
                 end=datetime.combine(now.date(), time(8, 30), tz),
                 amount=3,
+                from_slots=self.service_model.appointment_slots[0],
             ),
             AvailableAppointment(
                 start=datetime.combine(now.date(), time(8, 30), tz),
                 end=datetime.combine(now.date(), time(9, 0), tz),
                 amount=3,
+                from_slots=self.service_model.appointment_slots[0],
             ),
         ]
 
@@ -622,6 +669,7 @@ class TestServicesService:
                 start_time=time(8, 0),
                 end_time=time(9, 0),
                 end_day=today,
+                appointment_price=Decimal(50),
                 appointment_duration=timedelta(minutes=30),
                 max_appointments_per_slot=3,
             )
@@ -650,8 +698,86 @@ class TestServicesService:
                 start=datetime.combine(now.date(), time(8, 30), tz),
                 end=datetime.combine(now.date(), time(9, 0), tz),
                 amount=2,
+                from_slots=self.service_model.appointment_slots[0],
             ),
         ]
+
+    async def test_create_appointment_unmet_payment_conditions_should_raise(self) -> None:
+        # Given
+        tz = ZoneInfo(self.service_model.timezone)
+        now = datetime.combine(date.today(), time(1, 0), tz)  # It's 1:00AM
+        today = DayOfWeek.from_weekday(now.date().weekday())
+        self.service_model.appointment_days_in_advance = 0
+        self.service_model.appointment_slots = [
+            AppointmentSlots(
+                start_day=today,
+                start_time=time(8, 0),
+                end_time=time(9, 0),
+                end_day=today,
+                appointment_price=Decimal(50),
+                appointment_duration=timedelta(minutes=30),
+                max_appointments_per_slot=3,
+            )
+        ]
+        self.repository.get_all_by_range.return_value = []
+        self.services_service.get_service_by_id.return_value = self.service_model
+        self.payments_service.check_payment_conditions.side_effect = ValueError
+
+        # When, Then
+        start = datetime.combine(now.date(), time(8, 00), tz)
+        customer_id = uuid4()
+        address_id = uuid4()
+        with pytest.raises(ValueError):
+            await self.service.create_appointment(
+                AppointmentCreate(start=start),
+                self.service_model.id,
+                customer_id,
+                address_id,
+                "token",
+                now=now,
+            )
+        self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
+        self.payments_service.check_payment_conditions.assert_called_once_with(
+            self.service_model, customer_id, address_id, "token"
+        )
+        self.repository.save.assert_not_called()
+
+    async def test_create_appointment_invalid_start_time_should_raise(self) -> None:
+        # Given
+        tz = ZoneInfo(self.service_model.timezone)
+        now = datetime.combine(date.today(), time(1, 0), tz)  # It's 1:00AM
+        today = DayOfWeek.from_weekday(now.date().weekday())
+        self.service_model.appointment_days_in_advance = 0
+        self.service_model.appointment_slots = [
+            AppointmentSlots(
+                start_day=today,
+                start_time=time(8, 0),
+                end_time=time(9, 0),
+                end_day=today,
+                appointment_price=Decimal(50),
+                appointment_duration=timedelta(minutes=30),
+                max_appointments_per_slot=3,
+            )
+        ]
+        self.repository.get_all_by_range.return_value = []
+        self.services_service.get_service_by_id.return_value = self.service_model
+
+        # When, Then
+        start = datetime.combine(now.date(), time(8, 15), tz)
+        customer_id = uuid4()
+        address_id = uuid4()
+        with pytest.raises(InvalidAppointment):
+            await self.service.create_appointment(
+                AppointmentCreate(start=start),
+                self.service_model.id,
+                customer_id,
+                address_id,
+                "token",
+                now=now,
+            )
+        self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
+        self.assert_repo_get_all_by_range(now, after=start)
+        self.repository.save.assert_not_called()
 
     async def test_create_appointment(self) -> None:
         # Given
@@ -665,28 +791,41 @@ class TestServicesService:
                 start_time=time(8, 0),
                 end_time=time(9, 0),
                 end_day=today,
+                appointment_price=Decimal(50),
                 appointment_duration=timedelta(minutes=30),
                 max_appointments_per_slot=3,
             )
         ]
-        # self.repository.create.return_value = appointment
         self.repository.get_all_by_range.return_value = []
         self.services_service.get_service_by_id.return_value = self.service_model
+        self.services_service.get_services_read.return_value = [
+            ServiceRead(
+                address=self.service_model.address,
+                appointment_slots=self.service_model.appointment_slots,
+                **self.service_model.model_dump()
+            )
+        ]
         self.repository.save.side_effect = lambda x: x
 
         # When
         start = datetime.combine(now.date(), time(8, 0), tz)
         customer_id = uuid4()
+        address_id = uuid4()
         created_appointment = await self.service.create_appointment(
             AppointmentCreate(start=start),
             self.service_model.id,
-            customer_id=customer_id,
+            customer_id,
+            address_id,
+            "token",
             now=now,
         )
 
         # Then
         self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
         self.assert_repo_get_all_by_range(now, after=start)
+        self.payments_service.check_payment_conditions.assert_called_once_with(
+            self.service_model, customer_id, address_id, "token"
+        )
         self.repository.save.assert_called_once_with(created_appointment)
         assert created_appointment.start == datetime.combine(now.date(), time(8, 0), tz)
         assert created_appointment.end == datetime.combine(now.date(), time(8, 30), tz)
@@ -719,3 +858,6 @@ class TestServicesService:
                 lambda s: len(set(s)) == 3 and PaymentStatus.CANCELLED not in s
             ),
         )
+
+# TODO copy test_purchase_one_item, test_purchase_store_payment_exception
+# TODO add status updates

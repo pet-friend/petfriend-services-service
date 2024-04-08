@@ -1,6 +1,7 @@
 from enum import StrEnum
 from typing import Literal
 
+from sqlmodel import SQLModel
 from pydantic import BaseModel
 
 
@@ -18,3 +19,8 @@ PaymentStatusUpdate = Literal[
 
 class PaymentUpdate(BaseModel):
     status: PaymentStatusUpdate
+
+
+class PaymentStatusModel(SQLModel):
+    status: PaymentStatus
+    payment_url: str | None = None

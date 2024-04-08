@@ -10,12 +10,8 @@ from app.routes.util import get_exception_docs
 from app.serializers.stores import PurchaseList
 from app.services.stores import PurchasesService
 from app.config import settings
-from ..responses.purchases import (
-    PURCHASE_NOT_FOUND_ERROR,
-    FORBIDDEN_PURCHASE,
-    STORE_NOT_READY,
-    NOT_FOUND_ERROR,
-)
+from ..responses.purchases import PURCHASE_NOT_FOUND_ERROR, FORBIDDEN_PURCHASE, NOT_FOUND_ERROR
+from ..responses.payments import COLLECTOR_NOT_READY
 from ..responses.auth import FORBIDDEN
 
 router = APIRouter(prefix="", tags=["Purchases"])
@@ -24,7 +20,7 @@ router_payments = APIRouter(prefix="", tags=["Purchases"])
 
 @router.post(
     "/stores/{store_id}/purchases",
-    responses=get_exception_docs(NOT_FOUND_ERROR, FORBIDDEN_PURCHASE, STORE_NOT_READY),
+    responses=get_exception_docs(NOT_FOUND_ERROR, FORBIDDEN_PURCHASE, COLLECTOR_NOT_READY),
     response_model=PurchaseRead,
 )
 async def create_store_purchase(

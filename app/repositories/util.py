@@ -4,7 +4,7 @@ from math import radians, cos
 from sqlmodel import func
 from sqlalchemy import Exists, Function
 
-from app.models.util import KM_PER_DEG_LAT
+from app.models.util import Coordinates
 
 from ..models.stores import Store, Product
 from ..models.services import Service
@@ -19,9 +19,9 @@ def distance_filter(
     Should be decently accurate for small distances (a few km)
     """
 
-    km_per_deg_long = KM_PER_DEG_LAT * cos(radians(lat))
+    km_per_deg_long = Coordinates.KM_PER_DEG_LAT * cos(radians(lat))
     return model.address.has(  # type: ignore
-        func.pow(KM_PER_DEG_LAT * (Address.latitude - lat), 2)
+        func.pow(Coordinates.KM_PER_DEG_LAT * (Address.latitude - lat), 2)
         + func.pow(km_per_deg_long * (Address.longitude - long), 2)
         < func.pow(less_than, 2)
     )

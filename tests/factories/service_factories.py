@@ -1,4 +1,5 @@
 from datetime import time, timedelta
+from decimal import Decimal
 
 from polyfactory.factories.pydantic_factory import ModelFactory
 
@@ -27,6 +28,9 @@ class ServiceCreateFactory(ModelFactory[ServiceCreate]):
                         start_time=time(hour=start_hour),
                         end_time=time(hour=start_hour + 2),
                         appointment_duration=timedelta(minutes=duration_mins),
+                        appointment_price=Decimal(cls.__random__.uniform(10, 100)).quantize(
+                            Decimal("0.01")
+                        ),
                     )
                 )
         return slots

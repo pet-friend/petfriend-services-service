@@ -1,12 +1,7 @@
 from fastapi import HTTPException, status
 
 from app.exceptions.products import ProductOutOfStock
-from app.exceptions.purchases import (
-    PurchaseNotFound,
-    StoreNotReady,
-    OutsideDeliveryRange,
-    CantPurchaseFromOwnStore,
-)
+from app.exceptions.purchases import PurchaseNotFound
 
 PURCHASE_NOT_FOUND_ERROR = (
     PurchaseNotFound,
@@ -16,13 +11,6 @@ PURCHASE_NOT_FOUND_ERROR = (
     ),
 )
 
-STORE_NOT_READY = (
-    StoreNotReady,
-    HTTPException(
-        status_code=status.HTTP_409_CONFLICT,
-        detail="The store owner has not linked his payment account",
-    ),
-)
 
 # only for docs, PRODUCT_NOT_FOUND_ERROR and STORE_NOT_FOUND_ERROR are used
 NOT_FOUND_ERROR = HTTPException(
@@ -30,7 +18,7 @@ NOT_FOUND_ERROR = HTTPException(
     detail="Store or product not found",
 )
 
-# only for docs, OUTSIDE_DELIVERY_RANGE, CANT_PURCHASE_FROM_OWNS_STORE and OUT_OF_STOCK are used
+# only for docs, OUTSIDE_DELIVERY_RANGE, CANT_PURCHASE_FROM_OWN_BUSINESS and OUT_OF_STOCK are used
 FORBIDDEN_PURCHASE = HTTPException(
     status_code=status.HTTP_403_FORBIDDEN,
     detail=(
@@ -39,22 +27,6 @@ FORBIDDEN_PURCHASE = HTTPException(
     ),
 )
 
-
-OUTSIDE_DELIVERY_RANGE = (
-    OutsideDeliveryRange,
-    HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="The store does not deliver to this address",
-    ),
-)
-
-CANT_PURCHASE_FROM_OWNS_STORE = (
-    CantPurchaseFromOwnStore,
-    HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="You can't purchase from a store you own",
-    ),
-)
 
 OUT_OF_STOCK = (
     ProductOutOfStock,

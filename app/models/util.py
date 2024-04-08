@@ -2,7 +2,7 @@
 from math import pi, radians, cos
 from uuid import UUID, uuid4
 from datetime import datetime, timezone
-from typing import Any, BinaryIO, Protocol
+from typing import Any, BinaryIO, ClassVar, Protocol
 
 from pydantic import AwareDatetime, BaseModel
 from sqlalchemy import DateTime, TypeDecorator, func, Dialect
@@ -95,18 +95,19 @@ class Coordinates(SQLModel):
     latitude: float = Field(ge=-90, le=90)
     longitude: float = Field(ge=-180, le=180)
 
+    EARTH_RADIUS_KM: ClassVar[float] = 6371.009
+    KM_PER_DEG_LAT: ClassVar[float] = 2 * pi * EARTH_RADIUS_KM / 360.0
 
-EARTH_RADIUS_KM = 6371.009
-KM_PER_DEG_LAT = 2 * pi * EARTH_RADIUS_KM / 360.0
+    def within(self, other: "Coordinates", max_distance_km: float) -> bool:
+        return other.distance_to_squared(self) <= max_distance_km**2
 
+    def distance_to_squared(self, other: "Coordinates") -> float:
+        """
+        Based on https://stackoverflow.com/a/5207131
+        Should be decently accurate for small distances (a few km)
+        """
+        km_per_deg_long = self.KM_PER_DEG_LAT * cos(radians(self.latitude))
 
-def distance_squared(coords_base: Coordinates, other_coords: Coordinates) -> float:
-    """
-    Based on https://stackoverflow.com/a/5207131
-    Should be decently accurate for small distances (a few km)
-    """
-    km_per_deg_long = KM_PER_DEG_LAT * cos(radians(coords_base.latitude))
-
-    return (KM_PER_DEG_LAT * (other_coords.latitude - coords_base.latitude)) ** 2 + (
-        km_per_deg_long * (other_coords.longitude - coords_base.longitude)
-    ) ** 2
+        return (self.KM_PER_DEG_LAT * (other.latitude - self.latitude)) ** 2 + (
+            km_per_deg_long * (other.longitude - self.longitude)
+        ) ** 2

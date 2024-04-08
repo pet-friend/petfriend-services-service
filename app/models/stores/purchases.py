@@ -2,9 +2,9 @@ from decimal import Decimal
 from typing import Sequence
 
 from sqlalchemy import ForeignKeyConstraint, PrimaryKeyConstraint
-from sqlmodel import Relationship, Field, SQLModel
+from sqlmodel import Relationship, Field
 
-from ..payments import PaymentStatus
+from ..payments import PaymentStatusModel
 from ..util import Id, TimestampModel, UUIDModel
 from .stores import Store
 from .products import Product
@@ -35,10 +35,8 @@ class PurchaseItem(PurchaseItemBase, table=True):
     )
 
 
-class PurchaseBase(SQLModel):
+class PurchaseBase(PaymentStatusModel):
     store_id: Id = Field(primary_key=True, foreign_key="stores.id")
-    status: PaymentStatus
-    payment_url: str | None = None
     buyer_id: Id
     delivery_address_id: Id
 
