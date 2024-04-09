@@ -4,12 +4,8 @@ from app.auth import get_caller_id
 
 from app.models.util import Id, ImageUrlModel
 from app.services.services import ServicesService
-from ..responses.image import (
-    IMAGE_EXISTS_ERROR,
-    INVALID_IMAGE_ERROR,
-    NOT_FOUND_ERROR,
-)
 from ..responses.services import SERVICE_NOT_FOUND_ERROR
+from ..responses.image import IMAGE_EXISTS_ERROR, INVALID_IMAGE_ERROR, IMAGE_NOT_FOUND_ERROR
 from ..responses.auth import FORBIDDEN
 from ..util import get_exception_docs, get_image
 
@@ -50,7 +46,7 @@ async def set_service_image(
 @router.delete(
     "",
     status_code=status.HTTP_204_NO_CONTENT,
-    responses=get_exception_docs(NOT_FOUND_ERROR, FORBIDDEN),
+    responses=get_exception_docs(SERVICE_NOT_FOUND_ERROR, IMAGE_NOT_FOUND_ERROR, FORBIDDEN),
 )
 async def delete_service_image(
     service_id: Id,

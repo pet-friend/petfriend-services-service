@@ -89,6 +89,7 @@ class TestPurchasesService:
             end=datetime.combine(now.date(), time(8, 30), now.tzinfo),
             status=PaymentStatus.CANCELLED,
             customer_id=uuid4(),
+            customer_address_id=uuid4(),
         )
         prev = appointment.model_dump(mode="json")
 
@@ -134,6 +135,7 @@ class TestPurchasesService:
             end=datetime.combine(now.date(), time(8, 30), now.tzinfo),
             status=PaymentStatus.COMPLETED,
             customer_id=uuid4(),
+            customer_address_id=uuid4(),
         )
         prev = appointment.model_dump(mode="json")
 

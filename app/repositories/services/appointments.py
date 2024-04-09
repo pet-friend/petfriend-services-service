@@ -11,7 +11,7 @@ from app.db import get_db
 from ..base_repository import BaseRepository
 
 
-class AppointmentsRepository(BaseRepository[Appointment, Id | str]):
+class AppointmentsRepository(BaseRepository[Appointment, tuple[Id | str, Id | str]]):
     def __init__(self, session: AsyncSession = Depends(get_db)) -> None:
         super().__init__(Appointment, session)
 

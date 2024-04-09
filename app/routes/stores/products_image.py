@@ -7,7 +7,7 @@ from app.services.stores import ProductsService
 from ..responses.image import (
     IMAGE_EXISTS_ERROR,
     INVALID_IMAGE_ERROR,
-    NOT_FOUND_ERROR,
+    IMAGE_NOT_FOUND_ERROR,
 )
 from ..responses.products import PRODUCT_NOT_FOUND_ERROR
 from ..responses.auth import FORBIDDEN
@@ -52,7 +52,7 @@ async def set_product_image(
 @router.delete(
     "",
     status_code=status.HTTP_204_NO_CONTENT,
-    responses=get_exception_docs(NOT_FOUND_ERROR, FORBIDDEN),
+    responses=get_exception_docs(PRODUCT_NOT_FOUND_ERROR, IMAGE_NOT_FOUND_ERROR, FORBIDDEN),
 )
 async def delete_product_image(
     store_id: Id,

@@ -5,7 +5,14 @@ from .appointment_slots import (
     DayOfWeek,
     AppointmentSlotsList,
 )
-from .appointments import Appointment, AppointmentRead, AppointmentCreate, AvailableAppointment
+from .appointments import (
+    Appointment,
+    AppointmentRead,
+    AppointmentCreate,
+    AvailableAppointment,
+    AvailableAppointmentsForSlots,
+    AvailableAppointmentsList,
+)
 
 __all__ = [
     "Service",
@@ -21,4 +28,6 @@ __all__ = [
     "AppointmentRead",
     "AppointmentCreate",
     "AvailableAppointment",
+    "AvailableAppointmentsForSlots",
+    "AvailableAppointmentsList",
 ]

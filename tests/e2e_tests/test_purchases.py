@@ -148,7 +148,7 @@ class TestPurchasesRoute(BaseAPITestCase):
         assert r.status_code == 409
 
     async def test_purchase_one_item_invalid_address(
-        self, httpx_mock: HTTPXMock, mock_get_user_coordinates: GetUserCoordinatesMock
+        self, mock_get_user_coordinates: GetUserCoordinatesMock
     ) -> None:
         r_store = await self.client.post("/stores", json=self.store_create_json_data)
         assert r_store.status_code == 201
@@ -204,7 +204,7 @@ class TestPurchasesRoute(BaseAPITestCase):
             json=quantities,
             params={"delivery_address_id": str(address_id)},
         )
-        assert r.status_code == 200
+        assert r.status_code == 201
         data = r.json()
 
         assert data["payment_url"] == preference_url
@@ -247,7 +247,7 @@ class TestPurchasesRoute(BaseAPITestCase):
             json=quantities,
             params={"delivery_address_id": str(address_id)},
         )
-        assert r.status_code == 200
+        assert r.status_code == 201
         purchase_id = r.json()["id"]
 
         r_get = await self.client.get("/stores/purchases/me")
@@ -288,7 +288,7 @@ class TestPurchasesRoute(BaseAPITestCase):
             json=quantities,
             params={"delivery_address_id": str(address_id)},
         )
-        assert r.status_code == 200
+        assert r.status_code == 201
 
         r_product_get = await self.client.get(f"/stores/{store['id']}/products/{product['id']}")
         assert r_product_get.status_code == 200
@@ -363,7 +363,7 @@ class TestPurchasesRoute(BaseAPITestCase):
             json=quantities,
             params={"delivery_address_id": str(address_id)},
         )
-        assert r.status_code == 200
+        assert r.status_code == 201
         purchase_id = r.json()["id"]
 
         r = await self.client.patch(
@@ -400,7 +400,7 @@ class TestPurchasesRoute(BaseAPITestCase):
             json=quantities,
             params={"delivery_address_id": str(address_id)},
         )
-        assert r.status_code == 200
+        assert r.status_code == 201
         p = r.json()
         assert p["status"] == PaymentStatus.CREATED
 
@@ -445,7 +445,7 @@ class TestPurchasesRoute(BaseAPITestCase):
             json=quantities,
             params={"delivery_address_id": str(address_id)},
         )
-        assert r.status_code == 200
+        assert r.status_code == 201
         p = r.json()
         assert p["status"] == PaymentStatus.CREATED
 
@@ -490,7 +490,7 @@ class TestPurchasesRoute(BaseAPITestCase):
             json=quantities,
             params={"delivery_address_id": str(address_id)},
         )
-        assert r.status_code == 200
+        assert r.status_code == 201
         p = r.json()
         assert p["status"] == PaymentStatus.CREATED
 

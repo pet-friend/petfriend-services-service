@@ -1,27 +1,37 @@
-from decimal import Decimal
 from fastapi import APIRouter, Depends, Query, status
 from pydantic import PositiveInt
 
 from app.auth import get_caller_id, get_caller_token
 from app.models.stores import Purchase, PurchaseRead
-from app.models.payments import PaymentUpdate
 from app.models.util import Id
 from app.routes.util import get_exception_docs
 from app.serializers.stores import PurchaseList
 from app.services.stores import PurchasesService
-from app.config import settings
-from ..responses.purchases import PURCHASE_NOT_FOUND_ERROR, FORBIDDEN_PURCHASE, NOT_FOUND_ERROR
-from ..responses.payments import COLLECTOR_NOT_READY
+from ..responses.stores import STORE_NOT_FOUND_ERROR
+from ..responses.products import PRODUCT_NOT_FOUND_ERROR
+from ..responses.purchases import OUT_OF_STOCK, PURCHASE_NOT_FOUND_ERROR
+from ..responses.payments import (
+    CANT_BUY_FROM_OWN_BUSINESS,
+    COLLECTOR_NOT_READY,
+    OUTSIDE_BUSINESS_RANGE,
+)
 from ..responses.auth import FORBIDDEN
 
 router = APIRouter(prefix="", tags=["Purchases"])
-router_payments = APIRouter(prefix="", tags=["Purchases"])
 
 
 @router.post(
     "/stores/{store_id}/purchases",
-    responses=get_exception_docs(NOT_FOUND_ERROR, FORBIDDEN_PURCHASE, COLLECTOR_NOT_READY),
+    responses=get_exception_docs(
+        STORE_NOT_FOUND_ERROR,
+        PRODUCT_NOT_FOUND_ERROR,
+        OUTSIDE_BUSINESS_RANGE,
+        CANT_BUY_FROM_OWN_BUSINESS,
+        OUT_OF_STOCK,
+        COLLECTOR_NOT_READY,
+    ),
     response_model=PurchaseRead,
+    status_code=status.HTTP_201_CREATED,
 )
 async def create_store_purchase(
     store_id: Id,
@@ -72,23 +82,3 @@ async def get_store_purchase(
     user_id: Id = Depends(get_caller_id),
 ) -> Purchase:
     return await purchases_service.get_purchase(store_id, purchase_id, user_id)
-
-
-@router_payments.patch(
-    "/stores/{store_id}/purchases/{purchase_id}",
-    status_code=status.HTTP_202_ACCEPTED,
-)
-async def update_purchase_status(
-    update: PaymentUpdate,
-    store_id: Id,
-    purchase_id: Id,
-    purchases_service: PurchasesService = Depends(),
-) -> None:
-    await purchases_service.update_purchase_status(store_id, purchase_id, update.status)
-
-
-@router.get(
-    "/fee",
-)
-async def get_fee() -> Decimal:
-    return settings.FEE_PERCENTAGE

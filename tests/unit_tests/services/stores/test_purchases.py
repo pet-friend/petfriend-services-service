@@ -211,6 +211,7 @@ class TestPurchasesService:
         self.payments_service.check_payment_conditions.assert_called_once_with(
             self.store, self.store.owner_id, address_id, "token"
         )
+        self.repository.save.assert_not_called()
 
     async def test_purchase_no_stock_should_raise(self) -> None:
         # Given
@@ -234,6 +235,7 @@ class TestPurchasesService:
         self.products_service.update_stock.assert_called_once_with(
             self.product, -1 * quantities[self.product.id]
         )
+        self.repository.save.assert_not_called()
 
     async def test_purchase_one_item(self) -> None:
         # Given
@@ -307,6 +309,7 @@ class TestPurchasesService:
         assert purchase.items[0].product_id == self.product.id
         assert purchase.items[0].quantity == quantities[self.product.id]
         assert purchase.items[0].unit_price == unit_price
+        self.repository.save.assert_called_once_with(purchase)
 
     async def test_purchase_store_payment_exception(self) -> None:
         # Given
@@ -328,6 +331,7 @@ class TestPurchasesService:
             self.store, user_id, address_id, "token"
         )
         self.payments_service.create_preference.assert_called_once()
+        self.repository.save.assert_not_called()
 
     async def test_invalid_purchase_status_update(self) -> None:
         # Given
@@ -422,7 +426,6 @@ class TestPurchasesService:
         self.payments_service.update_payment_status.assert_called_once_with(
             purchase, PaymentStatus.CANCELLED
         )
-        purchase.payment_url = None  # type: ignore
         self.repository.save.assert_called_once_with(purchase)
         stock_calls = [call(item.product, item.quantity) for item in items]
         self.products_service.update_stock.assert_has_calls(stock_calls)

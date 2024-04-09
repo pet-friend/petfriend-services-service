@@ -64,7 +64,6 @@ class Purchase(PurchasePublic, table=True):
         back_populates="purchase",
     )
 
-    # Two products in the same store cannot have the same name:
     __table_args__ = (
         PrimaryKeyConstraint("store_id", "id"),  # Make sure the order of the PK is (store_id, id)
     )

@@ -2,7 +2,7 @@ from fastapi import HTTPException, status
 
 from app.exceptions.payments import OutsideBusinessRange, CantBuyFromOwnBusiness, CollectorNotReady
 
-OUTSIDE_DELIVERY_RANGE = (
+OUTSIDE_BUSINESS_RANGE = (
     OutsideBusinessRange,
     HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
@@ -10,14 +10,13 @@ OUTSIDE_DELIVERY_RANGE = (
     ),
 )
 
-CANT_PURCHASE_FROM_OWN_BUSINESS = (
+CANT_BUY_FROM_OWN_BUSINESS = (
     CantBuyFromOwnBusiness,
     HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="You can't buy from your own business",
     ),
 )
-
 
 COLLECTOR_NOT_READY = (
     CollectorNotReady,
