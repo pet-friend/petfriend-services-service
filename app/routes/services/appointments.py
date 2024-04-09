@@ -13,7 +13,11 @@ from ..responses.appointments import (
     APPOINTMENT_NOT_FOUND_ERROR,
     INVALID_APPOINTMENT_ERROR,
 )
-from ..responses.payments import COLLECTOR_NOT_READY
+from ..responses.payments import (
+    COLLECTOR_NOT_READY,
+    CANT_BUY_FROM_OWN_BUSINESS,
+    OUTSIDE_BUSINESS_RANGE,
+)
 from ..util import get_exception_docs
 
 
@@ -27,6 +31,8 @@ router = APIRouter(prefix="", tags=["Service appointments"])
         SERVICE_NOT_FOUND_ERROR,
         INVALID_APPOINTMENT_ERROR,
         COLLECTOR_NOT_READY,
+        CANT_BUY_FROM_OWN_BUSINESS,
+        OUTSIDE_BUSINESS_RANGE,
     ),
 )
 async def create_appointment(
