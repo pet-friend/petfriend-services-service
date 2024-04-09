@@ -6,9 +6,9 @@ from zoneinfo import ZoneInfo
 from sqlmodel import Field, Relationship, SQLModel
 from sqlalchemy import String
 
-from .appointment_slots import AppointmentSlotsBase, AppointmentSlots, AppointmentSlotsList
 from ..addresses import Address, AddressRead, AddressCreate, ServiceAddressLink
 from ..util import Id, TimestampModel, OptionalImageUrlModel, UUIDModel
+from .appointment_slots import AppointmentSlotsBase, AppointmentSlots, AppointmentSlotsList
 from .util import Timezone, DEFAULT_TIMEZONE
 
 

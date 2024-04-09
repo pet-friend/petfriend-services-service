@@ -191,7 +191,7 @@ class AppointmentsService:
 
     def __date_available_appointments(
         self,
-        date: date,
+        start_date: date,
         after: datetime,
         before: datetime,
         tree: IntervalTree,
@@ -200,18 +200,19 @@ class AppointmentsService:
         """
         Returns the available appointments for each slots configuration in the given date.
 
-        `date` is the day for which the available appointments will be returned.
+        `start_date` is the date in which the returned available appointments start.
         `after` and `before` are used to filter the returned available appointments. Only
         appointments that take place (totally or partially) in between `after` and `before` will be
         returned.
         `tree` contains the (start, end) intervals of the existing non-cancelled appointments
-        `slots_per_day` is a dictionary that maps the weekday to the available slots for that day
+        `slots_per_day` is a dictionary that maps the weekday to the appointment slots that start on
+        that day.
         """
-        day_slots = slots_per_day.get(date.weekday(), ())
+        day_slots = slots_per_day.get(start_date.weekday(), ())
 
         for slots in day_slots or ():
             available_for_these_slots = list(
-                self.__date_slots_available_appointments(date, slots, after, before, tree)
+                self.__date_slots_available_appointments(start_date, slots, after, before, tree)
             )
             if available_for_these_slots:
                 yield AvailableAppointmentsForSlots(
@@ -221,7 +222,7 @@ class AppointmentsService:
 
     def __date_slots_available_appointments(
         self,
-        date: date,
+        start_date: date,
         slots: AppointmentSlots,
         after: datetime,
         before: datetime,
@@ -230,7 +231,7 @@ class AppointmentsService:
         """
         Returns the available appointments for the given appointment slots and date,
 
-        `date` is the day for which the available appointments will be returned.
+        `start_date` is the date in which the returned available appointments start.
         `slots` is the appointment slots configuration for which the available appointments will be
         returned, and must take place in the given date.
         `after` and `before` are used to filter the returned available appointments. Only
@@ -238,8 +239,8 @@ class AppointmentsService:
         returned.
         `tree` contains the (start, end) intervals of the existing non-cancelled appointments,
         """
-        slots_end = datetime.combine(date, slots.end_time, tzinfo=after.tzinfo)
-        start = datetime.combine(date, slots.start_time, tzinfo=after.tzinfo)
+        slots_end = datetime.combine(start_date, slots.end_time, tzinfo=after.tzinfo)
+        start = datetime.combine(start_date, slots.start_time, tzinfo=after.tzinfo)
         end = start + slots.appointment_duration
         while end <= slots_end:
             if end > after and start < before:

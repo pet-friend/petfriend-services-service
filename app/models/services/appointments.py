@@ -5,9 +5,9 @@ from sqlalchemy import PrimaryKeyConstraint
 from sqlmodel import Field, Relationship
 from pydantic import PositiveInt, BaseModel, AwareDatetime
 
-from ..services import Service
 from ..payments import PaymentStatusModel
 from ..util import UUIDModel, Id, TZDateTime, TimestampModel
+from .services import Service
 from .appointment_slots import AppointmentSlotsBase
 
 
