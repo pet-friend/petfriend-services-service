@@ -20,7 +20,9 @@ depends_on = None
 
 def upgrade():
     op.alter_column("appointments", "status", new_column_name="payment_status")
+    op.alter_column("purchases", "status", new_column_name="payment_status")
 
 
 def downgrade():
+    op.alter_column("purchases", "payment_status", new_column_name="status")
     op.alter_column("appointments", "payment_status", new_column_name="status")
