@@ -208,7 +208,7 @@ class TestPurchasesRoute(BaseAPITestCase):
         data = r.json()
 
         assert data["payment_url"] == preference_url
-        assert data["status"] == "created"
+        assert data["payment_status"] == "created"
         assert data["store_id"] == store["id"]
         assert data["buyer_id"] == str(self.user_id)
         assert data["delivery_address_id"] == str(address_id)
@@ -402,7 +402,7 @@ class TestPurchasesRoute(BaseAPITestCase):
         )
         assert r.status_code == 201
         p = r.json()
-        assert p["status"] == PaymentStatus.CREATED
+        assert p["payment_status"] == PaymentStatus.CREATED
 
         r_patch = await self.client.patch(
             f"/stores/{store['id']}/purchases/{p['id']}",
@@ -414,7 +414,7 @@ class TestPurchasesRoute(BaseAPITestCase):
         r_get = await self.client.get(f"/stores/{store['id']}/purchases/{p['id']}")
         assert r_get.status_code == 200
         data = r_get.json()
-        assert data["status"] == PaymentStatus.IN_PROGRESS
+        assert data["payment_status"] == PaymentStatus.IN_PROGRESS
         assert data.get("payment_url", None) is None
 
     async def test_can_update_purchase_to_completed(
@@ -447,7 +447,7 @@ class TestPurchasesRoute(BaseAPITestCase):
         )
         assert r.status_code == 201
         p = r.json()
-        assert p["status"] == PaymentStatus.CREATED
+        assert p["payment_status"] == PaymentStatus.CREATED
 
         r_patch = await self.client.patch(
             f"/stores/{store['id']}/purchases/{p['id']}",
@@ -459,7 +459,7 @@ class TestPurchasesRoute(BaseAPITestCase):
         r_get = await self.client.get(f"/stores/{store['id']}/purchases/{p['id']}")
         assert r_get.status_code == 200
         data = r_get.json()
-        assert data["status"] == PaymentStatus.COMPLETED
+        assert data["payment_status"] == PaymentStatus.COMPLETED
         assert data.get("payment_url", None) is None
 
     async def test_can_update_purchase_to_cancelled_and_restores_stock(
@@ -492,7 +492,7 @@ class TestPurchasesRoute(BaseAPITestCase):
         )
         assert r.status_code == 201
         p = r.json()
-        assert p["status"] == PaymentStatus.CREATED
+        assert p["payment_status"] == PaymentStatus.CREATED
 
         r_patch = await self.client.patch(
             f"/stores/{store['id']}/purchases/{p['id']}",
@@ -504,7 +504,7 @@ class TestPurchasesRoute(BaseAPITestCase):
         r_get = await self.client.get(f"/stores/{store['id']}/purchases/{p['id']}")
         assert r_get.status_code == 200
         data = r_get.json()
-        assert data["status"] == PaymentStatus.CANCELLED
+        assert data["payment_status"] == PaymentStatus.CANCELLED
         assert data.get("payment_url", None) is None
 
         r_product_get = await self.client.get(f"/stores/{store['id']}/products/{product['id']}")

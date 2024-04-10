@@ -127,7 +127,7 @@ class TestServicesService:
             Appointment(
                 start=datetime.combine(now.date(), time(8, 0), now.tzinfo),
                 end=datetime.combine(now.date(), time(8, 30), now.tzinfo),
-                status=PaymentStatus.COMPLETED,
+                payment_status=PaymentStatus.COMPLETED,
                 customer_id=uuid4(),
                 customer_address_id=uuid4(),
             ),
@@ -169,7 +169,7 @@ class TestServicesService:
             Appointment(
                 start=datetime.combine(now.date(), time(8, 0), now.tzinfo),
                 end=datetime.combine(now.date(), time(8, 30), now.tzinfo),
-                status=PaymentStatus.COMPLETED,
+                payment_status=PaymentStatus.COMPLETED,
                 customer_id=uuid4(),
                 customer_address_id=uuid4(),
             ),
@@ -209,7 +209,7 @@ class TestServicesService:
             Appointment(
                 start=datetime.combine(now.date(), time(8, 0), now.tzinfo),
                 end=datetime.combine(now.date(), time(8, 45), now.tzinfo),
-                status=PaymentStatus.COMPLETED,
+                payment_status=PaymentStatus.COMPLETED,
                 customer_id=uuid4(),
                 customer_address_id=uuid4(),
             ),
@@ -300,7 +300,7 @@ class TestServicesService:
             Appointment(
                 start=datetime.combine(now.date(), time(8, 0), now.tzinfo),
                 end=datetime.combine(now.date(), time(8, 45), now.tzinfo),
-                status=PaymentStatus.COMPLETED,
+                payment_status=PaymentStatus.COMPLETED,
                 customer_id=uuid4(),
                 customer_address_id=uuid4(),
             ),
@@ -462,7 +462,7 @@ class TestServicesService:
             Appointment(
                 start=datetime.combine(now.date(), time(13, 30), now.tzinfo),
                 end=datetime.combine(tomorrow_date, time(14, 00), now.tzinfo),
-                status=PaymentStatus.IN_PROGRESS,
+                payment_status=PaymentStatus.IN_PROGRESS,
                 customer_id=uuid4(),
                 customer_address_id=uuid4(),
             )
@@ -611,7 +611,7 @@ class TestServicesService:
             Appointment(
                 start=datetime.combine(now.date(), time(7, 0), now.tzinfo),
                 end=datetime.combine(now.date(), time(8, 45), now.tzinfo),
-                status=PaymentStatus.COMPLETED,
+                payment_status=PaymentStatus.COMPLETED,
                 customer_id=uuid4(),
                 customer_address_id=uuid4(),
             )
@@ -767,10 +767,9 @@ class TestServicesService:
             CustomMatcher(check_payment_data), self.service_model.owner_id, token
         )
         self.repository.save.assert_called_once_with(created_appointment)
-        assert created_appointment.status == PaymentStatus.CREATED
+        assert created_appointment.payment_status == PaymentStatus.CREATED
         assert created_appointment.start == datetime.combine(now.date(), time(8, 0), now.tzinfo)
         assert created_appointment.end == datetime.combine(now.date(), time(8, 30), now.tzinfo)
-        assert created_appointment.status == PaymentStatus.CREATED
         assert created_appointment.service_id == self.service_model.id
         assert created_appointment.customer_id == customer_id
         assert created_appointment.payment_url == result_url
@@ -811,7 +810,7 @@ class TestServicesService:
         # Given
         now = self.get_now()
         appointment = Appointment(
-            status=PaymentStatus.COMPLETED,
+            payment_status=PaymentStatus.COMPLETED,
             payment_url=None,
             start=now,
             end=now + timedelta(minutes=30),
@@ -839,7 +838,7 @@ class TestServicesService:
         # Given
         now = self.get_now()
         appointment = Appointment(
-            status=PaymentStatus.CANCELLED,
+            payment_status=PaymentStatus.CANCELLED,
             payment_url=None,
             start=now,
             end=now + timedelta(minutes=30),
@@ -867,7 +866,7 @@ class TestServicesService:
         # Given
         now = self.get_now()
         appointment = Appointment(
-            status=PaymentStatus.CREATED,
+            payment_status=PaymentStatus.CREATED,
             payment_url="url",
             start=now,
             end=now + timedelta(minutes=30),
@@ -895,7 +894,7 @@ class TestServicesService:
         # Given
         now = self.get_now()
         appointment = Appointment(
-            status=PaymentStatus.CREATED,
+            payment_status=PaymentStatus.CREATED,
             payment_url="url",
             start=now,
             end=now + timedelta(minutes=30),
@@ -920,7 +919,7 @@ class TestServicesService:
         now = self.get_now()
         customer_id = uuid4()
         appointment = Appointment(
-            status=PaymentStatus.CREATED,
+            payment_status=PaymentStatus.CREATED,
             payment_url="url",
             start=now,
             end=now + timedelta(minutes=30),
@@ -944,7 +943,7 @@ class TestServicesService:
         # Given
         now = self.get_now()
         appointment = Appointment(
-            status=PaymentStatus.CREATED,
+            payment_status=PaymentStatus.CREATED,
             payment_url="url",
             start=now,
             end=now + timedelta(minutes=30),
@@ -986,7 +985,7 @@ class TestServicesService:
         # Given
         now = self.get_now()
         appointment = Appointment(
-            status=PaymentStatus.CREATED,
+            payment_status=PaymentStatus.CREATED,
             payment_url="url",
             start=now,
             end=now + timedelta(minutes=30),
@@ -1034,7 +1033,7 @@ class TestServicesService:
             after_matcher,
             before,
             service_id=self.service_model.id,
-            status=CustomMatcher[list[PaymentStatus]](
+            payment_status=CustomMatcher[list[PaymentStatus]](
                 lambda s: len(set(s)) == 3 and PaymentStatus.CANCELLED not in s
             ),
         )

@@ -221,7 +221,7 @@ class TestAppointmentsRoute(BaseAPITestCase):
         data = r.json()
 
         assert data["payment_url"] == preference_url
-        assert data["status"] == "created"
+        assert data["payment_status"] == "created"
         assert data["service_id"] == service["id"]
         assert data["customer_id"] == str(self.user_id)
         assert data["customer_address_id"] == str(address_id)
@@ -315,7 +315,7 @@ class TestAppointmentsRoute(BaseAPITestCase):
         )
         assert r.status_code == 201
         p = r.json()
-        assert p["status"] == PaymentStatus.CREATED
+        assert p["payment_status"] == PaymentStatus.CREATED
 
         r_patch = await self.client.patch(
             f"/services/{service['id']}/appointments/{p['id']}",
@@ -327,7 +327,7 @@ class TestAppointmentsRoute(BaseAPITestCase):
         r_get = await self.client.get(f"/services/{service['id']}/appointments/{p['id']}")
         assert r_get.status_code == 200
         data = r_get.json()
-        assert data["status"] == PaymentStatus.IN_PROGRESS
+        assert data["payment_status"] == PaymentStatus.IN_PROGRESS
         assert data.get("payment_url", None) is None
 
     async def test_can_update_appointment_to_completed(
@@ -354,7 +354,7 @@ class TestAppointmentsRoute(BaseAPITestCase):
         )
         assert r.status_code == 201
         p = r.json()
-        assert p["status"] == PaymentStatus.CREATED
+        assert p["payment_status"] == PaymentStatus.CREATED
 
         r_patch = await self.client.patch(
             f"/services/{service['id']}/appointments/{p['id']}",
@@ -366,7 +366,7 @@ class TestAppointmentsRoute(BaseAPITestCase):
         r_get = await self.client.get(f"/services/{service['id']}/appointments/{p['id']}")
         assert r_get.status_code == 200
         data = r_get.json()
-        assert data["status"] == PaymentStatus.COMPLETED
+        assert data["payment_status"] == PaymentStatus.COMPLETED
         assert data.get("payment_url", None) is None
 
     async def test_can_update_appointment_to_cancelled(
@@ -393,7 +393,7 @@ class TestAppointmentsRoute(BaseAPITestCase):
         )
         assert r.status_code == 201
         p = r.json()
-        assert p["status"] == PaymentStatus.CREATED
+        assert p["payment_status"] == PaymentStatus.CREATED
 
         r_patch = await self.client.patch(
             f"/services/{service['id']}/appointments/{p['id']}",
@@ -405,5 +405,5 @@ class TestAppointmentsRoute(BaseAPITestCase):
         r_get = await self.client.get(f"/services/{service['id']}/appointments/{p['id']}")
         assert r_get.status_code == 200
         data = r_get.json()
-        assert data["status"] == PaymentStatus.CANCELLED
+        assert data["payment_status"] == PaymentStatus.CANCELLED
         assert data.get("payment_url", None) is None

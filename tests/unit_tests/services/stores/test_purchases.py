@@ -70,7 +70,7 @@ class TestPurchasesService:
             id=purchase_id,
             items=items,
             buyer_id=uuid4(),
-            status=PaymentStatus.CREATED,
+            payment_status=PaymentStatus.CREATED,
             payment_url="http://payment.url",
             delivery_address_id=uuid4(),
         )
@@ -98,7 +98,7 @@ class TestPurchasesService:
             id=purchase_id,
             items=items,
             buyer_id=buyer,
-            status=PaymentStatus.CREATED,
+            payment_status=PaymentStatus.CREATED,
             payment_url="http://payment.url",
             delivery_address_id=uuid4(),
         )
@@ -123,7 +123,7 @@ class TestPurchasesService:
             id=purchase_id,
             items=items,
             buyer_id=uuid4(),
-            status=PaymentStatus.CREATED,
+            payment_status=PaymentStatus.CREATED,
             payment_url="http://payment.url",
             delivery_address_id=uuid4(),
         )
@@ -167,7 +167,7 @@ class TestPurchasesService:
             id=uuid4(),
             items=items,
             buyer_id=uuid4(),
-            status=PaymentStatus.CREATED,
+            payment_status=PaymentStatus.CREATED,
             payment_url="http://payment.url",
             delivery_address_id=uuid4(),
         )
@@ -300,7 +300,7 @@ class TestPurchasesService:
         self.products_service.update_stock.assert_called_once_with(
             self.product, -1 * quantities[self.product.id]
         )
-        assert purchase.status == PaymentStatus.CREATED
+        assert purchase.payment_status == PaymentStatus.CREATED
         assert purchase.payment_url == result_url
         assert purchase.id == service_reference
         assert purchase.store == self.store
@@ -345,7 +345,7 @@ class TestPurchasesService:
             id=purchase_id,
             items=items,
             buyer_id=uuid4(),
-            status=PaymentStatus.COMPLETED,
+            payment_status=PaymentStatus.COMPLETED,
             payment_url=None,
             delivery_address_id=uuid4(),
         )
@@ -377,7 +377,7 @@ class TestPurchasesService:
             id=purchase_id,
             items=items,
             buyer_id=uuid4(),
-            status=PaymentStatus.CANCELLED,
+            payment_status=PaymentStatus.CANCELLED,
             payment_url=None,
             delivery_address_id=uuid4(),
         )
@@ -409,7 +409,7 @@ class TestPurchasesService:
             id=purchase_id,
             items=items,
             buyer_id=uuid4(),
-            status=PaymentStatus.CREATED,
+            payment_status=PaymentStatus.CREATED,
             payment_url="http://payment.url",
             delivery_address_id=uuid4(),
         )

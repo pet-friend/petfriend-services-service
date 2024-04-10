@@ -32,17 +32,17 @@ class PaymentsService:
         """
         Updates the status of a payment and returns True if the status was updated.
         """
-        if model.status == new_status:
+        if model.payment_status == new_status:
             # No update
             return False
 
-        if model.status in FORBIDDEN_STATUS_CHANGES:
+        if model.payment_status in FORBIDDEN_STATUS_CHANGES:
             logging.warning(
-                f"Tried to update status of payment from '{model.status}' to '{new_status}'"
+                f"Tried to update status of payment from '{model.payment_status}' to '{new_status}'"
             )
             raise Forbidden
 
-        model.status = new_status
+        model.payment_status = new_status
         model.payment_url = None
         return True
 

@@ -67,7 +67,7 @@ class TestPurchasesService:
             id=purchase_id,
             items=items,
             buyer_id=uuid4(),
-            status=PaymentStatus.CANCELLED,
+            payment_status=PaymentStatus.CANCELLED,
             payment_url="http://payment.url",
             delivery_address_id=uuid4(),
         )
@@ -87,7 +87,7 @@ class TestPurchasesService:
         appointment = Appointment(
             start=datetime.combine(now.date(), time(8, 0), now.tzinfo),
             end=datetime.combine(now.date(), time(8, 30), now.tzinfo),
-            status=PaymentStatus.CANCELLED,
+            payment_status=PaymentStatus.CANCELLED,
             customer_id=uuid4(),
             customer_address_id=uuid4(),
         )
@@ -113,7 +113,7 @@ class TestPurchasesService:
             id=purchase_id,
             items=items,
             buyer_id=uuid4(),
-            status=PaymentStatus.COMPLETED,
+            payment_status=PaymentStatus.COMPLETED,
             payment_url="http://payment.url",
             delivery_address_id=uuid4(),
         )
@@ -133,7 +133,7 @@ class TestPurchasesService:
         appointment = Appointment(
             start=datetime.combine(now.date(), time(8, 0), now.tzinfo),
             end=datetime.combine(now.date(), time(8, 30), now.tzinfo),
-            status=PaymentStatus.COMPLETED,
+            payment_status=PaymentStatus.COMPLETED,
             customer_id=uuid4(),
             customer_address_id=uuid4(),
         )
@@ -159,18 +159,18 @@ class TestPurchasesService:
             id=purchase_id,
             items=items,
             buyer_id=uuid4(),
-            status=PaymentStatus.CREATED,
+            payment_status=PaymentStatus.CREATED,
             payment_url="http://payment.url",
             delivery_address_id=uuid4(),
         )
 
         # When, Then
         assert await self.service.update_payment_status(purchase, PaymentStatus.IN_PROGRESS)
-        assert purchase.status == PaymentStatus.IN_PROGRESS
+        assert purchase.payment_status == PaymentStatus.IN_PROGRESS
         assert purchase.payment_url is None
 
         assert await self.service.update_payment_status(purchase, PaymentStatus.COMPLETED)
-        assert purchase.status == PaymentStatus.COMPLETED
+        assert purchase.payment_status == PaymentStatus.COMPLETED
 
     async def test_update_payment_status_to_cancelled_should_update(self) -> None:
         # Given
@@ -184,17 +184,17 @@ class TestPurchasesService:
             id=purchase_id,
             items=items,
             buyer_id=uuid4(),
-            status=PaymentStatus.CREATED,
+            payment_status=PaymentStatus.CREATED,
             payment_url="http://payment.url",
             delivery_address_id=uuid4(),
         )
 
         # When, Then
         assert await self.service.update_payment_status(purchase, PaymentStatus.IN_PROGRESS)
-        assert purchase.status == PaymentStatus.IN_PROGRESS
+        assert purchase.payment_status == PaymentStatus.IN_PROGRESS
         assert purchase.payment_url is None
         assert await self.service.update_payment_status(purchase, PaymentStatus.CANCELLED)
-        assert purchase.status == PaymentStatus.CANCELLED
+        assert purchase.payment_status == PaymentStatus.CANCELLED
 
     async def test_update_payment_status_same_status_should_not_update(self) -> None:
         # Given
@@ -208,7 +208,7 @@ class TestPurchasesService:
             id=purchase_id,
             items=items,
             buyer_id=uuid4(),
-            status=PaymentStatus.COMPLETED,
+            payment_status=PaymentStatus.COMPLETED,
             payment_url="http://payment.url",
             delivery_address_id=uuid4(),
         )

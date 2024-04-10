@@ -84,7 +84,7 @@ class PurchasesService:
 
         purchase = Purchase(
             store=store,
-            status=PaymentStatus.CREATED,
+            payment_status=PaymentStatus.CREATED,
             buyer_id=user_id,
             delivery_address_id=delivery_address_id,
         )

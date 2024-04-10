@@ -73,7 +73,7 @@ class AppointmentsService:
         appointment = Appointment(
             start=start,
             end=available_appointment.end,
-            status=PaymentStatus.CREATED,
+            payment_status=PaymentStatus.CREATED,
             service_id=service_id,
             customer_id=customer_id,
             customer_address_id=user_address_id,
@@ -274,7 +274,11 @@ class AppointmentsService:
             range_start,
             range_end,
             service_id=service_id,
-            status=[PaymentStatus.CREATED, PaymentStatus.IN_PROGRESS, PaymentStatus.COMPLETED],
+            payment_status=[
+                PaymentStatus.CREATED,
+                PaymentStatus.IN_PROGRESS,
+                PaymentStatus.COMPLETED,
+            ],
         )
 
     async def __build_order(

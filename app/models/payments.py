@@ -22,5 +22,5 @@ class PaymentUpdate(BaseModel):
 
 
 class PaymentStatusModel(SQLModel):
-    status: PaymentStatus
+    payment_status: PaymentStatus
     payment_url: str | None = None
