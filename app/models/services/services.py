@@ -8,6 +8,7 @@ from sqlalchemy import String
 
 from ..addresses import Address, AddressRead, AddressCreate, ServiceAddressLink
 from ..util import Id, TimestampModel, OptionalImageUrlModel, UUIDModel
+from ..review import Review, ReviewsScoreAverage, set_review_score_average_column
 from .appointment_slots import AppointmentSlotsBase, AppointmentSlots, AppointmentSlotsList
 from .util import Timezone, DEFAULT_TIMEZONE
 
@@ -35,7 +36,7 @@ class ServiceBase(SQLModel):
 
 
 # Public database fields
-class ServicePublic(UUIDModel, ServiceBase):
+class ServicePublic(UUIDModel, ReviewsScoreAverage, ServiceBase):
     owner_id: Id
 
 
@@ -62,6 +63,10 @@ class Service(ServicePublic, TimestampModel, table=True):
         },
         link_model=ServiceAddressLink,
     )
+    # Not populated, only used for deleting reviews when a service is deleted
+    _reviews: list["ServiceReview"] = Relationship(
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
 
     def to_tz(self, dt: datetime) -> datetime:
         """
@@ -82,3 +87,12 @@ class Service(ServicePublic, TimestampModel, table=True):
 class ServiceCreate(ServiceBase):
     address: AddressCreate
     appointment_slots: AppointmentSlotsList
+
+
+class ServiceReview(Review, table=True):
+    __tablename__ = "service_reviews"
+
+    service_id: Id = Field(foreign_key="services.id")
+
+
+set_review_score_average_column(Service, ServiceReview, ServiceReview.service_id == Service.id)

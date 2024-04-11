@@ -53,8 +53,8 @@ class AddressCreate(AddressBase):
     pass
 
 
-# Use a link table to allow for other services to have a relationship with the address
-# table, and to cascade delete the address when the store/service is deleted
+# Use a link table to allow for both stores and services to have a relationship with
+# the address table, and to cascade delete the address when the store/service is deleted
 
 
 class StoreAddressLink(SQLModel, table=True):

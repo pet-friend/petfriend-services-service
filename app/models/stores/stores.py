@@ -11,6 +11,7 @@ from ..constants.stores import (
     INVALID_DELIVERY_RANGE_MSG,
     INVALID_SHIPPING_COST_MSG,
 )
+from ..review import Review, ReviewsScoreAverage, set_review_score_average_column
 from ..util import Id, TimestampModel, OptionalImageUrlModel, UUIDModel
 
 if TYPE_CHECKING:
@@ -37,7 +38,7 @@ class StoreBase(SQLModel):
 
 
 # Public database fields
-class StorePublic(UUIDModel, StoreBase):
+class StorePublic(UUIDModel, StoreBase, ReviewsScoreAverage):
     owner_id: Id
 
 
@@ -62,6 +63,10 @@ class Store(StorePublic, TimestampModel, table=True):
         sa_relationship_kwargs={"lazy": "selectin", "cascade": "all, delete-orphan"},
         back_populates="store",
     )
+    # Not populated, only used for deleting reviews when a store is deleted
+    _reviews: list["StoreReview"] = Relationship(
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
 
     @property
     def range_km(self) -> float:
@@ -71,3 +76,12 @@ class Store(StorePublic, TimestampModel, table=True):
 # Required attributes for creating a new record
 class StoreCreate(StoreBase):
     address: AddressCreate
+
+
+class StoreReview(Review, table=True):
+    __tablename__ = "store_reviews"
+
+    store_id: Id = Field(foreign_key="stores.id")
+
+
+set_review_score_average_column(Store, StoreReview, StoreReview.store_id == Store.id)

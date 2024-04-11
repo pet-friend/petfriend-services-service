@@ -6,6 +6,7 @@ from pydantic import field_validator, model_validator
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
+from ..review import Review, ReviewsScoreAverage, set_review_score_average_column
 from ..util import Id, UUIDModel, TimestampModel, OptionalImageUrlModel
 from .stores import Store
 
@@ -47,7 +48,7 @@ class ProductBase(SQLModel):
 
 
 # What the Product gets from the API (Base + id)
-class ProductPublic(ProductBase, UUIDModel):
+class ProductPublic(ProductBase, ReviewsScoreAverage, UUIDModel):
     store_id: Id = Field(foreign_key="stores.id", primary_key=True)
 
 
@@ -76,14 +77,18 @@ class Product(ProductPublic, TimestampModel, table=True):
         }
     )
 
+    store: "Store" = Relationship(
+        sa_relationship_kwargs={"lazy": "selectin"}, back_populates="products"
+    )
+    # Not populated, only used for deleting reviews when a product is deleted
+    _reviews: list["ProductReview"] = Relationship(
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+
     # Two products in the same store cannot have the same name:
     __table_args__ = (
         UniqueConstraint("name", "store_id", name="product_name_uq"),
         PrimaryKeyConstraint("store_id", "id"),  # Make sure the order of the PK is (store_id, id)
-    )
-
-    store: "Store" = Relationship(
-        sa_relationship_kwargs={"lazy": "selectin"}, back_populates="products"
     )
 
 
@@ -98,3 +103,21 @@ class ProductCreate(ProductBase):
                 f"Cannot have more than {MAX_CATEGORIES_PER_PRODUCT} categories per product"
             )
         return v
+
+
+class ProductReview(Review, table=True):
+    __tablename__ = "product_reviews"
+
+    store_id: Id
+    product_id: Id
+
+    __table_args__ = (
+        ForeignKeyConstraint(["store_id", "product_id"], ["products.store_id", "products.id"]),
+    )
+
+
+set_review_score_average_column(
+    Product,
+    ProductReview,
+    (ProductReview.store_id == Product.store_id) & (ProductReview.product_id == Product.id),
+)

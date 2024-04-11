@@ -1,3 +1,4 @@
+# fmt: off
 from logging.config import fileConfig
 import asyncio
 
@@ -8,8 +9,8 @@ from alembic import context
 
 from app.config import settings as fastapi_settings
 from app.db import engine
-from app.models.stores import Store, Product, Purchase, PurchaseItem  # noqa
-from app.models.services import Service, AppointmentSlots, Appointment  # noqa
+from app.models.stores import Store, Product, Purchase, PurchaseItem, StoreReview, ProductReview # noqa
+from app.models.services import Service, AppointmentSlots, Appointment, ServiceReview  # noqa
 from app.models.addresses import Address, StoreAddressLink, ServiceAddressLink  # noqa
 
 # this is the Alembic Config object, which provides
