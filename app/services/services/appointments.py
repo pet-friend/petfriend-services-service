@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, time, date
-from typing import Generator, Iterable, Sequence
+from typing import Any, Generator, Iterable, Sequence
 from zoneinfo import ZoneInfo
 import logging
 
@@ -91,6 +91,7 @@ class AppointmentsService:
         *,
         after: datetime | None = None,
         before: datetime | None = None,
+        include_partial: bool = True,
         now: datetime | None = None,
     ) -> AvailableAppointmentsList:
         """
@@ -98,9 +99,12 @@ class AppointmentsService:
         The result is guaranteed to be sorted by start time.
 
         `after` and `before` are optional and can be used to filter returned
-        available appointments. Only appointments that take place (totally or partially)
-        in between `after` and `before` will be returned. Defaults to the current time and
-        the maximum allowed appointment start time for the given service, respectively.
+        available appointments. Defaults to the current time and the maximum allowed
+        appointment start time for the given service, respectively.
+
+        If `include_partial` is `False` only appointments that start and end within the
+        given range will be returned. If `True`, appointments that are partially in the
+        range will also be returned. Defaults to `True`.
 
         `now` can be used to override the current time. Defaults to the current time.
         """
@@ -124,7 +128,7 @@ class AppointmentsService:
             self.__merge_or_extend_available(
                 available_appointments,
                 self.__date_available_appointments(
-                    current_date, after, before, appointments_tree, slots_per_day
+                    current_date, appointments_tree, slots_per_day, after, before, include_partial
                 ),
             )
         return available_appointments
@@ -150,25 +154,51 @@ class AppointmentsService:
         return appointment
 
     async def get_service_appointments(
-        self, service_id: Id, user_id: Id, limit: int, skip: int
+        self,
+        service_id: Id,
+        user_id: Id,
+        limit: int,
+        skip: int,
+        after: datetime | None = None,
+        before: datetime | None = None,
+        include_partial: bool = True,
     ) -> tuple[Sequence[Appointment], int]:
         service = await self.services_service.get_service_by_id(service_id)
         if user_id != service.owner_id:
             raise Forbidden
-        appointments = await self.appointments_repo.get_all(
-            service_id=service_id, limit=limit, skip=skip
+        appointments = await self.get_appointments(
+            limit, skip, after, before, include_partial, service_id=service_id
         )
         amount = await self.appointments_repo.count_all(service_id=service_id)
         return appointments, amount
 
     async def get_user_appointments(
-        self, user_id: Id, limit: int, skip: int
+        self,
+        user_id: Id,
+        limit: int,
+        skip: int,
+        after: datetime | None = None,
+        before: datetime | None = None,
+        include_partial: bool = True,
     ) -> tuple[Sequence[Appointment], int]:
-        appointments = await self.appointments_repo.get_all(
-            customer_id=user_id, limit=limit, skip=skip
+        appointments = await self.get_appointments(
+            limit, skip, after, before, include_partial, customer_id=user_id
         )
         amount = await self.appointments_repo.count_all(customer_id=user_id)
         return appointments, amount
+
+    async def get_appointments(
+        self,
+        limit: int | None = None,
+        skip: int = 0,
+        after: datetime | None = None,
+        before: datetime | None = None,
+        include_partial: bool = True,
+        **filters: Any,
+    ) -> Sequence[Appointment]:
+        return await self.appointments_repo.get_all_by_range(
+            after, before, include_partial, limit, skip, **filters
+        )
 
     def __merge_or_extend_available(
         self,
@@ -192,10 +222,11 @@ class AppointmentsService:
     def __date_available_appointments(
         self,
         start_date: date,
-        after: datetime,
-        before: datetime,
         tree: IntervalTree,
         slots_per_day: dict[int, list[AppointmentSlots]],
+        after: datetime,
+        before: datetime,
+        include_partial: bool,
     ) -> Generator[AvailableAppointmentsForSlots, None, None]:
         """
         Returns the available appointments for each slots configuration in the given date.
@@ -212,7 +243,9 @@ class AppointmentsService:
 
         for slots in day_slots or ():
             available_for_these_slots = list(
-                self.__date_slots_available_appointments(start_date, slots, after, before, tree)
+                self.__date_slots_available_appointments(
+                    start_date, slots, tree, after, before, include_partial
+                )
             )
             if available_for_these_slots:
                 yield AvailableAppointmentsForSlots(
@@ -224,9 +257,10 @@ class AppointmentsService:
         self,
         start_date: date,
         slots: AppointmentSlots,
+        tree: IntervalTree,
         after: datetime,
         before: datetime,
-        tree: IntervalTree,
+        include_partial: bool,
     ) -> Generator[AvailableAppointment, None, None]:
         """
         Returns the available appointments for the given appointment slots and date,
@@ -243,7 +277,11 @@ class AppointmentsService:
         start = datetime.combine(start_date, slots.start_time, tzinfo=after.tzinfo)
         end = start + slots.appointment_duration
         while end <= slots_end:
-            if end > after and start < before:
+            if (include_partial and start >= before) or (not include_partial and end > before):
+                # Already out of the range
+                break
+            if (include_partial and end > after) or (not include_partial and start >= after):
+                # In the range
                 amount = slots.max_appointments_per_slot - len(tree.overlap(start, end))
                 if amount > 0:
                     yield AvailableAppointment(start=start, end=end, amount=amount)
@@ -273,6 +311,7 @@ class AppointmentsService:
         return await self.appointments_repo.get_all_by_range(
             range_start,
             range_end,
+            return_partial=True,
             service_id=service_id,
             payment_status=[
                 PaymentStatus.CREATED,

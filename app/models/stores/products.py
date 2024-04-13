@@ -6,7 +6,7 @@ from pydantic import field_validator, model_validator
 from sqlalchemy import PrimaryKeyConstraint, ForeignKeyConstraint, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
-from ..review import Review, ReviewsScoreAverage, set_review_score_average_column
+from ..reviews import ReviewRead, ReviewsRatingAverage, set_review_rating_average_column
 from ..util import Id, UUIDModel, TimestampModel, OptionalImageUrlModel
 from .stores import Store
 
@@ -48,7 +48,7 @@ class ProductBase(SQLModel):
 
 
 # What the Product gets from the API (Base + id)
-class ProductPublic(ProductBase, ReviewsScoreAverage, UUIDModel):
+class ProductPublic(ProductBase, ReviewsRatingAverage, UUIDModel):
     store_id: Id = Field(foreign_key="stores.id", primary_key=True)
 
 
@@ -105,18 +105,22 @@ class ProductCreate(ProductBase):
         return v
 
 
-class ProductReview(Review, table=True):
-    __tablename__ = "product_reviews"
+class ProductReviewRead(ReviewRead):
+    store_id: Id = Field(primary_key=True)
+    product_id: Id = Field(primary_key=True)
 
-    store_id: Id
-    product_id: Id
+
+class ProductReview(ProductReviewRead, table=True):
+    __tablename__ = "product_reviews"
 
     __table_args__ = (
         ForeignKeyConstraint(["store_id", "product_id"], ["products.store_id", "products.id"]),
+        # Make sure the order of the PK is (store_id, product_id, reviewer_id)
+        PrimaryKeyConstraint("store_id", "product_id", "reviewer_id"),
     )
 
 
-set_review_score_average_column(
+set_review_rating_average_column(
     Product,
     ProductReview,
     (ProductReview.store_id == Product.store_id) & (ProductReview.product_id == Product.id),

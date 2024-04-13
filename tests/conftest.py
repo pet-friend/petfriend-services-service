@@ -31,7 +31,7 @@ def blob_global_setup() -> Generator[str, None, None]:
     try:
         yield connection_string
     finally:
-        azurite.stop(force=True)
+        azurite.stop()
 
 
 @pytest.fixture(scope="function")

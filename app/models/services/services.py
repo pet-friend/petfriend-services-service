@@ -4,11 +4,11 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from sqlmodel import Field, Relationship, SQLModel
-from sqlalchemy import String
+from sqlalchemy import PrimaryKeyConstraint, String
 
 from ..addresses import Address, AddressRead, AddressCreate, ServiceAddressLink
 from ..util import Id, TimestampModel, OptionalImageUrlModel, UUIDModel
-from ..review import Review, ReviewsScoreAverage, set_review_score_average_column
+from ..reviews import ReviewRead, ReviewsRatingAverage, set_review_rating_average_column
 from .appointment_slots import AppointmentSlotsBase, AppointmentSlots, AppointmentSlotsList
 from .util import Timezone, DEFAULT_TIMEZONE
 
@@ -36,7 +36,7 @@ class ServiceBase(SQLModel):
 
 
 # Public database fields
-class ServicePublic(UUIDModel, ReviewsScoreAverage, ServiceBase):
+class ServicePublic(UUIDModel, ReviewsRatingAverage, ServiceBase):
     owner_id: Id
 
 
@@ -89,10 +89,17 @@ class ServiceCreate(ServiceBase):
     appointment_slots: AppointmentSlotsList
 
 
-class ServiceReview(Review, table=True):
+class ServiceReviewRead(ReviewRead):
+    service_id: Id = Field(foreign_key="services.id", primary_key=True)
+
+
+class ServiceReview(ServiceReviewRead, table=True):
     __tablename__ = "service_reviews"
 
-    service_id: Id = Field(foreign_key="services.id")
+    __table_args__ = (
+        # Make sure the order of the PK is (service_id, reviewer_id)
+        PrimaryKeyConstraint("service_id", "reviewer_id"),
+    )
 
 
-set_review_score_average_column(Service, ServiceReview, ServiceReview.service_id == Service.id)
+set_review_rating_average_column(Service, ServiceReview, ServiceReview.service_id == Service.id)

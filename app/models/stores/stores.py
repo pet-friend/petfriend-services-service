@@ -1,6 +1,7 @@
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
+from sqlalchemy import PrimaryKeyConstraint
 from sqlmodel import Field, Relationship, SQLModel
 from pydantic import field_validator
 
@@ -11,7 +12,7 @@ from ..constants.stores import (
     INVALID_DELIVERY_RANGE_MSG,
     INVALID_SHIPPING_COST_MSG,
 )
-from ..review import Review, ReviewsScoreAverage, set_review_score_average_column
+from ..reviews import ReviewRead, ReviewsRatingAverage, set_review_rating_average_column
 from ..util import Id, TimestampModel, OptionalImageUrlModel, UUIDModel
 
 if TYPE_CHECKING:
@@ -38,7 +39,7 @@ class StoreBase(SQLModel):
 
 
 # Public database fields
-class StorePublic(UUIDModel, StoreBase, ReviewsScoreAverage):
+class StorePublic(UUIDModel, StoreBase, ReviewsRatingAverage):
     owner_id: Id
 
 
@@ -78,10 +79,17 @@ class StoreCreate(StoreBase):
     address: AddressCreate
 
 
-class StoreReview(Review, table=True):
+class StoreReviewRead(ReviewRead):
+    store_id: Id = Field(foreign_key="stores.id", primary_key=True)
+
+
+class StoreReview(StoreReviewRead, table=True):
     __tablename__ = "store_reviews"
 
-    store_id: Id = Field(foreign_key="stores.id")
+    __table_args__ = (
+        # Make sure the order of the PK is (store_id, reviewer_id)
+        PrimaryKeyConstraint("store_id", "reviewer_id"),
+    )
 
 
-set_review_score_average_column(Store, StoreReview, StoreReview.store_id == Store.id)
+set_review_rating_average_column(Store, StoreReview, StoreReview.store_id == Store.id)

@@ -36,6 +36,7 @@ class TestStoresProductsRoute(BaseAPITestCase):
         assert response_text.pop("store_id") == store_id
         response_text.pop("id")
         response_text.pop("image_url")
+        response_text.pop("reviews_average_rating")
         assert product._categories is not None
         assert len(response_text.items()) == len(self.product_create_json_data.items())
 
@@ -109,11 +110,13 @@ class TestStoresProductsRoute(BaseAPITestCase):
         assert response_text_1.pop("store_id") == store_id
         response_text_1.pop("id")
         response_text_1.pop("image_url")
+        response_text_1.pop("reviews_average_rating")
         assert len(response_text_1.items()) == len(self.product_create_json_data.items())
         assert product_2 is not None
         assert response_text_2.pop("store_id") == store_id
         response_text_2.pop("id")
         response_text_2.pop("image_url")
+        response_text_2.pop("reviews_average_rating")
         assert len(response_text_2.items()) == len(product_create_json_data_2.items())
 
     async def test_create_and_get(self) -> None:
@@ -132,6 +135,7 @@ class TestStoresProductsRoute(BaseAPITestCase):
         assert response_text.pop("store_id") == store_id
         response_text.pop("id")
         response_text.pop("image_url")
+        response_text.pop("reviews_average_rating")
         assert len(response_text.items()) == len(self.product_create_json_data.items())
 
     async def test_create_and_modify_product(self) -> None:

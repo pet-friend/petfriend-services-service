@@ -1,4 +1,5 @@
 # pylint: disable=E1102 # bugged with func.now()
+from enum import StrEnum
 from math import pi, radians, cos
 from uuid import UUID, uuid4
 from datetime import datetime, timezone
@@ -111,3 +112,8 @@ class Coordinates(SQLModel):
         return (self.KM_PER_DEG_LAT * (other.latitude - self.latitude)) ** 2 + (
             km_per_deg_long * (other.longitude - self.longitude)
         ) ** 2
+
+
+class SortOrder(StrEnum):
+    ASCENDING = "asc"
+    DESCENDING = "desc"

@@ -17,20 +17,34 @@ class AppointmentsRepository(BaseRepository[Appointment, tuple[Id | str, Id | st
 
     async def get_all_by_range(
         self,
-        range_start: datetime,
-        range_end: datetime,
-        skip: int = 0,
+        range_start: datetime | None,
+        range_end: datetime | None,
+        return_partial: bool = False,
         limit: int | None = None,
+        skip: int = 0,
         **filters: Any
     ) -> Sequence[Appointment]:
         """
-        Return all of the appointments that take place (totally or partially) in the given range.
+        Return all of the appointments that take place in the given range.
+        If return_partial is False, only return appointments that are fully
+        contained in the range will be returned.
+        If return_partial is True, appointments that partially overlap with the
+        range will also be returned.
         `range_start` and `range_end` must be timezone-aware datetimes.
         """
         # TZDateTime handles converting the aware datetimes to UTC
         query = select(Appointment)
         where = self._common_filters(**filters)
-        where = and_(Appointment.start < range_end, Appointment.end > range_start, where)
+        if range_start:
+            if return_partial:
+                where = and_(Appointment.end > range_start, where)
+            else:
+                where = and_(Appointment.start >= range_start, where)
+        if range_end:
+            if return_partial:
+                where = and_(Appointment.start < range_end, where)
+            else:
+                where = and_(Appointment.end <= range_end, where)
         query = query.where(where).offset(skip).limit(limit)
         result = await self.db.exec(query)
         return result.all()
