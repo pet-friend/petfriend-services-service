@@ -13,11 +13,18 @@ def get_exception_docs(
     """
     Builds a dict of HTTP exceptions for the responses parameter of a FastAPI route.
     """
-    docs: dict[int | str, dict[str, Any]] = {}
+    by_status_code: dict[int, list[HTTPException]] = {}
     for exc in exceptions:
         if isinstance(exc, tuple):
-            _, exc = exc
-        docs[exc.status_code] = {"model": ErrorSchema, "description": exc.detail}
+            exc = exc[1]
+        by_status_code.setdefault(exc.status_code, []).append(exc)
+
+    docs: dict[int | str, dict[str, Any]] = {}
+    for status, exc_list in by_status_code.items():
+        docs[status] = {
+            "model": ErrorSchema,
+            "description": " || ".join(e.detail for e in exc_list),
+        }
     return docs
 
 

@@ -1,11 +1,10 @@
 from decimal import Decimal
-from enum import StrEnum
-from typing import Literal, Sequence
+from typing import Sequence
 
-from pydantic import BaseModel
 from sqlalchemy import ForeignKeyConstraint, PrimaryKeyConstraint
-from sqlmodel import Relationship, Field, SQLModel
+from sqlmodel import Relationship, Field
 
+from ..payments import PaymentStatusModel
 from ..util import Id, TimestampModel, UUIDModel
 from .stores import Store
 from .products import Product
@@ -36,26 +35,8 @@ class PurchaseItem(PurchaseItemBase, table=True):
     )
 
 
-class PurchaseStatus(StrEnum):
-    CREATED = "created"
-    IN_PROGRESS = "in_progress"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
-
-
-PurchaseStatusUpdate = Literal[
-    PurchaseStatus.IN_PROGRESS, PurchaseStatus.COMPLETED, PurchaseStatus.CANCELLED
-]
-
-
-class PurchaseUpdate(BaseModel):
-    status: PurchaseStatusUpdate
-
-
-class PurchaseBase(SQLModel):
+class PurchaseBase(PaymentStatusModel):
     store_id: Id = Field(primary_key=True, foreign_key="stores.id")
-    status: PurchaseStatus
-    payment_url: str | None = None
     buyer_id: Id
     delivery_address_id: Id
 
@@ -83,7 +64,6 @@ class Purchase(PurchasePublic, table=True):
         back_populates="purchase",
     )
 
-    # Two products in the same store cannot have the same name:
     __table_args__ = (
         PrimaryKeyConstraint("store_id", "id"),  # Make sure the order of the PK is (store_id, id)
     )

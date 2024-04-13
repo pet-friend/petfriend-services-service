@@ -4,18 +4,19 @@ from unittest import IsolatedAsyncioTestCase
 from uuid import uuid4
 
 import pytest
+
 from app.exceptions.services import ServiceNotFound
 from app.exceptions.users import Forbidden
-
 from app.models.addresses import Address
 from app.models.services import Service, AppointmentSlots
 from app.services.files import FilesService
 from app.services.services import ServicesService
 from app.repositories.services import ServicesRepository
 from tests.factories.service_factories import ServiceCreateFactory
-from .util import File
+from ..util import File
 
 
+@pytest.mark.usefixtures("blob_setup")
 class TestServicesService(IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.service_create = ServiceCreateFactory.build()

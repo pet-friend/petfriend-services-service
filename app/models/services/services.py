@@ -1,13 +1,15 @@
 from typing import Sequence
 from enum import StrEnum
-import zoneinfo
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from sqlmodel import Field, Relationship, SQLModel
 from sqlalchemy import String
 
-from .appointment_slots import AppointmentSlotsBase, AppointmentSlots, AppointmentSlotsList
 from ..addresses import Address, AddressRead, AddressCreate, ServiceAddressLink
 from ..util import Id, TimestampModel, OptionalImageUrlModel, UUIDModel
+from .appointment_slots import AppointmentSlotsBase, AppointmentSlots, AppointmentSlotsList
+from .util import Timezone, DEFAULT_TIMEZONE
 
 
 class ServiceCategory(StrEnum):
@@ -17,11 +19,6 @@ class ServiceCategory(StrEnum):
     HEALTH = "health"  # veterinaria/salud
     CARE = "care"  # guarderias y cuidadores
     OTHER = "other"  # otro
-
-
-Timezone = StrEnum("Timezone", {x: x for x in zoneinfo.available_timezones()})  # type: ignore
-DEFAULT_TIMEZONE = "America/Argentina/Buenos_Aires"
-assert DEFAULT_TIMEZONE in Timezone
 
 
 class ServiceBase(SQLModel):
@@ -65,6 +62,20 @@ class Service(ServicePublic, TimestampModel, table=True):
         },
         link_model=ServiceAddressLink,
     )
+
+    def to_tz(self, dt: datetime) -> datetime:
+        """
+        Returns the given timestamp adjusted to the service's timezone.
+        If the given timestamp is naive, it is assumed to be in the service's timezone.
+        """
+        tz = ZoneInfo(self.timezone)
+        if not dt.tzinfo or dt.tzinfo.utcoffset(dt) is None:
+            return dt.replace(tzinfo=tz)
+        return dt.astimezone(tz)
+
+    @property
+    def range_km(self) -> float:
+        return self.customer_range_km
 
 
 # Required attributes for creating a new record

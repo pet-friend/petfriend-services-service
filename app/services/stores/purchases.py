@@ -3,39 +3,25 @@ import logging
 from typing import Sequence
 from asyncio import gather
 
-from fastapi import Depends, status
-from fastapi.encoders import jsonable_encoder
-from httpx import URL, AsyncClient, Timeout
+from fastapi import Depends
+from httpx import Timeout
 
 from app.exceptions.products import ProductNotFound
-from app.exceptions.purchases import (
-    CantPurchaseFromOwnStore,
-    OutsideDeliveryRange,
-    PurchaseNotFound,
-    StoreNotReady,
-)
+from app.exceptions.purchases import PurchaseNotFound
 from app.exceptions.users import Forbidden
-from app.models.addresses import Address
-from app.models.preferences import PaymentData, PreferenceItem, PurchaseTypes
-from app.models.stores import (
-    Store,
-    Product,
-    ProductRead,
-    Purchase,
-    PurchaseRead,
-    PurchaseItem,
-    PurchaseStatus,
-    PurchaseStatusUpdate,
-)
-from app.models.util import Coordinates, Id, distance_squared
+from app.models.preferences import StorePurchasePaymentData, PreferenceItem, PaymentType
+from app.models.stores import Store, Product, ProductRead, Purchase, PurchaseRead, PurchaseItem
+from app.models.payments import PaymentStatus, PaymentStatusUpdate
+from app.models.util import Id
 from app.repositories.stores import PurchasesRepository
 from app.config import settings
 from ..users import UsersService
+from ..payments import PaymentsService
 from .stores import StoresService
 from .products import ProductsService
 
 REQUEST_TIMEOUT = Timeout(5, read=45)
-FORBIDDEN_STATUS_CHANGES = [PurchaseStatus.COMPLETED, PurchaseStatus.CANCELLED]
+FORBIDDEN_STATUS_CHANGES = [PaymentStatus.COMPLETED, PaymentStatus.CANCELLED]
 
 
 class PurchasesService:
@@ -44,11 +30,13 @@ class PurchasesService:
         stores_service: StoresService = Depends(),
         products_service: ProductsService = Depends(),
         users_service: UsersService = Depends(),
+        payments_service: PaymentsService = Depends(),
         purchases_repo: PurchasesRepository = Depends(),
     ):
         self.stores_service = stores_service
         self.products_service = products_service
         self.users_service = users_service
+        self.payments_service = payments_service
         self.purchases_repo = purchases_repo
 
     async def get_purchase(self, store_id: Id, purchase_id: Id, user_id: Id) -> Purchase:
@@ -93,91 +81,50 @@ class PurchasesService:
         if len(products_quantities) == 0:
             raise ProductNotFound
         store = await self.stores_service.get_store_by_id(store_id)
-        if store.owner_id == user_id:
-            raise CantPurchaseFromOwnStore
 
         purchase = Purchase(
             store=store,
-            status=PurchaseStatus.CREATED,
+            payment_status=PaymentStatus.CREATED,
             buyer_id=user_id,
             delivery_address_id=delivery_address_id,
         )
 
         _, (items, payload) = await gather(
-            self.__check_purchase_conditions(store, user_id, delivery_address_id, token),
+            self.payments_service.check_payment_conditions(
+                store, user_id, delivery_address_id, token
+            ),
             self.__build_order(purchase.id, store.products, products_quantities),
         )
         purchase.items = items
 
         logging.debug(f"Creating preference for payment:\n{payload}")
 
-        async with AsyncClient(
-            headers={"Authorization": f"Bearer {token}"}, timeout=REQUEST_TIMEOUT
-        ) as client:
-            url = URL(
-                settings.PAYMENTS_SERVICE_URL + "/payment",
-                params={
-                    "user_to_be_payed_id": str(store.owner_id),
-                },
-            )
-            r = await client.post(url, json=jsonable_encoder(payload))
-            if r.status_code == status.HTTP_404_NOT_FOUND:
-                raise StoreNotReady
-            logging.debug(f"Payment service response: {r.status_code} {r.text}")
-            r.raise_for_status()
-            preference_url: str = r.json()
-            purchase.payment_url = preference_url
-
+        purchase.payment_url = await self.payments_service.create_preference(
+            payload, store.owner_id, token
+        )
         await self.purchases_repo.save(purchase)
         return purchase
 
     async def update_purchase_status(
-        self, store_id: Id, purchase_id: Id, new_status: PurchaseStatusUpdate
+        self, store_id: Id, purchase_id: Id, new_status: PaymentStatusUpdate
     ) -> None:
         purchase = await self.purchases_repo.get_by_id((store_id, purchase_id))
         if purchase is None:
             raise PurchaseNotFound
 
-        if purchase.status == new_status:
-            # No update
+        if not await self.payments_service.update_payment_status(purchase, new_status):
             return
 
-        if purchase.status in FORBIDDEN_STATUS_CHANGES:
-            logging.warning(
-                f"Tried to update status of purchase from '{purchase.status}' to '{new_status}'"
-            )
-            raise Forbidden
-
-        if new_status == PurchaseStatus.CANCELLED:
+        if new_status == PaymentStatus.CANCELLED:
             # Restore stock
             for item in purchase.items:
                 await self.products_service.update_stock(item.product, item.quantity)
 
-        purchase.status = new_status
-        # For some reason mypy doesn't like this: https://github.com/pydantic/pydantic/issues/7482
-        purchase.payment_url = None  # type: ignore
         await self.purchases_repo.save(purchase)
-
-    async def __check_purchase_conditions(
-        self, store: Store, user_id: Id, delivery_address_id: Id, token: str
-    ) -> None:
-        user_coords = await self.users_service.get_user_address_coordinates(
-            user_id, delivery_address_id, token
-        )
-
-        store_address: Address = store.address
-        if (
-            distance_squared(
-                Coordinates(latitude=store_address.latitude, longitude=store_address.longitude),
-                user_coords,
-            )
-            > store.delivery_range_km**2
-        ):
-            raise OutsideDeliveryRange
 
     async def __build_order(
         self, order_id: Id, products: Sequence[Product], products_quantities: dict[Id, int]
-    ) -> tuple[list[PurchaseItem], PaymentData]:
+    ) -> tuple[list[PurchaseItem], StorePurchasePaymentData]:
         products_map = {p.id: p for p in products if p.id in products_quantities}
         if len(products_map) != len(products_quantities):
             raise ProductNotFound
@@ -201,7 +148,7 @@ class PurchasesService:
 
         return items, {
             "service_reference": order_id,
-            "type": PurchaseTypes.STORE_PURCHASE,
+            "type": PaymentType.STORE_PURCHASE,
             "preference_data": {
                 "items": items_data,
                 "marketplace_fee": total_cost * settings.FEE_PERCENTAGE / 100,
@@ -212,7 +159,7 @@ class PurchasesService:
                 "metadata": {
                     "store_id": store.id,
                     "purchase_id": order_id,
-                    "type": PurchaseTypes.STORE_PURCHASE,
+                    "type": PaymentType.STORE_PURCHASE,
                 },
             },
         }

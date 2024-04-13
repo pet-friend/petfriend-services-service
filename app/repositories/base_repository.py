@@ -26,6 +26,8 @@ class BaseRepository(Generic[T, PK], ABC):
                 raise ValueError(f"Invalid column name: '{c}'")
             if isinstance(getattr(self.cls, c).type, AutoString):
                 where_clauses.append(getattr(self.cls, c).ilike(f"%{v}%"))
+            elif isinstance(v, list):
+                where_clauses.append(getattr(self.cls, c).in_(v))
             else:
                 where_clauses.append(getattr(self.cls, c) == v)
 
