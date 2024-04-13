@@ -1,12 +1,13 @@
 from typing import Any, Sequence, Type, TypeVar, Generic
 from abc import ABC
-from sqlalchemy import ColumnExpressionArgument
 
 from sqlmodel import AutoString, select, and_, func
 from sqlmodel.sql.expression import SelectOfScalar
 from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy import asc, desc, ColumnExpressionArgument
 
 from app.exceptions.repository import RecordNotFound
+from app.models.util import SortOrder
 
 T = TypeVar("T")  # Model
 PK = TypeVar("PK")  # Primary key type
@@ -22,8 +23,7 @@ class BaseRepository(Generic[T, PK], ABC):
         for c, v in filters.items():
             if v is None:
                 continue
-            if not hasattr(self.cls, c):
-                raise ValueError(f"Invalid column name: '{c}'")
+            self._check_column(c)
             if isinstance(getattr(self.cls, c).type, AutoString):
                 where_clauses.append(getattr(self.cls, c).ilike(f"%{v}%"))
             elif isinstance(v, list):
@@ -40,8 +40,20 @@ class BaseRepository(Generic[T, PK], ABC):
         query = select(self.cls)
         return query.where(self._common_filters(**filters))
 
-    async def get_all(self, skip: int = 0, limit: int | None = None, **filters: Any) -> Sequence[T]:
-        query = self._list_select(**filters).offset(skip).limit(limit)
+    async def get_all(
+        self,
+        skip: int = 0,
+        limit: int | None = None,
+        sort_by: str | None = None,
+        sort_order: SortOrder = SortOrder.ASCENDING,
+        **filters: Any,
+    ) -> Sequence[T]:
+        query = self._list_select(**filters)
+        order_func = asc if sort_order == SortOrder.ASCENDING else desc
+        if sort_by is not None:
+            self._check_column(sort_by)
+            query = query.order_by(order_func(getattr(self.cls, sort_by)))
+        query = query.offset(skip).limit(limit)
         result = await self.db.exec(query)
         return result.all()
 
@@ -80,3 +92,7 @@ class BaseRepository(Generic[T, PK], ABC):
         query = select(func.count()).select_from(self.cls)  # pylint: disable=not-callable
         query = query.where(self._common_filters(**filters))
         return query
+
+    def _check_column(self, col: str) -> None:
+        if not hasattr(self.cls, col):
+            raise ValueError(f"Invalid column name for {self.cls}: '{col}'")

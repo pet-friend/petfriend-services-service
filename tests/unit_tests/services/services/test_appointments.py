@@ -90,6 +90,35 @@ class TestServicesService:
             )
         ]
 
+    async def test_get_available_appointments_first_no_include_partial(self) -> None:
+        # Given
+        now = self.get_now(time(8, 15))  # It's 8:15AM
+        self.set_slots(now)
+        self.repository.get_all_by_range.return_value = []
+        self.services_service.get_service_by_id.return_value = self.service_model
+
+        # When
+        available_appointments = await self.service.get_available_appointments(
+            self.service_model.id, now=now, include_partial=False
+        )
+
+        # Then
+        self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
+
+        self.assert_repo_get_all_by_range(now)
+        assert available_appointments == [
+            AAFS(
+                slots_configuration=self.service_model.appointment_slots[0],
+                available_appointments=[
+                    AA(
+                        start=datetime.combine(now.date(), time(8, 30), now.tzinfo),
+                        end=datetime.combine(now.date(), time(9, 0), now.tzinfo),
+                        amount=3,
+                    ),
+                ],
+            )
+        ]
+
     async def test_get_available_appointments_first_one_finished(self) -> None:
         # Given
         now = self.get_now(time(8, 40))  # It's 8:40AM
@@ -995,7 +1024,7 @@ class TestServicesService:
             customer_address_id=uuid4(),
         )
         self.services_service.get_service_by_id.return_value = self.service_model
-        self.repository.get_all.return_value = [appointment]
+        self.repository.get_all_by_range.return_value = [appointment]
         self.repository.count_all.return_value = 1
 
         # When
@@ -1007,8 +1036,8 @@ class TestServicesService:
         assert total == 1
         assert appointments[0] == appointment
         self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
-        self.repository.get_all.assert_called_once_with(
-            service_id=self.service_model.id, limit=5, skip=0
+        self.repository.get_all_by_range.assert_called_once_with(
+            None, None, True, 5, 0, service_id=self.service_model.id
         )
         self.repository.count_all.assert_called_once_with(service_id=self.service_model.id)
 
@@ -1032,6 +1061,7 @@ class TestServicesService:
         self.repository.get_all_by_range.assert_called_once_with(
             after_matcher,
             before,
+            return_partial=True,
             service_id=self.service_model.id,
             payment_status=CustomMatcher[list[PaymentStatus]](
                 lambda s: len(set(s)) == 3 and PaymentStatus.CANCELLED not in s

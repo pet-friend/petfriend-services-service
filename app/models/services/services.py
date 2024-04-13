@@ -4,10 +4,11 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from sqlmodel import Field, Relationship, SQLModel
-from sqlalchemy import String
+from sqlalchemy import PrimaryKeyConstraint, String
 
 from ..addresses import Address, AddressRead, AddressCreate, ServiceAddressLink
 from ..util import Id, TimestampModel, OptionalImageUrlModel, UUIDModel
+from ..reviews import ReviewRead, ReviewsRatingAverage, set_review_rating_average_column
 from .appointment_slots import AppointmentSlotsBase, AppointmentSlots, AppointmentSlotsList
 from .util import Timezone, DEFAULT_TIMEZONE
 
@@ -35,7 +36,7 @@ class ServiceBase(SQLModel):
 
 
 # Public database fields
-class ServicePublic(UUIDModel, ServiceBase):
+class ServicePublic(UUIDModel, ReviewsRatingAverage, ServiceBase):
     owner_id: Id
 
 
@@ -62,6 +63,10 @@ class Service(ServicePublic, TimestampModel, table=True):
         },
         link_model=ServiceAddressLink,
     )
+    # Not populated, only used for deleting reviews when a service is deleted
+    _reviews: list["ServiceReview"] = Relationship(
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
 
     def to_tz(self, dt: datetime) -> datetime:
         """
@@ -82,3 +87,19 @@ class Service(ServicePublic, TimestampModel, table=True):
 class ServiceCreate(ServiceBase):
     address: AddressCreate
     appointment_slots: AppointmentSlotsList
+
+
+class ServiceReviewRead(ReviewRead):
+    service_id: Id = Field(foreign_key="services.id", primary_key=True)
+
+
+class ServiceReview(ServiceReviewRead, table=True):
+    __tablename__ = "service_reviews"
+
+    __table_args__ = (
+        # Make sure the order of the PK is (service_id, reviewer_id)
+        PrimaryKeyConstraint("service_id", "reviewer_id"),
+    )
+
+
+set_review_rating_average_column(Service, ServiceReview, ServiceReview.service_id == Service.id)

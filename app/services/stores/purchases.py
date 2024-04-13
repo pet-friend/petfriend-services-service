@@ -1,6 +1,6 @@
 from decimal import Decimal
 import logging
-from typing import Sequence
+from typing import Any, Sequence
 from asyncio import gather
 
 from fastapi import Depends
@@ -56,16 +56,21 @@ class PurchasesService:
         store = await self.stores_service.get_store_by_id(store_id)
         if user_id != store.owner_id:
             raise Forbidden
-        purchases = await self.purchases_repo.get_all(store_id=store_id, limit=limit, skip=skip)
+        purchases = await self.get_purchases(limit, skip, store_id=store_id)
         amount = await self.purchases_repo.count_all(store_id=store_id)
         return purchases, amount
 
     async def get_user_purchases(
-        self, user_id: Id, limit: int, skip: int
+        self, user_id: Id, limit: int | None, skip: int, **filters: Any
     ) -> tuple[Sequence[Purchase], int]:
-        purchases = await self.purchases_repo.get_all(buyer_id=user_id, limit=limit, skip=skip)
-        amount = await self.purchases_repo.count_all(buyer_id=user_id)
+        purchases = await self.get_purchases(limit, skip, buyer_id=user_id, **filters)
+        amount = await self.purchases_repo.count_all(buyer_id=user_id, **filters)
         return purchases, amount
+
+    async def get_purchases(
+        self, limit: int | None = None, skip: int = 0, **filters: Any
+    ) -> Sequence[Purchase]:
+        return await self.purchases_repo.get_all(limit=limit, skip=skip, **filters)
 
     async def purchase(
         self,
