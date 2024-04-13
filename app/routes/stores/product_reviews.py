@@ -15,7 +15,7 @@ from app.services.stores import ProductReviewsService
 from ..util import get_exception_docs
 
 router = APIRouter(
-    prefix="/stores/{store_id}/products/{product_id}/reviews", tags=["Store reviews"]
+    prefix="/stores/{store_id}/products/{product_id}/reviews", tags=["Product reviews"]
 )
 
 

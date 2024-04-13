@@ -1,6 +1,6 @@
-from fastapi import Depends
 from typing import Type, TypeVar, TypeVarTuple, Any
 
+from fastapi import Depends
 from sqlmodel import select, func
 from sqlmodel.ext.asyncio.session import AsyncSession
 

@@ -8,5 +8,5 @@ from .service_reviews import router as service_reviews_router
 router = APIRouter()
 router.include_router(services_router)
 router.include_router(services_image_router)
-router.include_router(appointments_router)
 router.include_router(service_reviews_router)
+router.include_router(appointments_router)

@@ -31,8 +31,8 @@ def set_review_rating_average_column(
     cls: Type[ReviewsRatingAverage], review_cls: Type[ReviewRead], join_condition: Any
 ) -> Any:
     """
-    Adds a SQLAlchemy
-    [`column_property`](https://docs.sqlalchemy.org/en/13/orm/mapped_sql_expr.html#using-column-property)
+    Adds a SQLAlchemy `column_property`
+    (https://docs.sqlalchemy.org/en/13/orm/mapped_sql_expr.html#using-column-property)
     to the class `cls` that calculates the average rating of the reviews that are related to
     the class `cls` through the `join_condition`.
 

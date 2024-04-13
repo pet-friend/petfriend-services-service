@@ -1,11 +1,10 @@
 from typing import Any, Sequence, Type, TypeVar, Generic
 from abc import ABC
-from sqlalchemy import ColumnExpressionArgument
 
 from sqlmodel import AutoString, select, and_, func
 from sqlmodel.sql.expression import SelectOfScalar
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlalchemy import asc, desc
+from sqlalchemy import asc, desc, ColumnExpressionArgument
 
 from app.exceptions.repository import RecordNotFound
 from app.models.util import SortOrder
