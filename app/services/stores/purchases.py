@@ -10,7 +10,15 @@ from app.exceptions.products import ProductNotFound
 from app.exceptions.purchases import PurchaseNotFound
 from app.exceptions.users import Forbidden
 from app.models.preferences import StorePurchasePaymentData, PreferenceItem, PaymentType
-from app.models.stores import Store, Product, ProductRead, Purchase, PurchaseRead, PurchaseItem
+from app.models.stores import (
+    Store,
+    Product,
+    ProductRead,
+    Purchase,
+    PurchaseRead,
+    PurchaseItem,
+    PurchaseItemRead,
+)
 from app.models.payments import PaymentStatus, PaymentStatusUpdate
 from app.models.util import Id
 from app.repositories.stores import PurchasesRepository
@@ -47,8 +55,8 @@ class PurchasesService:
             raise Forbidden
         return purchase
 
-    def get_purchases_read(self, *purchases: Purchase) -> list[PurchaseRead]:
-        return [PurchaseRead(**p.model_dump(), items=p.items) for p in purchases]
+    async def get_purchases_read(self, *purchases: Purchase) -> list[PurchaseRead]:
+        return await gather(*(self.__readable(p) for p in purchases))
 
     async def get_store_purchases(
         self, store_id: Id, user_id: Id, limit: int, skip: int
@@ -190,3 +198,18 @@ class PurchasesService:
             unit_price=unit_price,
         )  # type: ignore
         return purchase_item, purchase_item_data
+
+    async def __readable(self, purchase: Purchase) -> PurchaseRead:
+        store_promise = self.stores_service.get_stores_read(purchase.store)
+        products_promise = self.products_service.get_products_read(
+            *(i.product for i in purchase.items)
+        )
+        stores, products = await gather(store_promise, products_promise)
+        return PurchaseRead(
+            **purchase.model_dump(),
+            store=stores[0],
+            items=[
+                PurchaseItemRead(**item.model_dump(), product=products[i])
+                for i, item in enumerate(purchase.items)
+            ],
+        )

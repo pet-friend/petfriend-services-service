@@ -44,9 +44,10 @@ async def create_appointment(
     user_id: Id = Depends(get_caller_id),
     token: str = Depends(get_caller_token),
 ) -> AppointmentRead:
-    return await appointments_service.create_appointment(
+    appointment = await appointments_service.create_appointment(
         data, service_id, user_id, user_address_id, token
     )
+    return (await appointments_service.get_appointments_read(appointment))[0]
 
 
 @router.get("/services/appointments/me")
@@ -62,7 +63,9 @@ async def get_my_appointments(
     appointments, count = await appointments_service.get_user_appointments(
         user_id, limit, offset, after, before, include_partial
     )
-    return AppointmentList(appointments=appointments, amount=count)
+    return AppointmentList(
+        appointments=await appointments_service.get_appointments_read(*appointments), amount=count
+    )
 
 
 @router.get(
@@ -81,7 +84,9 @@ async def get_service_appointments(
     appointments, count = await appointments_service.get_service_appointments(
         service_id, user_id, limit, offset, after, before, include_partial
     )
-    return AppointmentList(appointments=appointments, amount=count)
+    return AppointmentList(
+        appointments=await appointments_service.get_appointments_read(*appointments), amount=count
+    )
 
 
 @router.get(
@@ -110,4 +115,5 @@ async def get_service_appointment(
     appointments_service: AppointmentsService = Depends(),
     user_id: Id = Depends(get_caller_id),
 ) -> AppointmentRead:
-    return await appointments_service.get_appointment(service_id, appointment_id, user_id)
+    appointment = await appointments_service.get_appointment(service_id, appointment_id, user_id)
+    return (await appointments_service.get_appointments_read(appointment))[0]

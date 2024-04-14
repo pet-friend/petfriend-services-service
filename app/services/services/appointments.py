@@ -1,3 +1,4 @@
+from asyncio import gather
 from datetime import datetime, timedelta, time, date
 from typing import Any, Generator, Iterable, Sequence
 from zoneinfo import ZoneInfo
@@ -20,6 +21,7 @@ from app.models.services import (
     AvailableAppointmentsForSlots,
     AvailableAppointmentsList,
 )
+from app.models.services.appointments import AppointmentRead
 from app.models.util import Id
 from app.models.payments import PaymentStatus, PaymentStatusUpdate
 from app.repositories.services import AppointmentsRepository
@@ -200,6 +202,9 @@ class AppointmentsService:
             after, before, include_partial, limit, skip, **filters
         )
 
+    async def get_appointments_read(self, *appointments: Appointment) -> list[AppointmentRead]:
+        return await gather(*(self.__readable(a) for a in appointments))
+
     def __merge_or_extend_available(
         self,
         available_appointments: AvailableAppointmentsList,
@@ -352,3 +357,10 @@ class AppointmentsService:
             "quantity": 1,
             "unit_price": used_slot.appointment_price,
         }
+
+    async def __readable(self, appointment: Appointment) -> AppointmentRead:
+        service = (await self.services_service.get_services_read(appointment.service))[0]
+        return AppointmentRead(
+            **appointment.model_dump(),
+            service=service,
+        )

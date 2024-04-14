@@ -8,7 +8,7 @@ from .products import (
     ProductReview,
     ProductReviewRead,
 )
-from .purchases import Purchase, PurchaseRead, PurchaseItem
+from .purchases import Purchase, PurchaseRead, PurchaseItem, PurchaseItemRead
 
 __all__ = [
     "Store",
@@ -26,4 +26,5 @@ __all__ = [
     "Purchase",
     "PurchaseRead",
     "PurchaseItem",
+    "PurchaseItemRead",
 ]

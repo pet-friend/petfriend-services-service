@@ -7,25 +7,25 @@ from pydantic import PositiveInt, BaseModel, AwareDatetime
 
 from ..payments import PaymentStatusModel
 from ..util import UUIDModel, Id, TZDateTime, TimestampModel
-from .services import Service
+from .services import Service, ServiceRead
 from .appointment_slots import AppointmentSlotsBase
 
 
 class AppointmentBase(PaymentStatusModel, UUIDModel, TimestampModel):
     start: AwareDatetime = Field(sa_type=TZDateTime)
     end: AwareDatetime = Field(sa_type=TZDateTime)
-    service_id: Id = Field(foreign_key="services.id", primary_key=True)
     customer_id: Id
     customer_address_id: Id
 
 
 class AppointmentRead(AppointmentBase):
-    pass
+    service: ServiceRead
 
 
-class Appointment(AppointmentRead, table=True):
+class Appointment(AppointmentBase, table=True):
     __tablename__ = "appointments"
 
+    service_id: Id = Field(foreign_key="services.id", primary_key=True)
     service: Service = Relationship(sa_relationship_kwargs={"lazy": "selectin"})
 
     __table_args__ = (

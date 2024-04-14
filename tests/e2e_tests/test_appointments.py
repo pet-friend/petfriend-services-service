@@ -56,8 +56,8 @@ class TestAppointmentsRoute(BaseAPITestCase):
     async def test_get_available_appointments(self) -> None:
         r_service = await self.client.post("/services", json=self.service_create_json_data)
         assert r_service.status_code == 201
-        service_id = r_service.json()["id"]
-        r = await self.client.get(f"/services/{service_id}/appointments/available")
+        service = r_service.json()
+        r = await self.client.get(f"/services/{service['id']}/appointments/available")
         assert r.status_code == 200
         available = r.json()
 
@@ -68,29 +68,31 @@ class TestAppointmentsRoute(BaseAPITestCase):
                 self.service_create_json_data["appointment_slots"][0]
             )
 
+        def check_available_appointments(available_appointments: list[dict[str, Any]]) -> None:
+            assert [
+                {
+                    "start": datetime.fromisoformat(a["start"]),
+                    "end": datetime.fromisoformat(a["end"]),
+                    "amount": a["amount"],
+                }
+                for a in available_appointments
+            ] == [
+                {
+                    "start": datetime.combine(self.appointment_date, time(8, 0), self.tz),
+                    "end": datetime.combine(self.appointment_date, time(8, 30), self.tz),
+                    "amount": 12,
+                },
+                {
+                    "start": datetime.combine(self.appointment_date, time(8, 30), self.tz),
+                    "end": datetime.combine(self.appointment_date, time(9, 0), self.tz),
+                    "amount": 12,
+                },
+            ]
+
         assert available == [
             {
                 "slots_configuration": CustomMatcher(check_slots_configuration),
-                "available_appointments": [
-                    {
-                        "start": datetime.combine(
-                            self.appointment_date, time(8, 0), self.tz
-                        ).isoformat(),
-                        "end": datetime.combine(
-                            self.appointment_date, time(8, 30), self.tz
-                        ).isoformat(),
-                        "amount": 12,
-                    },
-                    {
-                        "start": datetime.combine(
-                            self.appointment_date, time(8, 30), self.tz
-                        ).isoformat(),
-                        "end": datetime.combine(
-                            self.appointment_date, time(9, 0), self.tz
-                        ).isoformat(),
-                        "amount": 12,
-                    },
-                ],
+                "available_appointments": CustomMatcher(check_available_appointments),
             }
         ]
 
@@ -200,6 +202,7 @@ class TestAppointmentsRoute(BaseAPITestCase):
         service = r_service.json()
 
         service_owner = await self.change_service_owner(service["id"])
+        service["owner_id"] = str(service_owner)
 
         url = URL(
             settings.PAYMENTS_SERVICE_URL + "/payment",
@@ -222,7 +225,7 @@ class TestAppointmentsRoute(BaseAPITestCase):
 
         assert data["payment_url"] == preference_url
         assert data["payment_status"] == "created"
-        assert data["service_id"] == service["id"]
+        assert data["service"] == service
         assert data["customer_id"] == str(self.user_id)
         assert data["customer_address_id"] == str(address_id)
 

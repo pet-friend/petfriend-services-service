@@ -185,6 +185,7 @@ class TestPurchasesRoute(BaseAPITestCase):
         product = r_product.json()
 
         store_owner = await self.change_store_owner(store["id"])
+        store["owner_id"] = str(store_owner)
 
         quantities = {product["id"]: 1}
 
@@ -209,11 +210,11 @@ class TestPurchasesRoute(BaseAPITestCase):
 
         assert data["payment_url"] == preference_url
         assert data["payment_status"] == "created"
-        assert data["store_id"] == store["id"]
+        assert data["store"] == store
         assert data["buyer_id"] == str(self.user_id)
         assert data["delivery_address_id"] == str(address_id)
         assert len(data["items"]) == 1
-        assert data["items"][0]["product_id"] == product["id"]
+        assert data["items"][0]["product"] == product
 
     async def test_purchase_one_item_and_get_my_purchases(
         self, httpx_mock: HTTPXMock, mock_get_user_coordinates: GetUserCoordinatesMock

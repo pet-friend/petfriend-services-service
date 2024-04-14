@@ -6,19 +6,23 @@ from sqlmodel import Relationship, Field
 
 from ..payments import PaymentStatusModel
 from ..util import Id, TimestampModel, UUIDModel
-from .stores import Store
-from .products import Product
+from .stores import Store, StoreRead
+from .products import Product, ProductRead
 
 
 class PurchaseItemBase(UUIDModel):
-    product_id: Id
     quantity: int
     unit_price: Decimal = Field(max_digits=14, decimal_places=2, ge=0)
+
+
+class PurchaseItemRead(PurchaseItemBase):
+    product: ProductRead
 
 
 class PurchaseItem(PurchaseItemBase, table=True):
     __tablename__ = "purchase_items"
     store_id: Id
+    product_id: Id
     purchase_id: Id
 
     purchase: "Purchase" = Relationship(
@@ -36,7 +40,6 @@ class PurchaseItem(PurchaseItemBase, table=True):
 
 
 class PurchaseBase(PaymentStatusModel):
-    store_id: Id = Field(primary_key=True, foreign_key="stores.id")
     buyer_id: Id
     delivery_address_id: Id
 
@@ -47,12 +50,14 @@ class PurchasePublic(PurchaseBase, UUIDModel, TimestampModel):
 
 
 class PurchaseRead(PurchasePublic):
-    items: Sequence[PurchaseItemBase]
+    items: Sequence[PurchaseItemRead]
+    store: StoreRead
 
 
 # Actual data in database table (Base + id + timestamps)
 class Purchase(PurchasePublic, table=True):
     __tablename__ = "purchases"
+    store_id: Id = Field(primary_key=True, foreign_key="stores.id")
 
     store: Store = Relationship(sa_relationship_kwargs={"lazy": "selectin"})
     items: list[PurchaseItem] = Relationship(

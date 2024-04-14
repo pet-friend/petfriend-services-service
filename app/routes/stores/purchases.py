@@ -40,11 +40,12 @@ async def create_store_purchase(
     purchases_service: PurchasesService = Depends(),
     user_id: Id = Depends(get_caller_id),
     token: str = Depends(get_caller_token),
-) -> Purchase:
+) -> PurchaseRead:
     """Body must be a dictionary with product ids as keys and quantities as values."""
-    return await purchases_service.purchase(
+    purchase = await purchases_service.purchase(
         store_id, products_quantities, user_id, delivery_address_id, token
     )
+    return (await purchases_service.get_purchases_read(purchase))[0]
 
 
 @router.get("/stores/purchases/me")
@@ -55,7 +56,9 @@ async def get_my_purchases(
     purchases_service: PurchasesService = Depends(),
 ) -> PurchaseList:
     purchases, count = await purchases_service.get_user_purchases(user_id, limit, offset)
-    return PurchaseList(purchases=purchases_service.get_purchases_read(*purchases), amount=count)
+    return PurchaseList(
+        purchases=await purchases_service.get_purchases_read(*purchases), amount=count
+    )
 
 
 @router.get("/stores/{store_id}/purchases", responses=get_exception_docs(FORBIDDEN))
@@ -67,7 +70,9 @@ async def get_store_purchases(
     purchases_service: PurchasesService = Depends(),
 ) -> PurchaseList:
     purchases, count = await purchases_service.get_store_purchases(store_id, user_id, limit, offset)
-    return PurchaseList(purchases=purchases_service.get_purchases_read(*purchases), amount=count)
+    return PurchaseList(
+        purchases=await purchases_service.get_purchases_read(*purchases), amount=count
+    )
 
 
 @router.get(
