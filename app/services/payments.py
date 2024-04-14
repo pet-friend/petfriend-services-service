@@ -80,5 +80,5 @@ class PaymentsService:
                 raise CollectorNotReady
             logging.debug(f"Payment service response: {r.status_code} {r.text}")
             r.raise_for_status()
-            preference_url: str = r.json()
-            return preference_url
+            preference_url: dict[str, str] = r.json()
+            return preference_url["url"]

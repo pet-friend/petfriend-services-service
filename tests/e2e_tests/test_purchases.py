@@ -195,7 +195,7 @@ class TestPurchasesRoute(BaseAPITestCase):
             },
         )
         preference_url = "http://payment.com"
-        httpx_mock.add_response(url=url, json=preference_url)
+        httpx_mock.add_response(url=url, json={"url": preference_url})
         address_id = uuid4()
         mock_get_user_coordinates(address_id)
 
@@ -238,7 +238,7 @@ class TestPurchasesRoute(BaseAPITestCase):
             },
         )
         preference_url = "http://payment.com"
-        httpx_mock.add_response(url=url, json=preference_url)
+        httpx_mock.add_response(url=url, json={"url": preference_url})
         address_id = uuid4()
         mock_get_user_coordinates(address_id)
 
@@ -279,7 +279,7 @@ class TestPurchasesRoute(BaseAPITestCase):
                 "user_to_be_payed_id": str(store_owner),
             },
         )
-        httpx_mock.add_response(url=url, json="http://payment.com")
+        httpx_mock.add_response(url=url, json={"url": "http://payment.com"})
 
         address_id = uuid4()
         mock_get_user_coordinates(address_id)
@@ -355,7 +355,7 @@ class TestPurchasesRoute(BaseAPITestCase):
                 "user_to_be_payed_id": str(store_owner),
             },
         )
-        httpx_mock.add_response(url=url, json="http://payment.com")
+        httpx_mock.add_response(url=url, json={"url": "http://payment.com"})
         address_id = uuid4()
         mock_get_user_coordinates(address_id)
         r = await self.client.post(
@@ -392,7 +392,7 @@ class TestPurchasesRoute(BaseAPITestCase):
                 "user_to_be_payed_id": str(store_owner),
             },
         )
-        httpx_mock.add_response(url=url, json="http://payment.com")
+        httpx_mock.add_response(url=url, json={"url": "http://payment.com"})
         address_id = uuid4()
         mock_get_user_coordinates(address_id)
         r = await self.client.post(
@@ -437,7 +437,7 @@ class TestPurchasesRoute(BaseAPITestCase):
                 "user_to_be_payed_id": str(store_owner),
             },
         )
-        httpx_mock.add_response(url=url, json="http://payment.com")
+        httpx_mock.add_response(url=url, json={"url": "http://payment.com"})
         address_id = uuid4()
         mock_get_user_coordinates(address_id)
         r = await self.client.post(
@@ -482,7 +482,7 @@ class TestPurchasesRoute(BaseAPITestCase):
                 "user_to_be_payed_id": str(store_owner),
             },
         )
-        httpx_mock.add_response(url=url, json="http://payment.com")
+        httpx_mock.add_response(url=url, json={"url": "http://payment.com"})
         address_id = uuid4()
         mock_get_user_coordinates(address_id)
         r = await self.client.post(

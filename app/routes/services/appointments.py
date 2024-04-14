@@ -65,7 +65,9 @@ async def get_my_appointments(
     return AppointmentList(appointments=appointments, amount=count)
 
 
-@router.get("/services/{service_id}/appointments")
+@router.get(
+    "/services/{service_id}/appointments", responses=get_exception_docs(SERVICE_NOT_FOUND_ERROR)
+)
 async def get_service_appointments(
     service_id: Id,
     after: AwareDatetime | None = Query(None),

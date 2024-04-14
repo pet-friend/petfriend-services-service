@@ -312,7 +312,10 @@ class TestPurchasesService:
         )
         payment_url = "http://url"
         httpx_mock.add_response(
-            url=url, headers={"Authorization": f"Bearer {token}"}, status_code=200, json=payment_url
+            url=url,
+            headers={"Authorization": f"Bearer {token}"},
+            status_code=200,
+            json={"url": payment_url},
         )
 
         data: PaymentData = {
