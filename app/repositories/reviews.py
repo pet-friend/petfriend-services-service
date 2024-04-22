@@ -20,7 +20,7 @@ class ReviewsRepository(BaseRepository[R, tuple[*PK]]):
     def __init__(self, cls: Type[R], session: AsyncSession = Depends(get_db)):
         super().__init__(cls, session)
 
-    async def count_and_average_all(self, **filters: Any) -> tuple[int, float]:
+    async def count_and_average_all(self, **filters: Any) -> tuple[int, float | None]:
         query = (
             select(func.count(), func.avg(self.cls.rating))  # pylint: disable=not-callable
             .select_from(self.cls)

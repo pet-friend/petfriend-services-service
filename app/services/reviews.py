@@ -43,7 +43,7 @@ class ReviewsService(Generic[R, *PK]):
     ) -> Sequence[R]:
         return await self.repository.get_all(skip, limit, sort_by, sort_order, **filters)
 
-    async def count_and_average_reviews(self, **filters: Any) -> tuple[int, float]:
+    async def count_and_average_reviews(self, **filters: Any) -> tuple[int, float | None]:
         return await self.repository.count_and_average_all(**filters)
 
     async def _check_already_exists(self, *review_pk: Unpack[PK]) -> None:
