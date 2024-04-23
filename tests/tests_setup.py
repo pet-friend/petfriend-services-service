@@ -1,4 +1,4 @@
-from typing import AsyncGenerator, Generator, Protocol
+from typing import Any, AsyncGenerator, Generator, Protocol
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
@@ -6,7 +6,7 @@ import pytest
 from pytest_httpx import HTTPXMock
 from sqlmodel import SQLModel, text
 from sqlmodel.ext.asyncio.session import AsyncSession
-from httpx import ASGITransport, AsyncClient
+from httpx import ASGITransport, AsyncClient, Response
 from app.exceptions.addresses import NonExistentAddress
 
 from app.exceptions.users import InvalidToken
@@ -92,12 +92,16 @@ class BaseAPITestCase(BaseDbTestCase):
             fail: bool = False,
             return_value: Coordinates = Coordinates(latitude=0, longitude=0),
         ) -> None:
-            httpx_mock.add_response(
+            def callback(*args: Any, **kwargs: Any) -> Response:
+                if fail:
+                    return Response(status_code=404)
+                return Response(status_code=200, json=return_value.model_dump())
+
+            httpx_mock.add_callback(
+                callback,
                 method="GET",
                 url=f"{settings.USERS_SERVICE_URL}/users/{self.user_id}/addresses/{address_id}",
                 match_headers={"Authorization": f"Bearer {self.token}"},
-                json=(return_value.model_dump() if not fail else None),
-                status_code=200 if not fail else 404,
             )
 
         return inner

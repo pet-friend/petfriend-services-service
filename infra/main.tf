@@ -52,6 +52,7 @@ module "microservice" {
     PAYMENTS_SERVICE_URL      = var.payments_service_url
     GOOGLE_MAPS_API_KEY       = var.google_maps_api_key
     PAYMENTS_API_KEY          = var.payments_api_key
+    ANIMALS_SERVICE_URL       = var.animals_service_url
   }
 }
 

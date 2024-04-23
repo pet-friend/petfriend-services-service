@@ -3,10 +3,11 @@ from uuid import UUID, uuid4
 from datetime import datetime, timedelta, time
 from zoneinfo import ZoneInfo
 
-from httpx import URL
+from httpx import URL, Response
+import pytest
 from pytest_httpx import HTTPXMock
-from app.config import settings
 
+from app.config import settings
 from app.models.services import Service, DayOfWeek, AppointmentSlotsBase
 from app.models.payments import PaymentStatus
 from app.models.util import Id
@@ -35,7 +36,8 @@ class TestAppointmentsRoute(BaseAPITestCase):
             }
         ]
         self.first_appointment = {
-            "start": datetime.combine(self.appointment_date, time(8, 0)).isoformat()
+            "start": datetime.combine(self.appointment_date, time(8, 0)).isoformat(),
+            "animal_id": str(uuid4()),
         }
 
     async def change_service_owner(
@@ -52,6 +54,17 @@ class TestAppointmentsRoute(BaseAPITestCase):
         self.db.add(service)
         await self.db.flush()
         return service.owner_id
+
+    @pytest.fixture
+    async def mock_animal_validation(self, httpx_mock: HTTPXMock) -> None:
+        def callback(*args: Any, **kwargs: Any) -> Response:
+            return Response(200, json={"owner": str(self.user_id)})
+
+        httpx_mock.add_callback(
+            callback,
+            url=f"{settings.ANIMALS_SERVICE_URL}/animals/{self.first_appointment['animal_id']}",
+            method="GET",
+        )
 
     async def test_get_available_appointments(self) -> None:
         r_service = await self.client.post("/services", json=self.service_create_json_data)
@@ -138,7 +151,7 @@ class TestAppointmentsRoute(BaseAPITestCase):
         )
         assert r.status_code == 404
 
-    async def test_cant_create_appointment_from_self(self) -> None:
+    async def test_cant_create_appointment_from_self(self, mock_animal_validation: None) -> None:
         r_service = await self.client.post("/services", json=self.service_create_json_data)
         assert r_service.status_code == 201
         service_id = r_service.json()["id"]
@@ -151,7 +164,10 @@ class TestAppointmentsRoute(BaseAPITestCase):
         assert r.status_code == 403
 
     async def test_appointment_service_has_not_linked_payment_account(
-        self, httpx_mock: HTTPXMock, mock_get_user_coordinates: GetUserCoordinatesMock
+        self,
+        httpx_mock: HTTPXMock,
+        mock_get_user_coordinates: GetUserCoordinatesMock,
+        mock_animal_validation: None,
     ) -> None:
         r_service = await self.client.post("/services", json=self.service_create_json_data)
         assert r_service.status_code == 201
@@ -177,7 +193,7 @@ class TestAppointmentsRoute(BaseAPITestCase):
         assert r.status_code == 409
 
     async def test_create_appointment_invalid_address(
-        self, mock_get_user_coordinates: GetUserCoordinatesMock
+        self, mock_get_user_coordinates: GetUserCoordinatesMock, mock_animal_validation: None
     ) -> None:
         r_service = await self.client.post("/services", json=self.service_create_json_data)
         assert r_service.status_code == 201
@@ -194,8 +210,65 @@ class TestAppointmentsRoute(BaseAPITestCase):
         )
         assert r.status_code == 404
 
+    async def test_create_appointment_animal_id_not_exists(
+        self,
+        httpx_mock: HTTPXMock,
+        mock_get_user_coordinates: GetUserCoordinatesMock,
+    ) -> None:
+        r_service = await self.client.post("/services", json=self.service_create_json_data)
+        assert r_service.status_code == 201
+        service = r_service.json()
+
+        service_owner = await self.change_service_owner(service["id"])
+        service["owner_id"] = str(service_owner)
+
+        address_id = uuid4()
+        mock_get_user_coordinates(address_id)
+
+        httpx_mock.add_response(
+            url=f"{settings.ANIMALS_SERVICE_URL}/animals/{self.first_appointment['animal_id']}",
+            status_code=404,
+        )
+
+        r = await self.client.post(
+            f"/services/{service['id']}/appointments",
+            json=self.first_appointment,
+            params={"user_address_id": str(address_id)},
+        )
+        assert r.status_code == 400
+
+    async def test_create_appointment_animal_id_different_owner(
+        self,
+        httpx_mock: HTTPXMock,
+        mock_get_user_coordinates: GetUserCoordinatesMock,
+    ) -> None:
+        r_service = await self.client.post("/services", json=self.service_create_json_data)
+        assert r_service.status_code == 201
+        service = r_service.json()
+
+        service_owner = await self.change_service_owner(service["id"])
+        service["owner_id"] = str(service_owner)
+
+        address_id = uuid4()
+        mock_get_user_coordinates(address_id)
+
+        httpx_mock.add_response(
+            url=f"{settings.ANIMALS_SERVICE_URL}/animals/{self.first_appointment['animal_id']}",
+            json={"owner": str(uuid4())},
+        )
+
+        r = await self.client.post(
+            f"/services/{service['id']}/appointments",
+            json=self.first_appointment,
+            params={"user_address_id": str(address_id)},
+        )
+        assert r.status_code == 400
+
     async def test_create_appointment(
-        self, httpx_mock: HTTPXMock, mock_get_user_coordinates: GetUserCoordinatesMock
+        self,
+        httpx_mock: HTTPXMock,
+        mock_get_user_coordinates: GetUserCoordinatesMock,
+        mock_animal_validation: None,
     ) -> None:
         r_service = await self.client.post("/services", json=self.service_create_json_data)
         assert r_service.status_code == 201
@@ -230,7 +303,10 @@ class TestAppointmentsRoute(BaseAPITestCase):
         assert data["customer_address_id"] == str(address_id)
 
     async def test_create_appointment_and_get_my_appointments(
-        self, httpx_mock: HTTPXMock, mock_get_user_coordinates: GetUserCoordinatesMock
+        self,
+        httpx_mock: HTTPXMock,
+        mock_get_user_coordinates: GetUserCoordinatesMock,
+        mock_animal_validation: None,
     ) -> None:
         r_service = await self.client.post("/services", json=self.service_create_json_data)
         assert r_service.status_code == 201
@@ -264,7 +340,10 @@ class TestAppointmentsRoute(BaseAPITestCase):
         assert data["appointments"][0]["id"] == appointment_id
 
     async def test_cant_update_appointment_without_api_key(
-        self, httpx_mock: HTTPXMock, mock_get_user_coordinates: GetUserCoordinatesMock
+        self,
+        httpx_mock: HTTPXMock,
+        mock_get_user_coordinates: GetUserCoordinatesMock,
+        mock_animal_validation: None,
     ) -> None:
         r_service = await self.client.post("/services", json=self.service_create_json_data)
         assert r_service.status_code == 201
@@ -295,7 +374,10 @@ class TestAppointmentsRoute(BaseAPITestCase):
         assert r.status_code == 401
 
     async def test_can_update_appointment_to_in_progress(
-        self, httpx_mock: HTTPXMock, mock_get_user_coordinates: GetUserCoordinatesMock
+        self,
+        httpx_mock: HTTPXMock,
+        mock_get_user_coordinates: GetUserCoordinatesMock,
+        mock_animal_validation: None,
     ) -> None:
         r_service = await self.client.post("/services", json=self.service_create_json_data)
         assert r_service.status_code == 201
@@ -334,7 +416,10 @@ class TestAppointmentsRoute(BaseAPITestCase):
         assert data.get("payment_url", None) is None
 
     async def test_can_update_appointment_to_completed(
-        self, httpx_mock: HTTPXMock, mock_get_user_coordinates: GetUserCoordinatesMock
+        self,
+        httpx_mock: HTTPXMock,
+        mock_get_user_coordinates: GetUserCoordinatesMock,
+        mock_animal_validation: None,
     ) -> None:
         r_service = await self.client.post("/services", json=self.service_create_json_data)
         assert r_service.status_code == 201
@@ -373,7 +458,10 @@ class TestAppointmentsRoute(BaseAPITestCase):
         assert data.get("payment_url", None) is None
 
     async def test_can_update_appointment_to_cancelled(
-        self, httpx_mock: HTTPXMock, mock_get_user_coordinates: GetUserCoordinatesMock
+        self,
+        httpx_mock: HTTPXMock,
+        mock_get_user_coordinates: GetUserCoordinatesMock,
+        mock_animal_validation: None,
     ) -> None:
         r_service = await self.client.post("/services", json=self.service_create_json_data)
         assert r_service.status_code == 201

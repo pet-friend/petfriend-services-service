@@ -21,6 +21,7 @@ class TestServicesRoute(BaseAPITestCase):
 
         now = datetime.now(timezone.utc)
         self.appointment = Appointment(
+            animal_id=uuid4(),
             service_id=uuid4(),
             customer_id=self.user_id,
             payment_status=PaymentStatus.COMPLETED,

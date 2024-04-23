@@ -39,6 +39,7 @@ class TestReviewsServices:
         now = datetime.now(timezone.utc)
 
         appointment = Appointment(
+            animal_id=uuid4(),
             service_id=self.review.service_id,
             customer_id=self.review.reviewer_id,
             payment_status=PaymentStatus.COMPLETED,
@@ -84,6 +85,7 @@ class TestReviewsServices:
         now = datetime.now(timezone.utc)
 
         appointment = Appointment(
+            animal_id=uuid4(),
             service_id=self.review.service_id,
             customer_id=self.review.reviewer_id,
             payment_status=PaymentStatus.COMPLETED,

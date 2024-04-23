@@ -42,3 +42,8 @@ variable "payments_api_key" {
   type        = string
   sensitive   = true
 }
+
+variable "animals_service_url" {
+  description = "URL of the animals service"
+  type        = string
+}

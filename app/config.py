@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     app_name: str = "Services API"
     DB_URL: str = Field(validation_alias="DATABASE_URL")
     USERS_SERVICE_URL: str
+    ANIMALS_SERVICE_URL: str
     PAYMENTS_SERVICE_URL: str
     PAYMENTS_API_KEY: str
     FEE_PERCENTAGE: Decimal = Field(
@@ -51,6 +52,7 @@ class TestingSettings(Settings):
     DB_FORCE_ROLLBACK: bool = True
     DB_ARGUMENTS: dict[str, str | bool] = {"check_same_thread": False}
     USERS_SERVICE_URL: str = "http://users_service_url"
+    ANIMALS_SERVICE_URL: str = "http://animals_service_url"
     PAYMENTS_SERVICE_URL: str = "http://payments_service_url"
     PAYMENTS_API_KEY: str = "API_KEY"
     GOOGLE_MAPS_URL: str = "https://map_url"

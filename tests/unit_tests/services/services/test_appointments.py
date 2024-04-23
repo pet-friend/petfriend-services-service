@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from app.config import settings
+from app.exceptions.animals import InvalidAnimal
 from app.exceptions.appointments import AppointmentNotFound, InvalidAppointment
 from app.exceptions.users import Forbidden
 from app.models.payments import PaymentStatus
@@ -24,6 +25,7 @@ from app.models.services import (
 )
 from app.models.addresses import Address
 from app.repositories.services import AppointmentsRepository
+from app.services.animals import AnimalsService
 from app.services.services import AppointmentsService, ServicesService
 from app.services.users import UsersService
 from app.services.payments import PaymentsService
@@ -52,8 +54,13 @@ class TestServicesService:
         self.services_service = AsyncMock(spec=ServicesService)
         self.users_service = AsyncMock(spec=UsersService)
         self.payments_service = AsyncMock(spec=PaymentsService)
+        self.animals_service = AsyncMock(spec=AnimalsService)
         self.service = AppointmentsService(
-            self.repository, self.services_service, self.users_service, self.payments_service
+            self.repository,
+            self.services_service,
+            self.users_service,
+            self.payments_service,
+            self.animals_service,
         )
 
     async def test_get_available_appointments_simple(self) -> None:
@@ -154,6 +161,7 @@ class TestServicesService:
         self.set_slots(now)
         self.repository.get_all_by_range.return_value = [
             Appointment(
+                animal_id=uuid4(),
                 start=datetime.combine(now.date(), time(8, 0), now.tzinfo),
                 end=datetime.combine(now.date(), time(8, 30), now.tzinfo),
                 payment_status=PaymentStatus.COMPLETED,
@@ -196,6 +204,7 @@ class TestServicesService:
         self.set_slots(now, max_per_slot=1)  # Only 1 appointment per slot
         self.repository.get_all_by_range.return_value = [
             Appointment(
+                animal_id=uuid4(),
                 start=datetime.combine(now.date(), time(8, 0), now.tzinfo),
                 end=datetime.combine(now.date(), time(8, 30), now.tzinfo),
                 payment_status=PaymentStatus.COMPLETED,
@@ -236,6 +245,7 @@ class TestServicesService:
             # which can happen if the service provider changes the
             # slots configuration after the appointment was made
             Appointment(
+                animal_id=uuid4(),
                 start=datetime.combine(now.date(), time(8, 0), now.tzinfo),
                 end=datetime.combine(now.date(), time(8, 45), now.tzinfo),
                 payment_status=PaymentStatus.COMPLETED,
@@ -327,6 +337,7 @@ class TestServicesService:
         self.set_slots(now, advance=7, end=time(8, 30))
         self.repository.get_all_by_range.return_value = [
             Appointment(
+                animal_id=uuid4(),
                 start=datetime.combine(now.date(), time(8, 0), now.tzinfo),
                 end=datetime.combine(now.date(), time(8, 45), now.tzinfo),
                 payment_status=PaymentStatus.COMPLETED,
@@ -489,6 +500,7 @@ class TestServicesService:
         tomorrow_date = now.date() + timedelta(days=1)
         self.repository.get_all_by_range.return_value = [
             Appointment(
+                animal_id=uuid4(),
                 start=datetime.combine(now.date(), time(13, 30), now.tzinfo),
                 end=datetime.combine(tomorrow_date, time(14, 00), now.tzinfo),
                 payment_status=PaymentStatus.IN_PROGRESS,
@@ -638,6 +650,7 @@ class TestServicesService:
         self.set_slots(now)
         self.repository.get_all_by_range.return_value = [
             Appointment(
+                animal_id=uuid4(),
                 start=datetime.combine(now.date(), time(7, 0), now.tzinfo),
                 end=datetime.combine(now.date(), time(8, 45), now.tzinfo),
                 payment_status=PaymentStatus.COMPLETED,
@@ -683,7 +696,7 @@ class TestServicesService:
         address_id = uuid4()
         with pytest.raises(ValueError):
             await self.service.create_appointment(
-                AppointmentCreate(start=start),
+                AppointmentCreate(start=start, animal_id=uuid4()),
                 self.service_model.id,
                 customer_id,
                 address_id,
@@ -709,7 +722,7 @@ class TestServicesService:
         address_id = uuid4()
         with pytest.raises(InvalidAppointment):
             await self.service.create_appointment(
-                AppointmentCreate(start=start),
+                AppointmentCreate(start=start, animal_id=uuid4()),
                 self.service_model.id,
                 customer_id,
                 address_id,
@@ -718,6 +731,34 @@ class TestServicesService:
             )
         self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
         self.assert_repo_get_all_by_range(now, after=start)
+        self.repository.save.assert_not_called()
+
+    async def test_create_appointment_invalid_animal_should_raise(self) -> None:
+        # Given
+        now = self.get_now()
+        self.set_slots(now)
+        self.repository.get_all_by_range.return_value = []
+        self.services_service.get_service_by_id.return_value = self.service_model
+        self.animals_service.validate_animal.side_effect = InvalidAnimal
+
+        # When, Then
+        start = datetime.combine(now.date(), time(8, 0), now.tzinfo)
+        customer_id = uuid4()
+        address_id = uuid4()
+        animal_id = uuid4()
+        with pytest.raises(InvalidAnimal):
+            await self.service.create_appointment(
+                AppointmentCreate(start=start, animal_id=animal_id),
+                self.service_model.id,
+                customer_id,
+                address_id,
+                "token",
+                now=now,
+            )
+        self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
+        self.animals_service.validate_animal.assert_called_once_with(
+            customer_id, animal_id, "token"
+        )
         self.repository.save.assert_not_called()
 
     async def test_create_appointment(self) -> None:
@@ -777,8 +818,9 @@ class TestServicesService:
         start = datetime.combine(now.date(), time(8, 0), now.tzinfo)
         customer_id = uuid4()
         address_id = uuid4()
+        animal_id = uuid4()
         created_appointment = await self.service.create_appointment(
-            AppointmentCreate(start=start),
+            AppointmentCreate(start=start, animal_id=animal_id),
             self.service_model.id,
             customer_id,
             address_id,
@@ -789,6 +831,9 @@ class TestServicesService:
         # Then
         self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
         self.assert_repo_get_all_by_range(now, after=start)
+        self.animals_service.validate_animal.assert_called_once_with(
+            customer_id, animal_id, "token"
+        )
         self.payments_service.check_payment_conditions.assert_called_once_with(
             self.service_model, customer_id, address_id, "token"
         )
@@ -825,7 +870,7 @@ class TestServicesService:
         start = datetime.combine(now.date(), time(8, 0), now.tzinfo)
         with pytest.raises(ValueError):
             await self.service.create_appointment(
-                AppointmentCreate(start=start),
+                AppointmentCreate(start=start, animal_id=uuid4()),
                 self.service_model.id,
                 uuid4(),
                 uuid4(),
@@ -839,6 +884,7 @@ class TestServicesService:
         # Given
         now = self.get_now()
         appointment = Appointment(
+            animal_id=uuid4(),
             payment_status=PaymentStatus.COMPLETED,
             payment_url=None,
             start=now,
@@ -867,6 +913,7 @@ class TestServicesService:
         # Given
         now = self.get_now()
         appointment = Appointment(
+            animal_id=uuid4(),
             payment_status=PaymentStatus.CANCELLED,
             payment_url=None,
             start=now,
@@ -895,6 +942,7 @@ class TestServicesService:
         # Given
         now = self.get_now()
         appointment = Appointment(
+            animal_id=uuid4(),
             payment_status=PaymentStatus.CREATED,
             payment_url="url",
             start=now,
@@ -923,6 +971,7 @@ class TestServicesService:
         # Given
         now = self.get_now()
         appointment = Appointment(
+            animal_id=uuid4(),
             payment_status=PaymentStatus.CREATED,
             payment_url="url",
             start=now,
@@ -948,6 +997,7 @@ class TestServicesService:
         now = self.get_now()
         customer_id = uuid4()
         appointment = Appointment(
+            animal_id=uuid4(),
             payment_status=PaymentStatus.CREATED,
             payment_url="url",
             start=now,
@@ -972,6 +1022,7 @@ class TestServicesService:
         # Given
         now = self.get_now()
         appointment = Appointment(
+            animal_id=uuid4(),
             payment_status=PaymentStatus.CREATED,
             payment_url="url",
             start=now,
@@ -1014,6 +1065,7 @@ class TestServicesService:
         # Given
         now = self.get_now()
         appointment = Appointment(
+            animal_id=uuid4(),
             payment_status=PaymentStatus.CREATED,
             payment_url="url",
             start=now,

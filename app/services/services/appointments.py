@@ -25,6 +25,7 @@ from app.models.services.appointments import AppointmentRead
 from app.models.util import Id
 from app.models.payments import PaymentStatus, PaymentStatusUpdate
 from app.repositories.services import AppointmentsRepository
+from ..animals import AnimalsService
 from ..users import UsersService
 from ..payments import PaymentsService
 from .services import ServicesService
@@ -37,11 +38,13 @@ class AppointmentsService:
         services_service: ServicesService = Depends(),
         users_service: UsersService = Depends(),
         payments_service: PaymentsService = Depends(),
+        animals_service: AnimalsService = Depends(),
     ):
         self.appointments_repo = appointments_repo
         self.services_service = services_service
         self.users_service = users_service
         self.payments_service = payments_service
+        self.animals_service = animals_service
 
     async def create_appointment(
         self,
@@ -57,12 +60,12 @@ class AppointmentsService:
         start = service.to_tz(data.start)
         logging.debug(f"Creating appointment for service {service_id} at {start}")
 
-        await self.payments_service.check_payment_conditions(
-            service, customer_id, user_address_id, token
-        )
-
-        available_appointments = await self.get_available_appointments(
-            service, after=start, now=now
+        available_appointments, _, _ = await gather(
+            self.get_available_appointments(service, after=start, now=now),
+            self.animals_service.validate_animal(customer_id, data.animal_id, token),
+            self.payments_service.check_payment_conditions(
+                service, customer_id, user_address_id, token
+            ),
         )
 
         for slots_config, available_appointment in available_appointments.iterate_appointments():
@@ -74,6 +77,7 @@ class AppointmentsService:
 
         appointment = Appointment(
             start=start,
+            animal_id=data.animal_id,
             end=available_appointment.end,
             payment_status=PaymentStatus.CREATED,
             service_id=service_id,

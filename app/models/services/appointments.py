@@ -16,6 +16,7 @@ class AppointmentBase(PaymentStatusModel, UUIDModel, TimestampModel):
     end: AwareDatetime = Field(sa_type=TZDateTime)
     customer_id: Id
     customer_address_id: Id
+    animal_id: Id
 
 
 class AppointmentRead(AppointmentBase):
@@ -36,6 +37,7 @@ class Appointment(AppointmentBase, table=True):
 
 class AppointmentCreate(BaseModel):
     start: datetime  # assumed to be in the service's timezone if naive
+    animal_id: Id
 
 
 class AvailableAppointment(BaseModel):

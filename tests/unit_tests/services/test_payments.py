@@ -85,6 +85,7 @@ class TestPurchasesService:
         # Given
         now = datetime.now(timezone.utc)
         appointment = Appointment(
+            animal_id=uuid4(),
             start=datetime.combine(now.date(), time(8, 0), now.tzinfo),
             end=datetime.combine(now.date(), time(8, 30), now.tzinfo),
             payment_status=PaymentStatus.CANCELLED,
@@ -131,6 +132,7 @@ class TestPurchasesService:
         # Given
         now = datetime.now(timezone.utc)
         appointment = Appointment(
+            animal_id=uuid4(),
             start=datetime.combine(now.date(), time(8, 0), now.tzinfo),
             end=datetime.combine(now.date(), time(8, 30), now.tzinfo),
             payment_status=PaymentStatus.COMPLETED,
