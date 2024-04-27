@@ -23,7 +23,7 @@ from app.models.payments import PaymentStatus, PaymentStatusUpdate
 from app.models.util import Id
 from app.repositories.stores import PurchasesRepository
 from app.config import settings
-from ..users import UsersService
+from ..users import Notification, UsersService
 from ..payments import PaymentsService
 from .stores import StoresService
 from .products import ProductsService
@@ -116,6 +116,7 @@ class PurchasesService:
             payload, store.owner_id, token
         )
         await self.purchases_repo.save(purchase)
+        await self.__send_order_notification(purchase)
         return purchase
 
     async def update_purchase_status(
@@ -134,6 +135,47 @@ class PurchasesService:
                 await self.products_service.update_stock(item.product, item.quantity)
 
         await self.purchases_repo.save(purchase)
+        await self.__send_order_notification(purchase)
+
+    async def __send_order_notification(self, purchase: Purchase) -> None:
+        text = await self.__get_notification_text(purchase)
+        if text is None:
+            return
+        store_read = (await self.stores_service.get_stores_read(purchase.store))[0]
+        await self.users_service.send_notification(
+            purchase.store.owner_id,
+            Notification(
+                source="purchase",
+                title=text[0],
+                message=text[1],
+                image=store_read.image_url,
+                payload={
+                    "purchase_id": str(purchase.id),
+                    "store_id": str(purchase.store.id),
+                    "type": "purchase",
+                    "payment_status": purchase.payment_status,
+                },
+            ),
+        )
+
+    async def __get_notification_text(self, purchase: Purchase) -> tuple[str, str] | None:
+        total_cost = sum((i.unit_price * i.quantity for i in purchase.items), start=Decimal(0))
+        if purchase.payment_status == PaymentStatus.CREATED:
+            return (
+                f"[{purchase.store.name}] Tenés una nueva compra",
+                f"Pago pendiente por ${total_cost}",
+            )
+        if purchase.payment_status == PaymentStatus.COMPLETED:
+            return (
+                f"[{purchase.store.name}] Se completó el pago de una compra",
+                f"Pago confirmado por ${total_cost}. Coordiná la entrega con el comprador.",
+            )
+        if purchase.payment_status == PaymentStatus.CANCELLED:
+            return (
+                f"[{purchase.store.name}] Se canceló una compra",
+                f"El pago por ${total_cost} fue cancelado. Se restauró el stock de tus productos.",
+            )
+        return None
 
     async def __build_order(
         self, order_id: Id, products: Sequence[Product], products_quantities: dict[Id, int]

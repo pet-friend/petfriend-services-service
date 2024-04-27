@@ -26,7 +26,7 @@ from app.models.util import Id
 from app.models.payments import PaymentStatus, PaymentStatusUpdate
 from app.repositories.services import AppointmentsRepository
 from ..animals import AnimalsService
-from ..users import UsersService
+from ..users import Notification, UsersService
 from ..payments import PaymentsService
 from .services import ServicesService
 
@@ -80,15 +80,17 @@ class AppointmentsService:
             animal_id=data.animal_id,
             end=available_appointment.end,
             payment_status=PaymentStatus.CREATED,
-            service_id=service_id,
+            service=service,
             customer_id=customer_id,
             customer_address_id=user_address_id,
+            price=slots_config.appointment_price,
         )
 
         payment_data = await self.__build_order(service, appointment, slots_config)
         appointment.payment_url = await self.payments_service.create_preference(
             payment_data, service.owner_id, token
         )
+        await self.__send_appointment_notification(appointment)
         return await self.appointments_repo.save(appointment)
 
     async def get_available_appointments(
@@ -150,6 +152,7 @@ class AppointmentsService:
             return
 
         await self.appointments_repo.save(appointment)
+        await self.__send_appointment_notification(appointment)
 
     async def get_appointment(self, service_id: Id, appointment_id: Id, user_id: Id) -> Appointment:
         appointment = await self.appointments_repo.get_by_id((service_id, appointment_id))
@@ -368,3 +371,42 @@ class AppointmentsService:
             **appointment.model_dump(),
             service=service,
         )
+
+    async def __send_appointment_notification(self, appointment: Appointment) -> None:
+        text = await self.__get_notification_text(appointment)
+        if text is None:
+            return
+        store_read = (await self.services_service.get_services_read(appointment.service))[0]
+        await self.users_service.send_notification(
+            appointment.service.owner_id,
+            Notification(
+                source="appointment",
+                title=text[0],
+                message=text[1],
+                image=store_read.image_url,
+                payload={
+                    "appointment_id": str(appointment.id),
+                    "service_id": str(appointment.service.id),
+                    "type": "appointment",
+                    "payment_status": appointment.payment_status,
+                },
+            ),
+        )
+
+    async def __get_notification_text(self, appointment: Appointment) -> tuple[str, str] | None:
+        if appointment.payment_status == PaymentStatus.CREATED:
+            return (
+                f"[{appointment.service.name}] Se agendó un nuevo turno",
+                f"Pago pendiente por ${appointment.price}",
+            )
+        if appointment.payment_status == PaymentStatus.COMPLETED:
+            return (
+                f"[{appointment.service.name}] Se completó el pago de un turno",
+                f"Pago confirmado por ${appointment.price}",
+            )
+        if appointment.payment_status == PaymentStatus.CANCELLED:
+            return (
+                f"[{appointment.service.name}] Se canceló un turno",
+                f"El pago por ${appointment.price} fue cancelado",
+            )
+        return None

@@ -27,7 +27,7 @@ from app.models.addresses import Address
 from app.repositories.services import AppointmentsRepository
 from app.services.animals import AnimalsService
 from app.services.services import AppointmentsService, ServicesService
-from app.services.users import UsersService
+from app.services.users import Notification, UsersService
 from app.services.payments import PaymentsService
 from tests.factories.service_factories import ServiceCreateFactory
 from tests.util import CustomMatcher
@@ -160,14 +160,10 @@ class TestServicesService:
         now = self.get_now()
         self.set_slots(now)
         self.repository.get_all_by_range.return_value = [
-            Appointment(
-                animal_id=uuid4(),
-                start=datetime.combine(now.date(), time(8, 0), now.tzinfo),
-                end=datetime.combine(now.date(), time(8, 30), now.tzinfo),
-                payment_status=PaymentStatus.COMPLETED,
-                customer_id=uuid4(),
-                customer_address_id=uuid4(),
-            ),
+            self.get_appt(
+                datetime.combine(now.date(), time(8, 0), now.tzinfo),
+                datetime.combine(now.date(), time(8, 30), now.tzinfo),
+            )
         ]
         self.services_service.get_service_by_id.return_value = self.service_model
 
@@ -203,14 +199,10 @@ class TestServicesService:
         now = self.get_now()
         self.set_slots(now, max_per_slot=1)  # Only 1 appointment per slot
         self.repository.get_all_by_range.return_value = [
-            Appointment(
-                animal_id=uuid4(),
-                start=datetime.combine(now.date(), time(8, 0), now.tzinfo),
-                end=datetime.combine(now.date(), time(8, 30), now.tzinfo),
-                payment_status=PaymentStatus.COMPLETED,
-                customer_id=uuid4(),
-                customer_address_id=uuid4(),
-            ),
+            self.get_appt(
+                datetime.combine(now.date(), time(8, 0), now.tzinfo),
+                datetime.combine(now.date(), time(8, 30), now.tzinfo),
+            )
         ]
         self.services_service.get_service_by_id.return_value = self.service_model
 
@@ -244,14 +236,10 @@ class TestServicesService:
             # this appointment overlaps with both slots,
             # which can happen if the service provider changes the
             # slots configuration after the appointment was made
-            Appointment(
-                animal_id=uuid4(),
+            self.get_appt(
                 start=datetime.combine(now.date(), time(8, 0), now.tzinfo),
                 end=datetime.combine(now.date(), time(8, 45), now.tzinfo),
-                payment_status=PaymentStatus.COMPLETED,
-                customer_id=uuid4(),
-                customer_address_id=uuid4(),
-            ),
+            )
         ]
         self.services_service.get_service_by_id.return_value = self.service_model
 
@@ -336,14 +324,10 @@ class TestServicesService:
         # I can make appointments for the next week:
         self.set_slots(now, advance=7, end=time(8, 30))
         self.repository.get_all_by_range.return_value = [
-            Appointment(
-                animal_id=uuid4(),
-                start=datetime.combine(now.date(), time(8, 0), now.tzinfo),
-                end=datetime.combine(now.date(), time(8, 45), now.tzinfo),
-                payment_status=PaymentStatus.COMPLETED,
-                customer_id=uuid4(),
-                customer_address_id=uuid4(),
-            ),
+            self.get_appt(
+                datetime.combine(now.date(), time(8, 0), now.tzinfo),
+                datetime.combine(now.date(), time(8, 30), now.tzinfo),
+            )
         ]
         self.services_service.get_service_by_id.return_value = self.service_model
 
@@ -499,14 +483,10 @@ class TestServicesService:
         ]
         tomorrow_date = now.date() + timedelta(days=1)
         self.repository.get_all_by_range.return_value = [
-            Appointment(
-                animal_id=uuid4(),
-                start=datetime.combine(now.date(), time(13, 30), now.tzinfo),
-                end=datetime.combine(tomorrow_date, time(14, 00), now.tzinfo),
-                payment_status=PaymentStatus.IN_PROGRESS,
-                customer_id=uuid4(),
-                customer_address_id=uuid4(),
-            )
+            self.get_appt(
+                datetime.combine(now.date(), time(13, 30), now.tzinfo),
+                datetime.combine(tomorrow_date, time(14, 00), now.tzinfo),
+            ),
         ]
         self.services_service.get_service_by_id.return_value = self.service_model
 
@@ -649,13 +629,9 @@ class TestServicesService:
         now = self.get_now()
         self.set_slots(now)
         self.repository.get_all_by_range.return_value = [
-            Appointment(
-                animal_id=uuid4(),
+            self.get_appt(
                 start=datetime.combine(now.date(), time(7, 0), now.tzinfo),
                 end=datetime.combine(now.date(), time(8, 45), now.tzinfo),
-                payment_status=PaymentStatus.COMPLETED,
-                customer_id=uuid4(),
-                customer_address_id=uuid4(),
             )
         ]
         self.services_service.get_service_by_id.return_value = self.service_model
@@ -708,6 +684,7 @@ class TestServicesService:
             self.service_model, customer_id, address_id, "token"
         )
         self.repository.save.assert_not_called()
+        self.users_service.send_notification.assert_not_called()
 
     async def test_create_appointment_invalid_start_time_should_raise(self) -> None:
         # Given
@@ -732,6 +709,7 @@ class TestServicesService:
         self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
         self.assert_repo_get_all_by_range(now, after=start)
         self.repository.save.assert_not_called()
+        self.users_service.send_notification.assert_not_called()
 
     async def test_create_appointment_invalid_animal_should_raise(self) -> None:
         # Given
@@ -760,6 +738,7 @@ class TestServicesService:
             customer_id, animal_id, "token"
         )
         self.repository.save.assert_not_called()
+        self.users_service.send_notification.assert_not_called()
 
     async def test_create_appointment(self) -> None:
         # Given
@@ -829,6 +808,15 @@ class TestServicesService:
         )
 
         # Then
+        def check_notification(notification: Notification) -> None:
+            assert notification.source == "appointment"
+            assert notification.payload == {
+                "service_id": str(self.service_model.id),
+                "appointment_id": str(created_appointment.id),
+                "payment_status": PaymentStatus.CREATED,
+                "type": "appointment",
+            }
+
         self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
         self.assert_repo_get_all_by_range(now, after=start)
         self.animals_service.validate_animal.assert_called_once_with(
@@ -844,10 +832,13 @@ class TestServicesService:
         assert created_appointment.payment_status == PaymentStatus.CREATED
         assert created_appointment.start == datetime.combine(now.date(), time(8, 0), now.tzinfo)
         assert created_appointment.end == datetime.combine(now.date(), time(8, 30), now.tzinfo)
-        assert created_appointment.service_id == self.service_model.id
+        assert created_appointment.service == self.service_model
         assert created_appointment.customer_id == customer_id
         assert created_appointment.payment_url == result_url
         assert created_appointment.id == service_reference
+        self.users_service.send_notification.assert_called_once_with(
+            self.service_model.owner_id, CustomMatcher(check_notification)
+        )
 
     async def test_create_appointment_payment_exception(self) -> None:
         # Given
@@ -879,21 +870,11 @@ class TestServicesService:
             )
 
         self.repository.save.assert_not_called()
+        self.users_service.send_notification.assert_not_called()
 
     async def test_invalid_appointment_status_update(self) -> None:
         # Given
-        now = self.get_now()
-        appointment = Appointment(
-            animal_id=uuid4(),
-            payment_status=PaymentStatus.COMPLETED,
-            payment_url=None,
-            start=now,
-            end=now + timedelta(minutes=30),
-            service_id=self.service_model.id,
-            customer_id=uuid4(),
-            service=self.service_model,
-            customer_address_id=uuid4(),
-        )
+        appointment = self.get_appt(payment_status=PaymentStatus.COMPLETED)
         self.repository.get_by_id.return_value = appointment
         self.payments_service.update_payment_status.side_effect = Forbidden
 
@@ -908,21 +889,11 @@ class TestServicesService:
             appointment, PaymentStatus.IN_PROGRESS
         )
         self.repository.save.assert_not_called()
+        self.users_service.send_notification.assert_not_called()
 
     async def test_update_appointment_no_changes_idempotent(self) -> None:
         # Given
-        now = self.get_now()
-        appointment = Appointment(
-            animal_id=uuid4(),
-            payment_status=PaymentStatus.CANCELLED,
-            payment_url=None,
-            start=now,
-            end=now + timedelta(minutes=30),
-            service_id=self.service_model.id,
-            customer_id=uuid4(),
-            service=self.service_model,
-            customer_address_id=uuid4(),
-        )
+        appointment = self.get_appt(payment_status=PaymentStatus.CANCELLED)
         self.repository.get_by_id.return_value = appointment
         self.payments_service.update_payment_status.return_value = False
 
@@ -937,23 +908,26 @@ class TestServicesService:
             appointment, PaymentStatus.CANCELLED
         )
         self.repository.save.assert_not_called()
+        self.users_service.send_notification.assert_not_called()
 
     async def test_update_appointment_ok_should_save(self) -> None:
         # Given
-        now = self.get_now()
-        appointment = Appointment(
-            animal_id=uuid4(),
-            payment_status=PaymentStatus.CREATED,
-            payment_url="url",
-            start=now,
-            end=now + timedelta(minutes=30),
-            service_id=self.service_model.id,
-            customer_id=uuid4(),
-            service=self.service_model,
-            customer_address_id=uuid4(),
-        )
+        appointment = self.get_appt(payment_status=PaymentStatus.CREATED)
         self.repository.get_by_id.return_value = appointment
-        self.payments_service.update_payment_status.return_value = True
+
+        def update_payment_status(model: Appointment, status: PaymentStatus) -> bool:
+            model.payment_status = status
+            return True
+
+        self.payments_service.update_payment_status.side_effect = update_payment_status
+        self.services_service.get_services_read.return_value = [
+            ServiceRead(
+                address=self.service_model.address,
+                appointment_slots=self.service_model.appointment_slots,
+                image_url="http://image.url",
+                **self.service_model.model_dump()
+            )
+        ]
 
         # When
         await self.service.update_appointment_status(
@@ -961,26 +935,27 @@ class TestServicesService:
         )
 
         # Then
+        def check_notification(notification: Notification) -> None:
+            assert notification.source == "appointment"
+            assert notification.payload == {
+                "service_id": str(self.service_model.id),
+                "appointment_id": str(appointment.id),
+                "payment_status": PaymentStatus.CANCELLED,
+                "type": "appointment",
+            }
+
         self.repository.get_by_id.assert_called_once_with((self.service_model.id, appointment.id))
         self.payments_service.update_payment_status.assert_called_once_with(
             appointment, PaymentStatus.CANCELLED
         )
         self.repository.save.assert_called_once_with(appointment)
+        self.users_service.send_notification.assert_called_once_with(
+            self.service_model.owner_id, CustomMatcher(check_notification)
+        )
 
     async def test_get_appointment_by_service_owner_should_call_repository_get_by_id(self) -> None:
         # Given
-        now = self.get_now()
-        appointment = Appointment(
-            animal_id=uuid4(),
-            payment_status=PaymentStatus.CREATED,
-            payment_url="url",
-            start=now,
-            end=now + timedelta(minutes=30),
-            service_id=self.service_model.id,
-            customer_id=uuid4(),
-            service=self.service_model,
-            customer_address_id=uuid4(),
-        )
+        appointment = self.get_appt()
         self.repository.get_by_id.return_value = appointment
 
         # When
@@ -994,24 +969,12 @@ class TestServicesService:
 
     async def test_get_appointment_by_customer_should_call_repository_get_by_id(self) -> None:
         # Given
-        now = self.get_now()
-        customer_id = uuid4()
-        appointment = Appointment(
-            animal_id=uuid4(),
-            payment_status=PaymentStatus.CREATED,
-            payment_url="url",
-            start=now,
-            end=now + timedelta(minutes=30),
-            service_id=self.service_model.id,
-            customer_id=customer_id,
-            service=self.service_model,
-            customer_address_id=uuid4(),
-        )
+        appointment = self.get_appt()
         self.repository.get_by_id.return_value = appointment
 
         # When
         saved_record = await self.service.get_appointment(
-            self.service_model.id, appointment.id, customer_id
+            self.service_model.id, appointment.id, appointment.customer_id
         )
 
         # Then
@@ -1020,18 +983,7 @@ class TestServicesService:
 
     async def test_get_appointment_unrelated_user_should_raise(self) -> None:
         # Given
-        now = self.get_now()
-        appointment = Appointment(
-            animal_id=uuid4(),
-            payment_status=PaymentStatus.CREATED,
-            payment_url="url",
-            start=now,
-            end=now + timedelta(minutes=30),
-            service_id=self.service_model.id,
-            customer_id=uuid4(),
-            service=self.service_model,
-            customer_address_id=uuid4(),
-        )
+        appointment = self.get_appt()
         self.repository.get_by_id.return_value = appointment
 
         # When, Then
@@ -1063,18 +1015,7 @@ class TestServicesService:
 
     async def test_get_service_appointments_service_owner_user_should_return(self) -> None:
         # Given
-        now = self.get_now()
-        appointment = Appointment(
-            animal_id=uuid4(),
-            payment_status=PaymentStatus.CREATED,
-            payment_url="url",
-            start=now,
-            end=now + timedelta(minutes=30),
-            service_id=self.service_model.id,
-            customer_id=uuid4(),
-            service=self.service_model,
-            customer_address_id=uuid4(),
-        )
+        appointment = self.get_appt()
         self.services_service.get_service_by_id.return_value = self.service_model
         self.repository.get_all_by_range.return_value = [appointment]
         self.repository.count_all.return_value = 1
@@ -1146,3 +1087,22 @@ class TestServicesService:
         tz = ZoneInfo(self.service_model.timezone)
         now = datetime.combine(date.today(), t, tz)
         return now
+
+    def get_appt(
+        self,
+        start: datetime | None = None,
+        end: datetime | None = None,
+        payment_status: PaymentStatus = PaymentStatus.COMPLETED,
+    ) -> Appointment:
+        now = self.get_now()
+        return Appointment(
+            animal_id=uuid4(),
+            start=start or now,
+            end=end or now + timedelta(minutes=30),
+            payment_status=payment_status,
+            customer_id=uuid4(),
+            customer_address_id=uuid4(),
+            price=Decimal(100),
+            service=self.service_model,
+            payment_url="url" if payment_status == PaymentStatus.CREATED else None,
+        )

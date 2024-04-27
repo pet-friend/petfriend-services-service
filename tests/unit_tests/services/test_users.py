@@ -1,6 +1,6 @@
 from typing import AsyncGenerator
 from uuid import uuid4
-from httpx import AsyncClient
+from httpx import AsyncClient, HTTPStatusError
 
 import pytest
 import pytest_asyncio
@@ -9,7 +9,7 @@ from pytest_httpx import HTTPXMock
 from app.config import settings
 from app.exceptions.addresses import AddressNotFound
 from app.exceptions.users import InvalidToken
-from app.services.users import UsersService
+from app.services.users import Notification, UsersService
 
 
 class TestUserService:
@@ -19,7 +19,7 @@ class TestUserService:
     @pytest_asyncio.fixture(autouse=True, scope="function")
     async def users_service(self) -> AsyncGenerator[None, None]:
         async with AsyncClient(base_url=settings.USERS_SERVICE_URL) as client:
-            self.users_service = UsersService(client)
+            self.service = UsersService(client)
             yield
 
     async def test_validate_user_id_is_valid(self, httpx_mock: HTTPXMock) -> None:
@@ -33,7 +33,7 @@ class TestUserService:
         )
 
         # When
-        result_id = await self.users_service.validate_user(self.token)
+        result_id = await self.service.validate_user(self.token)
 
         # Then
         assert result_id == user_id
@@ -49,7 +49,7 @@ class TestUserService:
 
         # When, Then
         with pytest.raises(InvalidToken):
-            await self.users_service.validate_user(self.token)
+            await self.service.validate_user(self.token)
 
     async def test_get_coordinates_is_valid(self, httpx_mock: HTTPXMock) -> None:
         # Given
@@ -66,7 +66,7 @@ class TestUserService:
         )
 
         # When
-        coords = await self.users_service.get_user_address_coordinates(user_id, address_id, token)
+        coords = await self.service.get_user_address_coordinates(user_id, address_id, token)
 
         # Then
         assert coords.latitude == lat
@@ -86,4 +86,52 @@ class TestUserService:
 
         # When, Then
         with pytest.raises(AddressNotFound):
-            await self.users_service.get_user_address_coordinates(user_id, address_id, token)
+            await self.service.get_user_address_coordinates(user_id, address_id, token)
+
+    async def test_send_notification(self, httpx_mock: HTTPXMock) -> None:
+        # Given
+        user_id = uuid4()
+        notification = Notification(source="purchase", title="title", message="message")
+        httpx_mock.add_response(
+            url=f"{settings.USERS_SERVICE_URL}/notifications/{user_id}",
+            method="POST",
+            match_json=notification.model_dump(),
+            match_headers={"api-key": settings.NOTIFICATIONS_API_KEY},
+        )
+
+        # When
+        await self.service.send_notification(user_id, notification)
+
+    async def test_send_notification_error_should_not_raise(self, httpx_mock: HTTPXMock) -> None:
+        # Given
+        user_id = uuid4()
+        notification = Notification(source="purchase", title="title", message="message")
+        httpx_mock.add_response(
+            url=f"{settings.USERS_SERVICE_URL}/notifications/{user_id}",
+            method="POST",
+            match_json=notification.model_dump(),
+            match_headers={"api-key": settings.NOTIFICATIONS_API_KEY},
+            status_code=500,
+        )
+
+        # When
+        await self.service.send_notification(user_id, notification)
+
+    async def test_send_notification_error_should_raise_if_param_true(
+        self, httpx_mock: HTTPXMock
+    ) -> None:
+        # Given
+        user_id = uuid4()
+        notification = Notification(source="purchase", title="title", message="message")
+        httpx_mock.add_response(
+            url=f"{settings.USERS_SERVICE_URL}/notifications/{user_id}",
+            method="POST",
+            match_json=notification.model_dump(),
+            match_headers={"api-key": settings.NOTIFICATIONS_API_KEY},
+            status_code=500,
+            json={"error": "error"},
+        )
+
+        # When, Then
+        with pytest.raises(HTTPStatusError):
+            await self.service.send_notification(user_id, notification, raise_on_error=True)
