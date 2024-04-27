@@ -34,11 +34,17 @@ async def get_services(
     owner_id: Id | None = None,
     name: str | None = Query(None),
     category: ServiceCategory | None = Query(None),
+    is_home_service: bool | None = Query(None),
     limit: int = Query(10, ge=1),
     offset: int = Query(0, ge=0),
     services_service: ServicesService = Depends(ServicesService),
 ) -> ServiceList:
-    query = {"name": name, "owner_id": owner_id, "category": category}
+    query = {
+        "name": name,
+        "owner_id": owner_id,
+        "category": category,
+        "is_home_service": is_home_service,
+    }
     services = await services_service.get_services(limit, offset, **query)
     services_amount = await services_service.count_services(**query)
     return ServiceList(
@@ -50,12 +56,18 @@ async def get_services(
 async def get_my_services(
     name: str | None = Query(None),
     category: ServiceCategory | None = Query(None),
+    is_home_service: bool | None = Query(None),
     limit: int = Query(10, ge=1),
     offset: int = Query(0, ge=0),
     services_service: ServicesService = Depends(ServicesService),
     owner_id: Id = Depends(get_caller_id),
 ) -> ServiceList:
-    query = {"name": name, "owner_id": owner_id, "category": category}
+    query = {
+        "name": name,
+        "owner_id": owner_id,
+        "category": category,
+        "is_home_service": is_home_service,
+    }
     services = await services_service.get_services(limit, offset, **query)
     services_amount = await services_service.count_services(**query)
     return ServiceList(
@@ -68,6 +80,7 @@ async def get_nearby_services(
     user_address_id: Id,
     name: str | None = Query(None),
     category: ServiceCategory | None = Query(None),
+    is_home_service: bool | None = Query(None),
     user_token: str = Depends(get_caller_token),
     limit: int = Query(10, ge=1),
     offset: int = Query(0, ge=0),
@@ -75,7 +88,14 @@ async def get_nearby_services(
     user_id: Id = Depends(get_caller_id),
 ) -> ServiceList:
     services, services_amount = await services_service.get_nearby_services(
-        user_token, limit, offset, user_id, user_address_id, name=name, category=category
+        user_token,
+        limit,
+        offset,
+        user_id,
+        user_address_id,
+        name=name,
+        category=category,
+        is_home_service=is_home_service,
     )
     return ServiceList(
         services=await services_service.get_services_read(*services), amount=services_amount
