@@ -91,6 +91,7 @@ class TestPurchasesService:
             payment_status=PaymentStatus.CANCELLED,
             customer_id=uuid4(),
             customer_address_id=uuid4(),
+            price=Decimal(100),
         )
         prev = appointment.model_dump(mode="json")
 
@@ -138,6 +139,7 @@ class TestPurchasesService:
             payment_status=PaymentStatus.COMPLETED,
             customer_id=uuid4(),
             customer_address_id=uuid4(),
+            price=Decimal(100),
         )
         prev = appointment.model_dump(mode="json")
 

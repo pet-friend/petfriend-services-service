@@ -21,13 +21,19 @@ variable "app_name" {
   type        = string
 }
 
+variable "google_maps_api_key" {
+  description = "Google Maps API key"
+  type        = string
+  sensitive   = true
+}
+
 variable "users_service_url" {
   description = "URL of the users service"
   type        = string
 }
 
-variable "google_maps_api_key" {
-  description = "Google Maps API key"
+variable "notifications_api_key" {
+  description = "Users service notifications API key"
   type        = string
   sensitive   = true
 }

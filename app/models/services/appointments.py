@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import Generator
 
 from sqlalchemy import PrimaryKeyConstraint
@@ -17,6 +18,7 @@ class AppointmentBase(PaymentStatusModel, UUIDModel, TimestampModel):
     customer_id: Id
     customer_address_id: Id
     animal_id: Id
+    price: Decimal = Field(max_digits=14, decimal_places=2, gt=0)
 
 
 class AppointmentRead(AppointmentBase):

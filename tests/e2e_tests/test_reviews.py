@@ -1,3 +1,4 @@
+from decimal import Decimal
 import json
 import pytest
 from uuid import uuid4
@@ -28,6 +29,7 @@ class TestServicesRoute(BaseAPITestCase):
             start=now - timedelta(hours=24),
             end=now - timedelta(hours=20),
             customer_address_id=uuid4(),
+            price=Decimal(100),
         )
 
     async def test_create_valid_review(self) -> None:

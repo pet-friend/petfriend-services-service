@@ -1,6 +1,9 @@
-from typing import AsyncGenerator
+import logging
+from typing import AsyncGenerator, Literal
+
 from fastapi import Depends, status
 from httpx import AsyncClient, Timeout
+from pydantic import BaseModel, JsonValue
 
 from app.exceptions.addresses import AddressNotFound
 from app.exceptions.users import InvalidToken, UnknownUserError
@@ -47,3 +50,33 @@ class UsersService:
             raise AddressNotFound
 
         raise UnknownUserError(response.text)
+
+    async def send_notification(
+        self, user_id: Id, notification: "Notification", raise_on_error: bool = False
+    ) -> None:
+        err_response = None
+        try:
+            response = await self.client.post(
+                f"/notifications/{user_id}",
+                json=notification.model_dump(),
+                headers={"api-key": settings.NOTIFICATIONS_API_KEY},
+            )
+            if not response.is_success:
+                err_response = response.json()
+            response.raise_for_status()
+        except Exception as e:
+            logging.warning(
+                f"Failed to send notification to {user_id}: '{e}'. Response: {err_response}"
+            )
+            if raise_on_error:
+                raise
+
+
+class Notification(BaseModel):
+    source: Literal["purchase", "appointment"]
+
+    title: str
+    message: str | None = None
+    image: str | None = None
+
+    payload: JsonValue | None = None

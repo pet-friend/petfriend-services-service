@@ -13,12 +13,13 @@ from app.models.addresses import Address
 from app.models.preferences import PaymentType
 from app.models.stores import Store, Purchase, PurchaseItem, Product, ProductRead
 from app.models.payments import PaymentStatus
+from app.models.stores.stores import StoreRead
 from app.models.util import Id
 from app.repositories.stores import PurchasesRepository
 from app.services.payments import PaymentsService
 from app.services.stores import ProductsService, PurchasesService
 from app.services.stores import StoresService
-from app.services.users import UsersService
+from app.services.users import Notification, UsersService
 from app.config import settings
 
 from tests.factories.product_factories import ProductCreateFactory
@@ -241,6 +242,11 @@ class TestPurchasesService:
         # Given
         self.product.available = 2
         self.stores_service.get_store_by_id.return_value = self.store
+        self.stores_service.get_stores_read.return_value = [
+            StoreRead(
+                image_url="http://image.url", address=self.store.address, **self.store.model_dump()
+            )
+        ]
         image_url = "http://image.url"
         self.products_service.get_products_read.return_value = [
             ProductRead(categories=[], image_url=image_url, **self.product.model_dump())
@@ -258,6 +264,12 @@ class TestPurchasesService:
         unit_price = self.product.price * (100 - self.product.percent_off) / 100
         fee = unit_price * quantities[self.product.id] * settings.FEE_PERCENTAGE / 100
 
+        # When
+        purchase = await self.service.purchase(
+            self.store.id, quantities, user_id, user_address_id, "token"
+        )
+
+        # Then
         def check_payment_data(data: dict[str, Any]) -> None:
             nonlocal service_reference
             service_reference = data["service_reference"]
@@ -284,12 +296,15 @@ class TestPurchasesService:
                 "type": PaymentType.STORE_PURCHASE,
             }
 
-        # When
-        purchase = await self.service.purchase(
-            self.store.id, quantities, user_id, user_address_id, "token"
-        )
+        def check_notification(notification: Notification) -> None:
+            assert notification.source == "purchase"
+            assert notification.payload == {
+                "store_id": str(self.store.id),
+                "purchase_id": str(service_reference),
+                "payment_status": PaymentStatus.CREATED,
+                "type": "purchase",
+            }
 
-        # Then
         self.stores_service.get_store_by_id.assert_called_once_with(self.store.id)
         self.payments_service.check_payment_conditions.assert_called_once_with(
             self.store, user_id, user_address_id, "token"
@@ -310,6 +325,9 @@ class TestPurchasesService:
         assert purchase.items[0].quantity == quantities[self.product.id]
         assert purchase.items[0].unit_price == unit_price
         self.repository.save.assert_called_once_with(purchase)
+        self.users_service.send_notification.assert_called_once_with(
+            self.store.owner_id, CustomMatcher(check_notification)
+        )
 
     async def test_purchase_store_payment_exception(self) -> None:
         # Given
@@ -364,6 +382,7 @@ class TestPurchasesService:
         )
         self.repository.save.assert_not_called()
         self.products_service.update_stock.assert_not_called()
+        self.users_service.send_notification.assert_not_called()
 
     async def test_update_purchase_no_changes_idempotent(self) -> None:
         # Given
@@ -396,6 +415,7 @@ class TestPurchasesService:
         )
         self.repository.save.assert_not_called()
         self.products_service.update_stock.assert_not_called()
+        self.users_service.send_notification.assert_not_called()
 
     async def test_update_purchase_cancelled_should_update_stock(self) -> None:
         # Given
@@ -414,7 +434,17 @@ class TestPurchasesService:
             delivery_address_id=uuid4(),
         )
         self.repository.get_by_id.return_value = purchase
-        self.payments_service.update_payment_status.return_value = True
+
+        def update_payment_status(model: Purchase, status: PaymentStatus) -> bool:
+            model.payment_status = status
+            return True
+
+        self.payments_service.update_payment_status.side_effect = update_payment_status
+        self.stores_service.get_stores_read.return_value = [
+            StoreRead(
+                image_url="http://image.url", address=self.store.address, **self.store.model_dump()
+            )
+        ]
 
         # When
         await self.service.update_purchase_status(
@@ -422,6 +452,15 @@ class TestPurchasesService:
         )
 
         # Then
+        def check_notification(notification: Notification) -> None:
+            assert notification.source == "purchase"
+            assert notification.payload == {
+                "store_id": str(self.store.id),
+                "purchase_id": str(purchase_id),
+                "payment_status": PaymentStatus.CANCELLED,
+                "type": "purchase",
+            }
+
         self.repository.get_by_id.assert_called_once_with((self.store.id, purchase_id))
         self.payments_service.update_payment_status.assert_called_once_with(
             purchase, PaymentStatus.CANCELLED
@@ -429,3 +468,6 @@ class TestPurchasesService:
         self.repository.save.assert_called_once_with(purchase)
         stock_calls = [call(item.product, item.quantity) for item in items]
         self.products_service.update_stock.assert_has_calls(stock_calls)
+        self.users_service.send_notification.assert_called_once_with(
+            self.store.owner_id, CustomMatcher(check_notification)
+        )

@@ -1,4 +1,5 @@
 from datetime import datetime, timezone, timedelta
+from decimal import Decimal
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
@@ -46,6 +47,7 @@ class TestReviewsServices:
             start=now - timedelta(hours=24),
             end=now - timedelta(hours=20),
             customer_address_id=uuid4(),
+            price=Decimal(100),
         )
         appointments_service.get_appointments.return_value = [appointment]
         self.repository.get_by_id.return_value = None
@@ -92,6 +94,7 @@ class TestReviewsServices:
             start=now - timedelta(hours=24),
             end=now - timedelta(hours=20),
             customer_address_id=uuid4(),
+            price=Decimal(100),
         )
         appointments_service.get_appointments.return_value = [appointment]
         self.repository.get_by_id.return_value = self.review
