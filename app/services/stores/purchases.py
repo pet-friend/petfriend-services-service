@@ -103,6 +103,8 @@ class PurchasesService:
         )
 
         _, (items, payload) = await gather(
+            # check_payment_conditions does not use SQLAlchemy's
+            # AsyncSession so it's safe to run it concurrently
             self.payments_service.check_payment_conditions(
                 store, user_id, delivery_address_id, token
             ),
@@ -188,18 +190,17 @@ class PurchasesService:
         store: Store = products[0].store
 
         total_cost = Decimal(0)
-        x = await gather(
-            *(
-                self.__build_order_item(products_map[p.id], p, products_quantities[p.id])
-                for p in products_read
+        items: list[PurchaseItem] = []
+        items_data: list[PreferenceItem] = []
+        for p in products_read:
+            # Note: don't run this concurrently since we can't use the
+            # AsyncSession to modify the stock in different tasks
+            item, item_data = await self.__build_order_item(
+                products_map[p.id], p, products_quantities[p.id]
             )
-        )
-        items: list[PurchaseItem]
-        items_data: list[PreferenceItem]
-        items, items_data = map(list, zip(*x))
-        total_cost = sum(
-            (item["unit_price"] * item["quantity"] for item in items_data), start=Decimal(0)
-        )
+            items.append(item)
+            items_data.append(item_data)
+            total_cost += item_data["unit_price"] * item_data["quantity"]
 
         return items, {
             "service_reference": order_id,
