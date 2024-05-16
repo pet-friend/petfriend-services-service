@@ -71,6 +71,34 @@ class UsersService:
             if raise_on_error:
                 raise
 
+    async def send_event_message(self, user_id: Id, text: str) -> None:
+        err_response = None
+        try:
+            response = await self.client.post(
+                "/messages",
+                json={"text": text, "event": True, "receiver": str(user_id)},
+                headers={"api-key": settings.NOTIFICATIONS_API_KEY},
+            )
+            if not response.is_success:
+                err_response = response.json()
+            response.raise_for_status()
+        except Exception as e:
+            logging.warning(f"Failed to send message to {user_id}: '{e}'. Response: {err_response}")
+
+    async def get_by_id(self, user_id: Id) -> dict:
+        response = await self.client.get(
+            f"/users/{user_id}",
+            headers={"api-key": settings.NOTIFICATIONS_API_KEY},
+        )
+
+        if response.is_success:
+            return response.json()
+
+        if response.status_code == status.HTTP_404_NOT_FOUND:
+            raise UnknownUserError(response.text)
+
+        raise UnknownUserError(response.text)
+
 
 class Notification(BaseModel):
     source: Literal["purchase", "appointment"]

@@ -450,6 +450,12 @@ class TestPurchasesRoute(BaseAPITestCase):
         p = r.json()
         assert p["payment_status"] == PaymentStatus.CREATED
 
+        httpx_mock.add_response(url=settings.USERS_SERVICE_URL + "/messages", status_code=204)
+        httpx_mock.add_response(
+            url=settings.USERS_SERVICE_URL + f"/users/{p["buyer_id"]}",
+            json={"name": "John"}
+        )
+
         r_patch = await self.client.patch(
             f"/stores/{store['id']}/purchases/{p['id']}",
             headers={"api-key": settings.PAYMENTS_API_KEY},
