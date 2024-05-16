@@ -85,7 +85,7 @@ class UsersService:
         except Exception as e:
             logging.warning(f"Failed to send message to {user_id}: '{e}'. Response: {err_response}")
 
-    async def get_by_id(self, user_id: Id) -> dict:
+    async def get_by_id(self, user_id: Id) -> dict[str, str]:
         response = await self.client.get(
             f"/users/{user_id}",
             headers={"api-key": settings.NOTIFICATIONS_API_KEY},
