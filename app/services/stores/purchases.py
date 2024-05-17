@@ -190,7 +190,7 @@ class PurchasesService:
         if purchase.payment_status == PaymentStatus.COMPLETED:
             buyer = await self.users_service.get_by_id(purchase.buyer_id)
             return (
-                f"¡{buyer["name"]} realizó una compra en {purchase.store.name}"
+                f"{buyer["name"]} realizó una compra en {purchase.store.name}"
             )
         return None
 
