@@ -138,6 +138,7 @@ class PurchasesService:
 
         await self.purchases_repo.save(purchase)
         await self.__send_order_notification(purchase)
+        await self.__send_event_message(purchase)
 
     async def __send_order_notification(self, purchase: Purchase) -> None:
         text = await self.__get_notification_text(purchase)
@@ -176,6 +177,20 @@ class PurchasesService:
             return (
                 f"[{purchase.store.name}] Se canceló una compra",
                 f"El pago por ${total_cost} fue cancelado. Se restauró el stock de tus productos.",
+            )
+        return None
+
+    async def __send_event_message(self, purchase: Purchase) -> None:
+        text = await self.__get_event_message_text(purchase)
+        if text is None:
+            return
+        await self.users_service.send_event_message(purchase.buyer_id, text)
+
+    async def __get_event_message_text(self, purchase: Purchase) -> str | None:
+        if purchase.payment_status == PaymentStatus.COMPLETED:
+            buyer = await self.users_service.get_by_id(purchase.buyer_id)
+            return (
+                f"{buyer["name"]} realizó una compra en {purchase.store.name}"
             )
         return None
 
