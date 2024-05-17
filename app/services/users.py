@@ -90,13 +90,8 @@ class UsersService:
             f"/users/{user_id}",
             headers={"api-key": settings.NOTIFICATIONS_API_KEY},
         )
-
         if response.is_success:
             return response.json()
-
-        if response.status_code == status.HTTP_404_NOT_FOUND:
-            raise UnknownUserError(response.text)
-
         raise UnknownUserError(response.text)
 
 
