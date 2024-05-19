@@ -283,6 +283,70 @@ class TestServicesRoute(BaseAPITestCase):
         services = response.json()["services"]
         assert {s["name"] for s in services} == {service_3.name}
 
+    async def test_get_nearby_services_owner_filter(
+        self, mock_get_user_coordinates: GetUserCoordinatesMock
+    ) -> None:
+        service_base = {
+            k: v
+            for k, v in self.service_create.items()
+            if k not in ("name", "address", "customer_range_km")
+        }
+        service_base["appointment_slots"] = []
+        addr_base = self.service_create["address"]
+        owner_id1 = uuid4()
+        owner_id2 = uuid4()
+        owner_id3 = uuid4()
+
+        # Serv 1: a menos de 500m del obelisco, radio de 1km -> debería aparecer
+        address_1 = Address(**addr_base, latitude=-34.60381182712754, longitude=-58.38586757264521)
+        service_1 = Service(
+            **service_base,
+            address=address_1,
+            name="Serv 1",
+            customer_range_km=1,
+            owner_id=owner_id1,
+        )
+
+        # Serv 2: a ~3.8km del obelisco, radio de 3km -> no debería aparecer
+        address_2 = Address(**addr_base, latitude=-34.58802836958609, longitude=-58.41891467656516)
+        service_2 = Service(
+            **service_base,
+            address=address_2,
+            name="Serv 2",
+            customer_range_km=3,
+            owner_id=owner_id2,
+        )
+
+        # Serv 3: a ~3.4km del obelisco, radio de 4km -> debería aparecer
+        address_3 = Address(**addr_base, latitude=-34.61434525255158, longitude=-58.4172589555573)
+        service_3 = Service(
+            **service_base,
+            address=address_3,
+            name="Serv 3",
+            customer_range_km=4,
+            owner_id=owner_id3,
+        )
+
+        self.db.add(service_1)
+        self.db.add(service_2)
+        self.db.add(service_3)
+        await self.db.flush()
+
+        address_id = uuid4()
+        mock_get_user_coordinates(
+            address_id,
+            # obelisco
+            return_value=Coordinates(latitude=-34.60360640938748, longitude=-58.38153821730145),
+        )
+
+        response = await self.client.get(
+            "/services/nearby",
+            params={"user_address_id": str(address_id), "owner_id": str(owner_id1)},
+        )
+        assert response.status_code == 200
+        services = response.json()["services"]
+        assert {s["owner_id"] for s in services} == {str(owner_id1)}
+
 
 # Aux
 async def _verify_paginated_response(

@@ -252,6 +252,65 @@ class TestStoresRoute(BaseAPITestCase):
         stores = response.json()["stores"]
         assert {s["name"] for s in stores} == {store_3.name}
 
+    async def test_get_nearby_stores_owner_filter(
+        self, mock_get_user_coordinates: GetUserCoordinatesMock
+    ) -> None:
+        store_base: dict[str, Any] = {"shipping_cost": 0, "description": ":D"}
+        addr_base: Any = valid_store["address"]
+        owner_id1 = uuid4()
+        owner_id2 = uuid4()
+        owner_id3 = uuid4()
+
+        # Tienda 1: a menos de 500m del obelisco, radio de 1km -> debería aparecer
+        address_1 = Address(**addr_base, latitude=-34.60381182712754, longitude=-58.38586757264521)
+        store_1 = Store(
+            **store_base,
+            address=address_1,
+            name="Tienda 1",
+            delivery_range_km=1,
+            owner_id=owner_id1,
+        )
+
+        # Tienda 2: a ~3.8km del obelisco, radio de 3km -> no debería aparecer
+        address_2 = Address(**addr_base, latitude=-34.58802836958609, longitude=-58.41891467656516)
+        store_2 = Store(
+            **store_base,
+            address=address_2,
+            name="Tienda 2",
+            delivery_range_km=3,
+            owner_id=owner_id2,
+        )
+
+        # Tienda 3: a ~3.4km del obelisco, radio de 4km -> debería aparecer
+        address_3 = Address(**addr_base, latitude=-34.61434525255158, longitude=-58.4172589555573)
+        store_3 = Store(
+            **store_base,
+            address=address_3,
+            name="Tienda 3",
+            delivery_range_km=4,
+            owner_id=owner_id3,
+        )
+
+        self.db.add(store_1)
+        self.db.add(store_2)
+        self.db.add(store_3)
+        await self.db.flush()
+
+        address_id = uuid4()
+        mock_get_user_coordinates(
+            address_id,
+            # obelisco
+            return_value=Coordinates(latitude=-34.60360640938748, longitude=-58.38153821730145),
+        )
+
+        response = await self.client.get(
+            "/stores/nearby",
+            params={"user_address_id": str(address_id), "owner_id": str(owner_id1)},
+        )
+        assert response.status_code == 200
+        stores = response.json()["stores"]
+        assert {s["owner_id"] for s in stores} == {str(owner_id1)}
+
 
 # Aux
 async def _verify_paginated_response(db, response_text, stores_in_page, amount):  # type: ignore

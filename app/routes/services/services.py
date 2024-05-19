@@ -79,6 +79,7 @@ async def get_my_services(
 async def get_nearby_services(
     user_address_id: Id,
     name: str | None = Query(None),
+    owner_id: Id | None = Query(None),
     category: ServiceCategory | None = Query(None),
     is_home_service: bool | None = Query(None),
     user_token: str = Depends(get_caller_token),
@@ -96,6 +97,7 @@ async def get_nearby_services(
         name=name,
         category=category,
         is_home_service=is_home_service,
+        owner_id=owner_id,
     )
     return ServiceList(
         services=await services_service.get_services_read(*services), amount=services_amount
