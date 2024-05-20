@@ -1050,7 +1050,7 @@ class TestServicesService:
         assert total == 1
         assert appointments[0] == appointment
         self.services_service.get_services.assert_called_once_with(
-            limit=None, skip=None, owner_id=self.service_model.owner_id
+            owner_id=self.service_model.owner_id
         )
         self.repository.get_all_by_range.assert_called_once_with(
             None, None, True, 5, 0, service_id=[self.service_model.id]
