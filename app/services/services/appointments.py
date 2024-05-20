@@ -190,7 +190,9 @@ class AppointmentsService:
         before: datetime | None = None,
         include_partial: bool = True,
     ) -> tuple[Sequence[Appointment], int]:
-        services = await self.services_service.get_services(owner_id=user_id)
+        services = await self.services_service.get_services(
+            limit=2000, skip=0, owner_id=user_id
+        )  # Get all services
         service_ids = [s.id for s in services]
         appointments = await self.get_appointments(
             limit, skip, after, before, include_partial, service_id=service_ids

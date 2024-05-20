@@ -46,6 +46,8 @@ class AppointmentsRepository(BaseRepository[Appointment, tuple[Id | str, Id | st
                 where = and_(Appointment.start < range_end, where)
             else:
                 where = and_(Appointment.end <= range_end, where)
-        query = query.where(where).offset(skip).limit(limit).order_by(desc(Appointment.start))
+        query = (
+            query.where(where).offset(skip).limit(limit).order_by(desc(getattr(self.cls, "start")))
+        )
         result = await self.db.exec(query)
         return result.all()
