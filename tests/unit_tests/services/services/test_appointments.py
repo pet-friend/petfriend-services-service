@@ -1034,6 +1034,29 @@ class TestServicesService:
         )
         self.repository.count_all.assert_called_once_with(service_id=self.service_model.id)
 
+    async def test_get_all_services_appointments_services_owner_user_should_return(self) -> None:
+        # Given
+        appointment = self.get_appt()
+        self.services_service.get_service_by_id.return_value = self.service_model
+        self.repository.get_all_by_range.return_value = [appointment]
+        self.repository.count_all.return_value = 1
+        self.services_service.get_services.return_value = [self.service_model]
+        # When
+        appointments, total = await self.service.get_services_appointments_by_owner(
+            self.service_model.owner_id, 5, 0
+        )
+
+        # Then
+        assert total == 1
+        assert appointments[0] == appointment
+        self.services_service.get_services.assert_called_once_with(
+            owner_id=self.service_model.owner_id
+        )
+        self.repository.get_all_by_range.assert_called_once_with(
+            None, None, True, 5, 0, service_id=[self.service_model.id]
+        )
+        self.repository.count_all.assert_called_once_with(service_id=[self.service_model.id])
+
     def assert_repo_get_all_by_range(
         self,
         now: datetime,
