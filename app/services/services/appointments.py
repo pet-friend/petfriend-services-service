@@ -181,6 +181,23 @@ class AppointmentsService:
         amount = await self.appointments_repo.count_all(service_id=service_id)
         return appointments, amount
 
+    async def get_services_appointments_by_owner(
+        self,
+        user_id: Id,
+        limit: int,
+        skip: int,
+        after: datetime | None = None,
+        before: datetime | None = None,
+        include_partial: bool = True,
+    ) -> tuple[Sequence[Appointment], int]:
+        services = await self.services_service.get_services(owner_id=user_id)
+        service_ids = [s.id for s in services]
+        appointments = await self.get_appointments(
+            limit, skip, after, before, include_partial, service_id=service_ids
+        )
+        amount = await self.appointments_repo.count_all(service_id=service_ids)
+        return appointments, amount
+
     async def get_user_appointments(
         self,
         user_id: Id,

@@ -89,6 +89,24 @@ async def get_service_appointments(
     )
 
 
+@router.get("/services/me/appointments")
+async def get_my_services_appointments(
+    user_id: Id = Depends(get_caller_id),
+    after: AwareDatetime | None = Query(None),
+    before: AwareDatetime | None = Query(None),
+    include_partial: bool = Query(True),
+    limit: int = Query(10, ge=1),
+    offset: int = Query(0, ge=0),
+    appointments_service: AppointmentsService = Depends(),
+) -> AppointmentList:
+    appointments, count = await appointments_service.get_services_appointments_by_owner(
+        user_id, limit, offset, after, before, include_partial
+    )
+    return AppointmentList(
+        appointments=await appointments_service.get_appointments_read(*appointments), amount=count
+    )
+
+
 @router.get(
     "/services/{service_id}/appointments/available",
     responses=get_exception_docs(SERVICE_NOT_FOUND_ERROR),

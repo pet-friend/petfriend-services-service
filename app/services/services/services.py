@@ -39,7 +39,9 @@ class ServicesService:
         )
         return await self.services_repo.save(service)
 
-    async def get_services(self, limit: int, skip: int, **filters: Any) -> Sequence[Service]:
+    async def get_services(
+        self, limit: int | None = None, skip: int = 0, **filters: Any
+    ) -> Sequence[Service]:
         services = await self.services_repo.get_all(skip=skip, limit=limit, **filters)
         return services
 

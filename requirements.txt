@@ -40,3 +40,6 @@ pylint~=3.1.0
 flake8~=7.0.0
 mypy~=1.9.0
 black~=24.3.0
+
+# Patch for https://github.com/psf/requests/issues/6707
+requests<2.32.0

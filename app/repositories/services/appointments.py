@@ -4,6 +4,7 @@ from datetime import datetime
 from fastapi import Depends
 from sqlmodel import and_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy import desc
 
 from app.models.services import Appointment
 from app.models.util import Id
@@ -45,6 +46,11 @@ class AppointmentsRepository(BaseRepository[Appointment, tuple[Id | str, Id | st
                 where = and_(Appointment.start < range_end, where)
             else:
                 where = and_(Appointment.end <= range_end, where)
-        query = query.where(where).offset(skip).limit(limit)
+        query = (
+            query.where(where)
+            .offset(skip)
+            .limit(limit)
+            .order_by(desc(Appointment.start))  # type: ignore
+        )
         result = await self.db.exec(query)
         return result.all()
