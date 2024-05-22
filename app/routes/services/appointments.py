@@ -5,6 +5,7 @@ from pydantic import AwareDatetime
 
 from app.auth import get_caller_id, get_caller_token
 from app.models.services import AppointmentRead, AppointmentCreate, AvailableAppointmentsForSlots
+from app.models.services.services import ServiceCategory
 from app.models.util import Id
 from app.routes.responses.auth import FORBIDDEN
 from app.serializers.services import AppointmentList
@@ -70,16 +71,19 @@ async def create_appointment(
 
 @router.get("/services/appointments/me")
 async def get_my_appointments(
-    user_id: Id = Depends(get_caller_id),
     after: AwareDatetime | None = Query(None),
     before: AwareDatetime | None = Query(None),
     include_partial: bool = Query(True),
     limit: int = Query(10, ge=1),
     offset: int = Query(0, ge=0),
+    animal_id: Id | None = Query(None),
+    service_category: ServiceCategory | None = Query(None),
+    user_id: Id = Depends(get_caller_id),
     appointments_service: AppointmentsService = Depends(),
 ) -> AppointmentList:
+    q = {"animal_id": animal_id, "service.category": service_category}
     appointments, count = await appointments_service.get_user_appointments(
-        user_id, limit, offset, after, before, include_partial
+        user_id, limit, offset, after, before, include_partial, **q
     )
     return AppointmentList(
         appointments=await appointments_service.get_appointments_read(*appointments), amount=count

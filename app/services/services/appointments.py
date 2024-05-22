@@ -206,11 +206,12 @@ class AppointmentsService:
         after: datetime | None = None,
         before: datetime | None = None,
         include_partial: bool = True,
+        **filters: Any,
     ) -> tuple[Sequence[Appointment], int]:
         appointments = await self.get_appointments(
-            limit, skip, after, before, include_partial, customer_id=user_id
+            limit, skip, after, before, include_partial, customer_id=user_id, **filters
         )
-        amount = await self.appointments_repo.count_all(customer_id=user_id)
+        amount = await self.appointments_repo.count_all(customer_id=user_id, **filters)
         return appointments, amount
 
     async def get_appointments(
