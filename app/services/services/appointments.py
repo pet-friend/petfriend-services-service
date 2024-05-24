@@ -313,8 +313,8 @@ class AppointmentsService:
         `tree` contains the (start, end) intervals of the existing non-cancelled appointments,
         """
         days_to_end = (slots.end_day.to_weekday() - start_date.weekday()) % len(DayOfWeek)
-        end_day = start_date + timedelta(days=days_to_end)
-        slots_end = datetime.combine(end_day, slots.end_time, tzinfo=after.tzinfo)
+        end_date = start_date + timedelta(days=days_to_end)
+        slots_end = datetime.combine(end_date, slots.end_time, tzinfo=after.tzinfo)
         start = datetime.combine(start_date, slots.start_time, tzinfo=after.tzinfo)
         end = start + slots.appointment_duration
         while end <= slots_end:
