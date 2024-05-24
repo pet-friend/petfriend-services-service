@@ -21,6 +21,7 @@ from app.models.services import (
     AvailableAppointmentsForSlots,
     AvailableAppointmentsList,
 )
+from app.models.services.appointment_slots import DayOfWeek
 from app.models.services.appointments import AppointmentRead
 from app.models.util import Id
 from app.models.payments import PaymentStatus, PaymentStatusUpdate
@@ -129,6 +130,12 @@ class AppointmentsService:
 
         today = now.date()
         appointments = await self.__get_open_appointments_in_range(service.id, after, before)
+
+        logging.debug(
+            f"Getting available appointments for {service.id=} from {after} to {before}. "
+            f"Found {len(appointments)} existing appointments in the range."
+        )
+
         appointments_tree = IntervalTree.from_tuples((a.start, a.end) for a in appointments)
         available_appointments = AvailableAppointmentsList()
         for d in range(0, service.appointment_days_in_advance + 1):
@@ -261,7 +268,8 @@ class AppointmentsService:
         """
         Returns the available appointments for each slots configuration in the given date.
 
-        `start_date` is the date in which the returned available appointments start.
+        `start_date` is the date in which the slots configuration of the returned available
+        appointments start.
         `after` and `before` are used to filter the returned available appointments. Only
         appointments that take place (totally or partially) in between `after` and `before` will be
         returned.
@@ -295,7 +303,8 @@ class AppointmentsService:
         """
         Returns the available appointments for the given appointment slots and date,
 
-        `start_date` is the date in which the returned available appointments start.
+        `start_date` is the date in which the slots configuration of the returned available
+        appointments start.
         `slots` is the appointment slots configuration for which the available appointments will be
         returned, and must take place in the given date.
         `after` and `before` are used to filter the returned available appointments. Only
@@ -303,7 +312,9 @@ class AppointmentsService:
         returned.
         `tree` contains the (start, end) intervals of the existing non-cancelled appointments,
         """
-        slots_end = datetime.combine(start_date, slots.end_time, tzinfo=after.tzinfo)
+        days_to_end = (slots.end_day.to_weekday() - start_date.weekday()) % len(DayOfWeek)
+        end_day = start_date + timedelta(days=days_to_end)
+        slots_end = datetime.combine(end_day, slots.end_time, tzinfo=after.tzinfo)
         start = datetime.combine(start_date, slots.start_time, tzinfo=after.tzinfo)
         end = start + slots.appointment_duration
         while end <= slots_end:

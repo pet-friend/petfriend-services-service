@@ -387,7 +387,7 @@ class TestServicesService:
                 start_day=tomorrow,
                 start_time=time(10, 0),
                 end_time=time(18, 0),
-                end_day=today,
+                end_day=tomorrow,
                 appointment_duration=timedelta(hours=4),
                 max_appointments_per_slot=2,
             ),
@@ -476,7 +476,7 @@ class TestServicesService:
                 start_day=tomorrow,
                 start_time=time(10, 0),
                 end_time=time(18, 0),
-                end_day=today,
+                end_day=tomorrow,
                 appointment_duration=timedelta(hours=4),
                 max_appointments_per_slot=2,
             ),
@@ -656,6 +656,54 @@ class TestServicesService:
                     ),
                 ],
             ),
+        ]
+
+    async def test_get_available_appointments_multi_day_slot(self) -> None:
+        # Given
+        now = self.get_now()
+        today = DayOfWeek.from_weekday(now.date().weekday())
+        tomorrow = DayOfWeek.from_weekday((now.date() + timedelta(days=1)).weekday())
+        self.service_model.appointment_days_in_advance = 1
+        self.service_model.appointment_slots = [
+            AppointmentSlots(
+                start_day=today,
+                start_time=time(23, 0),
+                end_day=tomorrow,
+                end_time=time(3, 0),
+                appointment_price=Decimal(50),
+                appointment_duration=timedelta(hours=2),
+                max_appointments_per_slot=3,
+            ),
+        ]
+        self.repository.get_all_by_range.return_value = []
+        self.services_service.get_service_by_id.return_value = self.service_model
+
+        # When
+        available_appointments = await self.service.get_available_appointments(
+            self.service_model.id, now=now
+        )
+
+        # Then
+        self.services_service.get_service_by_id.assert_called_once_with(self.service_model.id)
+
+        self.assert_repo_get_all_by_range(now, 1)
+        tomorrow_date = now.date() + timedelta(days=1)
+        assert available_appointments == [
+            AAFS(
+                slots_configuration=self.service_model.appointment_slots[0],
+                available_appointments=[
+                    AA(
+                        start=datetime.combine(now.date(), time(23, 0), now.tzinfo),
+                        end=datetime.combine(tomorrow_date, time(1, 0), now.tzinfo),
+                        amount=3,
+                    ),
+                    AA(
+                        start=datetime.combine(tomorrow_date, time(1, 0), now.tzinfo),
+                        end=datetime.combine(tomorrow_date, time(3, 0), now.tzinfo),
+                        amount=3,
+                    ),
+                ],
+            )
         ]
 
     async def test_create_appointment_unmet_payment_conditions_should_raise(self) -> None:
