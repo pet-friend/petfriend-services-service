@@ -1,13 +1,12 @@
 version = 1
 
-test_patterns = ["tests/**"]
-
 exclude_patterns = [
   ".git",
   "__pycache__",
   "requirements",
   "scripts",
-  "alembic"
+  "alembic",
+  "tests"
 ]
 
 [[analyzers]]
