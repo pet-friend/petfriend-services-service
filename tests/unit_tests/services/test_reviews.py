@@ -73,8 +73,8 @@ class TestReviewsServices:
             )
         )
         appointments_service.get_appointments.assert_called_once_with(
-            before=now,
-            include_partial=True,
+            # before=now,
+            # include_partial=True,
             customer_id=self.review.reviewer_id,
             service_id=self.review.service_id,
             payment_status=PaymentStatus.COMPLETED,

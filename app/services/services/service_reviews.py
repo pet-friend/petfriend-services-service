@@ -27,10 +27,17 @@ class ServiceReviewsService(ReviewsService[ServiceReview, Id, Id]):
         await self._check_already_exists(service_id, reviewer_id)
 
         now = now or datetime.now(timezone.utc)
-        # Only allow reviews for appointments that have at least started by now
+        # # Only allow reviews for appointments that have at least started by now
+        # appointments = await self.appointments_service.get_appointments(
+        #     before=now,
+        #     include_partial=True,
+        #     customer_id=reviewer_id,
+        #     service_id=service_id,
+        #     payment_status=PaymentStatus.COMPLETED,
+        # )
+
+        # Only allow completed appointments for services of this user
         appointments = await self.appointments_service.get_appointments(
-            before=now,
-            include_partial=True,
             customer_id=reviewer_id,
             service_id=service_id,
             payment_status=PaymentStatus.COMPLETED,
