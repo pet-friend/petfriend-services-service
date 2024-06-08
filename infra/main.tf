@@ -14,6 +14,15 @@ provider "azurerm" {
   features {}
 }
 
+provider "azurerm" {
+  alias = "dns_sub"
+  features {}
+
+  tenant_id       = var.dns_zone_data == null ? data.azurerm_client_config.config.tenant_id : var.dns_zone_data.tenant_id
+  subscription_id = var.dns_zone_data == null ? data.azurerm_client_config.config.subscription_id : var.dns_zone_data.subscription_id
+  client_id       = var.dns_zone_data == null ? data.azurerm_client_config.config.client_id : var.dns_zone_data.client_id
+}
+
 provider "azapi" {}
 
 locals {
@@ -30,7 +39,7 @@ locals {
 }
 
 module "microservice" {
-  source = "git::https://github.com/pet-friend/terraform-microservice-module.git?ref=v2.0.8"
+  source = "git::https://github.com/pet-friend/terraform-microservice-module.git?ref=v3.0.1"
 
   app_name           = var.app_name
   subdomain          = local.subdomain
@@ -54,6 +63,11 @@ module "microservice" {
     PAYMENTS_SERVICE_URL      = var.payments_service_url
     PAYMENTS_API_KEY          = var.payments_api_key
     ANIMALS_SERVICE_URL       = var.animals_service_url
+  }
+
+  providers = {
+    azurerm         = azurerm
+    azurerm.dns_sub = azurerm.dns_sub
   }
 }
 
