@@ -1,0 +1,2 @@
+class PurchaseNotFound(Exception):
+    pass

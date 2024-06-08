@@ -1,15 +1,36 @@
+from decimal import Decimal
 import os
-from functools import lru_cache
+from typing import Type
+
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     app_name: str = "Services API"
-    DB_URL: str = os.environ["DATABASE_URL"]
+    DB_URL: str = Field(validation_alias="DATABASE_URL")
+    FEE_PERCENTAGE: Decimal = Field(
+        ge=0, le=100, default=Decimal(3), max_digits=5, decimal_places=3
+    )
     DB_FORCE_ROLLBACK: bool = False
     DB_ARGUMENTS: dict[str, str | bool] = {}
     DEBUG: bool = False
     TESTING: bool = False
+
+    USERS_SERVICE_URL: str
+    NOTIFICATIONS_API_KEY: str
+    ANIMALS_SERVICE_URL: str
+    PAYMENTS_SERVICE_URL: str
+    PAYMENTS_API_KEY: str
+
+    GOOGLE_MAPS_URL: str = "https://maps.googleapis.com/maps/api/geocode/json"
+    GOOGLE_MAPS_API_KEY: str
+
+    # Images containers settings
+    STORAGE_CONNECTION_STRING: str
+    PRODUCTS_IMAGES_CONTAINER: str
+    STORES_IMAGES_CONTAINER: str
+    SERVICES_IMAGES_CONTAINER: str
 
 
 class ProductionSettings(Settings):
@@ -31,21 +52,22 @@ class TestingSettings(Settings):
     DB_URL: str = "sqlite+aiosqlite:///:memory:"
     DB_FORCE_ROLLBACK: bool = True
     DB_ARGUMENTS: dict[str, str | bool] = {"check_same_thread": False}
+    USERS_SERVICE_URL: str = "http://users_service_url"
+    NOTIFICATIONS_API_KEY: str = "API_KEY"
+    ANIMALS_SERVICE_URL: str = "http://animals_service_url"
+    PAYMENTS_SERVICE_URL: str = "http://payments_service_url"
+    PAYMENTS_API_KEY: str = "API_KEY"
+    GOOGLE_MAPS_URL: str = "https://map_url"
+    GOOGLE_MAPS_API_KEY: str = "API_KEY"
 
     __test__ = False  # Prevent pytest from discovering this class as a test class
 
 
-config_environments = {
+config_environments: dict[str, Type[Settings]] = {
     "PRODUCTION": ProductionSettings,
     "DEVELOPMENT": DevelopmentSettings,
     "TESTING": TestingSettings,
     "STAGING": StagingSettings,
 }
 
-
-@lru_cache()
-def get_settings() -> Settings:
-    return config_environments[os.environ["ENVIRONMENT"]]()
-
-
-settings = get_settings()
+settings = config_environments[os.environ["ENVIRONMENT"]]()

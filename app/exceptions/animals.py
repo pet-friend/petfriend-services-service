@@ -1,0 +1,2 @@
+class InvalidAnimal(Exception):
+    pass

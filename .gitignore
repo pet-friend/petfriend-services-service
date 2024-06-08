@@ -2,6 +2,7 @@
 *.pyc
 .coverage
 venv
+.venv
 test.db
 .env
 .vscode
@@ -14,8 +15,12 @@ __pycache__
 .pytest_cache
 coverage.xml
 
-app/db_volume/**
-!app/db_volume/.gitkeep
+app/dev_volumes/azurite/**
+!app/dev_volumes/azurite/.gitkeep
+app/dev_volumes/db/**
+!app/dev_volumes/db/.gitkeep
 
 alembic_*.ini
 **/.mypy_cache
+
+.DS_store
