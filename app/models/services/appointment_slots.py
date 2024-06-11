@@ -1,10 +1,13 @@
 from decimal import Decimal
 from enum import StrEnum
+import logging
 from typing import Self, Annotated
 from datetime import datetime, timedelta, timezone
 
 from sqlmodel import Field, SQLModel
 from pydantic import AfterValidator, field_validator, model_validator
+
+from app.exceptions.appointments import AppointmentSlotsCantOverlap
 
 from ..util import UUIDModel, Id
 from .util import NaiveTime
@@ -120,11 +123,12 @@ def validate_appointment_slots_list(
     for i, (slot, start_current, end_current) in enumerate(sorted_slots):
         if end_prev > start_current:
             prev_slot = sorted_slots[i - 1][0]
-            raise ValueError(
+            logging.debug(
                 "Appointment slots cannot overlap (slot ends on"
                 f" {prev_slot.end_day.capitalize()} at {prev_slot.end_time} and another slot"
                 f" starts on {slot.start_day.capitalize()} at {slot.start_time})"
             )
+            raise AppointmentSlotsCantOverlap
         end_prev = end_current
 
     return values

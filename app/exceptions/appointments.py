@@ -4,3 +4,7 @@ class InvalidAppointment(Exception):
 
 class AppointmentNotFound(Exception):
     pass
+
+
+class AppointmentSlotsCantOverlap(Exception):
+    pass

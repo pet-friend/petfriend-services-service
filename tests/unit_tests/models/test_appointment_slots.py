@@ -3,6 +3,7 @@ from datetime import timedelta, time
 import pytest
 from pydantic import BaseModel
 
+from app.exceptions.appointments import AppointmentSlotsCantOverlap
 from app.models.services import AppointmentSlotsBase, DayOfWeek, AppointmentSlotsList
 
 
@@ -152,7 +153,7 @@ class TestAppointmentSlotsModel:
         ]
 
         # When, Then
-        with pytest.raises(ValueError):
+        with pytest.raises(AppointmentSlotsCantOverlap):
             TestList.model_validate({"slots": slots})
 
     async def test_appointment_slots_different_days_is_valid(self) -> None:
@@ -225,5 +226,5 @@ class TestAppointmentSlotsModel:
         ]
 
         # When, Then
-        with pytest.raises(ValueError):
+        with pytest.raises(AppointmentSlotsCantOverlap):
             TestList.model_validate({"slots": slots})

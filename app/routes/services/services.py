@@ -3,6 +3,7 @@ from fastapi import status as http_status
 
 from app.models.services import ServicePublic, ServiceCreate, ServiceRead, ServiceCategory
 from app.models.util import Id
+from app.routes.responses.appointments import APPOINTMENT_SLOTS_CANT_OVERLAP_ERROR
 from app.serializers.services import ServiceList
 from app.services.services import ServicesService
 from app.auth import get_caller_id, get_caller_token
@@ -19,7 +20,7 @@ router = APIRouter(prefix="/services", tags=["Services"])
     "",
     response_model=ServiceRead,
     status_code=http_status.HTTP_201_CREATED,
-    responses=get_exception_docs(NON_EXISTENT_ADDRESS_ERROR),
+    responses=get_exception_docs(NON_EXISTENT_ADDRESS_ERROR, APPOINTMENT_SLOTS_CANT_OVERLAP_ERROR),
 )
 async def create_service(
     data: ServiceCreate,
@@ -112,7 +113,12 @@ async def get_service(
     return (await services_service.get_services_read(service))[0]
 
 
-@router.put("/{service_id}", responses=get_exception_docs(NON_EXISTENT_ADDRESS_ERROR, FORBIDDEN))
+@router.put(
+    "/{service_id}",
+    responses=get_exception_docs(
+        NON_EXISTENT_ADDRESS_ERROR, FORBIDDEN, APPOINTMENT_SLOTS_CANT_OVERLAP_ERROR
+    ),
+)
 async def update_user_service(
     service_id: Id,
     data: ServiceCreate,
