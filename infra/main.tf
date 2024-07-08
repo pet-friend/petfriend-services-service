@@ -39,7 +39,7 @@ locals {
 }
 
 module "microservice" {
-  source = "git::https://github.com/pet-friend/terraform-microservice-module.git?ref=v3.0.3"
+  source = "git::https://github.com/pet-friend/terraform-microservice-module.git?ref=v3.0.2"
 
   app_name           = var.app_name
   subdomain          = local.subdomain
